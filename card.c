@@ -60,5 +60,5 @@ void printCard(const Card *card) {
         "♥", "♦", "♣", "♠"
     };
 
-    printf("%s%s\n", rankNames[card->rank], suitSymbols[card->suit]);
+    printf("%s%s", rankNames[card->rank], suitSymbols[card->suit]);
 }
