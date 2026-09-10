@@ -1,7 +1,7 @@
 CC      = gcc
-CFLAGS  = -Wall -Wextra -std=c11 -g
+CFLAGS  = -Wall -Wextra -Werror -std=c11 -g
 TARGET  = tty21
-SRCS    = main.c card.c
+SRCS    = main.c card.c hand.c
 OBJS    = $(SRCS:.c=.o)
 
 all: $(TARGET)
