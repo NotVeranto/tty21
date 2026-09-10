@@ -1,4 +1,5 @@
 #include "card.h"
+#include "hand.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,18 +7,19 @@
 
 int main(void) {
     Deck deck;
-    int cardIndex;
+    Hand hand = {0};
 
     srand((unsigned int)time(NULL));
 
     initDeck(&deck);
     shuffleDeck(&deck);
 
-    printf("First 5 cards:\n");
+    addCardToHand(&hand, &deck.cards[0]);
+    addCardToHand(&hand, &deck.cards[1]);
+    addCardToHand(&hand, &deck.cards[2]);
 
-    for (cardIndex = 0; cardIndex < 5; cardIndex++) {
-        printCard(&deck.cards[cardIndex]);
-    }
+    printf("Test hand:\n");
+    printHand(&hand);
 
     return 0;
 }
