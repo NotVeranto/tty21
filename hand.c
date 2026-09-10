@@ -46,9 +46,7 @@ void printHand(const Hand *hand) {
 
     for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
         printCard(&hand->cards[cardIndex]);
-        if (cardIndex < hand->count - 1) {
-            printf(" ");
-        }
+        printf(" ");
     }
 
     printf("Total value: %d\n", hand->value);
