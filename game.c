@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // Draws the next card and advances the deck position.
 static void drawCard(Deck *deck, Hand *hand) {
@@ -85,19 +86,24 @@ void startRound(Game *game) {
 
 // Reads hit or stand commands until the player stands or busts.
 void playerTurn(Game *game) {
-    char input[64];
     int action;
+    int inputCharacter;
 
     action = 0;
 
     while (game->state == STATE_PLAYER_TURN) {
         printGameState(game, 1);
         printf("Hit or stand? [h/s]: ");
+        inputCharacter = getchar();
 
-        if (fgets(input, sizeof(input), stdin) == NULL) {
+        if (inputCharacter == EOF) {
             game->state = STATE_QUIT;
         } else {
-            action = input[0];
+            action = inputCharacter;
+
+            while (inputCharacter != '\n' && inputCharacter != EOF) {
+                inputCharacter = getchar();
+            }
 
             if (action == 'h' || action == 'H') {
                 drawCard(&game->deck, &game->player.hand);
