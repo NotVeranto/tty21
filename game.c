@@ -4,7 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Reshuffles before drawing if the deck position is exhausted.
+// Keeps a safety margin before reshuffling at the start of a round.
+#define DECK_RESHUFFLE_MARGIN 15
+
+// Draws the next card and advances the deck position.
 static void drawCard(Deck *deck, Hand *hand) {
     if (deck->top >= DECK_SIZE) {
         initDeck(deck);
@@ -15,12 +18,14 @@ static void drawCard(Deck *deck, Hand *hand) {
     deck->top++;
 }
 
-// Reads an integer bet from stdin and repeats until it is valid.
+// Returns -1 on EOF so quitting is distinct from a valid bet.
 static int readBet(int chips) {
     char input[64];
     char *endPointer;
     long betValue;
+    size_t newlinePosition;
     int validBet;
+    int inputCharacter;
 
     validBet = 0;
 
@@ -28,10 +33,24 @@ static int readBet(int chips) {
         printf("Enter bet (1-%d): ", chips);
 
         if (fgets(input, sizeof(input), stdin) == NULL) {
-            return 0;
+            return -1;
         }
 
-        input[strcspn(input, "\n")] = '\0';
+        newlinePosition = strcspn(input, "\n");
+
+        if (input[newlinePosition] != '\n') {
+            while ((inputCharacter = getchar()) != '\n' && inputCharacter != EOF) {
+            }
+
+            if (inputCharacter == EOF) {
+                return -1;
+            }
+
+            printf("Invalid bet. Enter an integer between 1 and %d.\n", chips);
+            continue;
+        }
+
+        input[newlinePosition] = '\0';
         betValue = strtol(input, &endPointer, 10);
 
         while (*endPointer == ' ' || *endPointer == '\t') {
@@ -48,7 +67,6 @@ static int readBet(int chips) {
     return (int)betValue;
 }
 
-// Initializes the deck, player funds, round counter and game state.
 void initGame(Game *game) {
     initDeck(&game->deck);
     shuffleDeck(&game->deck);
@@ -60,16 +78,15 @@ void initGame(Game *game) {
     game->roundNumber = 0;
 }
 
-// Starts a round by accepting a bet and dealing two cards to each hand.
 void startRound(Game *game) {
-    if (game->deck.top > DECK_SIZE - 15) {
+    if (game->deck.top > DECK_SIZE - DECK_RESHUFFLE_MARGIN) {
         initDeck(&game->deck);
         shuffleDeck(&game->deck);
     }
 
     game->player.bet = readBet(game->player.chips);
 
-    if (game->player.bet == 0) {
+    if (game->player.bet < 0) {
         game->state = STATE_QUIT;
     } else {
         resetHand(&game->player.hand);
@@ -89,43 +106,37 @@ void startRound(Game *game) {
     }
 }
 
-// Reads hit or stand commands until the player stands or busts.
 void playerTurn(Game *game) {
-    int action;
     int inputCharacter;
-
-    action = 0;
+    int actionCharacter;
 
     while (game->state == STATE_PLAYER_TURN) {
         printGameState(game, 1);
         printf("Hit or stand? [h/s]: ");
-        inputCharacter = getchar();
+        actionCharacter = getchar();
 
-        if (inputCharacter == EOF) {
+        if (actionCharacter == EOF) {
             game->state = STATE_QUIT;
+            break;
+        }
+
+        while ((inputCharacter = getchar()) != '\n' && inputCharacter != EOF) {
+        }
+
+        if (actionCharacter == 'h' || actionCharacter == 'H') {
+            drawCard(&game->deck, &game->player.hand);
+
+            if (game->player.hand.value > 21) {
+                game->state = STATE_RESULT;
+            }
+        } else if (actionCharacter == 's' || actionCharacter == 'S') {
+            game->state = STATE_DEALER_TURN;
         } else {
-            action = inputCharacter;
-
-            while (inputCharacter != '\n' && inputCharacter != EOF) {
-                inputCharacter = getchar();
-            }
-
-            if (action == 'h' || action == 'H') {
-                drawCard(&game->deck, &game->player.hand);
-
-                if (game->player.hand.value > 21) {
-                    game->state = STATE_RESULT;
-                }
-            } else if (action == 's' || action == 'S') {
-                game->state = STATE_DEALER_TURN;
-            } else {
-                printf("Invalid action. Enter h to hit or s to stand.\n");
-            }
+            printf("Invalid action. Enter h to hit or s to stand.\n");
         }
     }
 }
 
-// Makes the dealer hit until the hand reaches at least 17.
 void dealerTurn(Game *game) {
     if (game->state == STATE_DEALER_TURN) {
         while (game->dealer.hand.value < 17) {
@@ -136,7 +147,6 @@ void dealerTurn(Game *game) {
     }
 }
 
-// Resolves the round and applies the appropriate chip result.
 void resolveRound(Game *game) {
     int playerValue, dealerValue;
     int playerBlackjack, dealerBlackjack;
@@ -179,7 +189,6 @@ void resolveRound(Game *game) {
     }
 }
 
-// Prints the current player and dealer hands with optional hidden dealer card.
 void printGameState(const Game *game, int hideDealerCard) {
     int cardIndex;
 
@@ -198,12 +207,8 @@ void printGameState(const Game *game, int hideDealerCard) {
         }
     }
 
-    if (hideDealerCard) {
-        if (game->dealer.hand.count > 0) {
-            printf("\n");
-        } else {
-            printf(" | Total value: %d\n", game->dealer.hand.value);
-        }
+    if (hideDealerCard && game->dealer.hand.count > 0) {
+        printf("\n");
     } else {
         printf(" | Total value: %d\n", game->dealer.hand.value);
     }
@@ -213,7 +218,6 @@ void printGameState(const Game *game, int hideDealerCard) {
     printf("Chips: %d | Bet: %d\n", game->player.chips, game->player.bet);
 }
 
-// Runs the main round loop until the player quits or runs out of chips.
 int runGame(Game *game) {
     while (game->state != STATE_QUIT) {
         if (game->state == STATE_BET) {
