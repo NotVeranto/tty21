@@ -1,5 +1,10 @@
 CC      = gcc
-CFLAGS  = -Wall -Wextra -Werror -std=c11
+CFLAGS  = -Wall -Wextra -Werror -std=c11 -g
+VERSION = 0.1.0
+CFLAGS += -DTTY21_VERSION=\"$(VERSION)\"
+PREFIX  ?= /usr/local
+DESTDIR ?=
+BINDIR  = $(PREFIX)/bin
 TARGET  = tty21
 SRCS    = main.c card.c hand.c game.c
 OBJS    = $(SRCS:.c=.o)
@@ -15,4 +20,10 @@ $(TARGET): $(OBJS)
 clean:
 	rm -f $(OBJS) $(TARGET)
 
-.PHONY: all clean
+install: $(TARGET)
+	install -Dm755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
+
+uninstall:
+	rm -f $(DESTDIR)$(BINDIR)/$(TARGET)
+
+.PHONY: all clean install uninstall
