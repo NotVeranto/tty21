@@ -4,8 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-// Draws the next card and advances the deck position.
+// Reshuffles before drawing if the deck position is exhausted.
 static void drawCard(Deck *deck, Hand *hand) {
+    if (deck->top >= DECK_SIZE) {
+        initDeck(deck);
+        shuffleDeck(deck);
+    }
+
     addCardToHand(hand, &deck->cards[deck->top]);
     deck->top++;
 }
@@ -193,8 +198,12 @@ void printGameState(const Game *game, int hideDealerCard) {
         }
     }
 
-    if (hideDealerCard && game->dealer.hand.count > 0) {
-        printf("\n");
+    if (hideDealerCard) {
+        if (game->dealer.hand.count > 0) {
+            printf("\n");
+        } else {
+            printf(" | Total value: %d\n", game->dealer.hand.value);
+        }
     } else {
         printf(" | Total value: %d\n", game->dealer.hand.value);
     }
