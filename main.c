@@ -19,30 +19,29 @@ static void printUsage(FILE *stream) {
 int main(int argc, char **argv) {
     Game game;
     int argumentIndex;
-    int exitCode;
-
-    exitCode = 0;
 
     for (argumentIndex = 1; argumentIndex < argc; argumentIndex++) {
         if (strcmp(argv[argumentIndex], "-h") == 0 ||
             strcmp(argv[argumentIndex], "--help") == 0) {
             printUsage(stdout);
-        } else if (strcmp(argv[argumentIndex], "-v") == 0 ||
-                   strcmp(argv[argumentIndex], "--version") == 0) {
-            printf("tty21 %s\n", TTY21_VERSION);
-        } else {
-            fprintf(stderr, "error: unknown option '%s'\n", argv[argumentIndex]);
-            printUsage(stderr);
-            exitCode = 1;
+            return 0;
         }
+
+        if (strcmp(argv[argumentIndex], "-v") == 0 ||
+            strcmp(argv[argumentIndex], "--version") == 0) {
+            printf("tty21 %s\n", TTY21_VERSION);
+            return 0;
+        }
+
+        fprintf(stderr, "error: unknown option '%s'\n", argv[argumentIndex]);
+        printUsage(stderr);
+        return 1;
     }
 
-    if (exitCode == 0 && argc == 1) {
-        srand((unsigned int)time(NULL));
+    srand((unsigned int)time(NULL));
 
-        initGame(&game);
-        runGame(&game);
-    }
+    initGame(&game);
+    runGame(&game);
 
-    return exitCode;
+    return 0;
 }
