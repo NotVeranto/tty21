@@ -36,16 +36,19 @@ To be documented.
 
 ## Project status
 
-- [x] Stage 1: Card deck, shuffle, basic structures.
-- [ ] Stage 2: Hand logic and score calculation.
-- [ ] Stage 3: Game loop.
-- [ ] Stage 4: ASCII rendering.
-- [ ] Stage 5: Raw terminal input.
-- [ ] Stage 6: Floors and dealer modifiers.
-- [ ] Stage 7: Perks and shop.
-- [ ] Stage 8: Split and Double Down.
-- [ ] Stage 9: Save and load.
-- [ ] Stage 10: Polish and animations.
+- [x] Card deck, shuffle, basic structures.
+- [x] Hand logic and score calculation.
+- [x] Game loop.
+- [x] CLI flags, versioning and install targets.
+- [ ] ASCII rendering.
+- [ ] Raw terminal input.
+- [ ] Floors and dealer modifiers.
+- [ ] Perks and shop.
+- [ ] Split and Double Down.
+- [ ] Save and load (XDG).
+- [ ] Polish and animations.
+- [ ] Man page.
+- [ ] Packaging and release.
 
 ## License
 
