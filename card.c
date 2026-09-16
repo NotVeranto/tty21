@@ -3,6 +3,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+static const char *RANK_NAMES[] = {
+    "", "A", "2", "3", "4", "5", "6",
+    "7", "8", "9", "10", "J", "Q", "K"
+};
+
+static const char *SUIT_SYMBOLS[] = {
+    "♥", "♦", "♣", "♠"
+};
+
 // Fills the deck with all 52 card combinations.
 void initDeck(Deck *deck) {
     int suitIndex, rankIndex, cardIndex;
@@ -51,14 +60,5 @@ int getCardValue(const Card *card) {
 
 // Prints a card using its rank and Unicode suit symbol.
 void printCard(const Card *card) {
-    const char *rankNames[] = {
-        "", "A", "2", "3", "4", "5", "6",
-        "7", "8", "9", "10", "J", "Q", "K"
-    };
-
-    const char *suitSymbols[] = {
-        "♥", "♦", "♣", "♠"
-    };
-
-    printf("%s%s", rankNames[card->rank], suitSymbols[card->suit]);
+    printf("%s%s", RANK_NAMES[card->rank], SUIT_SYMBOLS[card->suit]);
 }
