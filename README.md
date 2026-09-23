@@ -32,7 +32,14 @@ souls earned from victories can be spent on perks.
 
 ## Controls
 
-To be documented.
+In-game (during the player's turn):
+- `h` — hit
+- `s` — stand
+- `q` — quit the current run
+- `Ctrl+C` — force quit, terminal state restored
+
+Betting:
+- Type a number and press Enter.
 
 ## Project status
 
@@ -40,8 +47,8 @@ To be documented.
 - [x] Hand logic and score calculation.
 - [x] Game loop.
 - [x] CLI flags, versioning and install targets.
-- [ ] ASCII rendering.
-- [ ] Raw terminal input.
+- [x] ASCII rendering.
+- [x] Raw terminal input.
 - [ ] Floors and dealer modifiers.
 - [ ] Perks and shop.
 - [ ] Split and Double Down.
