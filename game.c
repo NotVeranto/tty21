@@ -1,5 +1,6 @@
 #include "game.h"
 #include "render.h"
+#include "input.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,7 @@ static void drawCard(Deck *deck, Hand *hand) {
     deck->top++;
 }
 
+// Bet input stays line-based so fgets can handle multi-character numeric input and backspace.
 // Returns -1 on EOF so quitting is distinct from a valid bet.
 static int readBet(int chips) {
     char input[64];
@@ -100,13 +102,25 @@ void initGame(Game *game) {
 }
 
 void startRound(Game *game) {
+    int rawMode;
+
     if (game->deck.top > DECK_SIZE - DECK_RESHUFFLE_MARGIN) {
         initDeck(&game->deck);
         shuffleDeck(&game->deck);
     }
 
     renderTable(game, 0);
+
+    rawMode = inputIsRaw();
+    if (rawMode) {
+        disableRawMode();
+    }
+
     game->player.bet = readBet(game->player.chips);
+
+    if (rawMode && game->player.bet >= 0) {
+        inputInit();
+    }
 
     if (game->player.bet < 0) {
         game->state = STATE_QUIT;
@@ -132,30 +146,59 @@ void playerTurn(Game *game) {
     int inputCharacter;
     int actionCharacter;
 
-    while (game->state == STATE_PLAYER_TURN) {
+    if (inputIsRaw()) {
         renderTable(game, 1);
-        renderMessage("Hit or stand? [h/s]: ", GAME_PROMPT_ROW);
-        actionCharacter = getchar();
 
-        if (actionCharacter == EOF) {
-            game->state = STATE_QUIT;
-            break;
-        }
+        while (game->state == STATE_PLAYER_TURN) {
+            renderMessage("Hit or stand? [h/s]: ", GAME_PROMPT_ROW);
+            actionCharacter = getch();
 
-        while ((inputCharacter = getchar()) != '\n' && inputCharacter != EOF) {
-        }
-
-        if (actionCharacter == 'h' || actionCharacter == 'H') {
-            drawCard(&game->deck, &game->player.hand);
-
-            if (game->player.hand.value > 21) {
-                game->state = STATE_RESULT;
+            if (actionCharacter == -1) {
+                game->state = STATE_QUIT;
+                break;
             }
-        } else if (actionCharacter == 's' || actionCharacter == 'S') {
-            game->state = STATE_DEALER_TURN;
-        } else {
-            renderMessage("Invalid action. Enter h to hit or s to stand.",
-                          GAME_PROMPT_ROW);
+
+            if (actionCharacter == 'h' || actionCharacter == 'H') {
+                drawCard(&game->deck, &game->player.hand);
+
+                if (game->player.hand.value > 21) {
+                    game->state = STATE_RESULT;
+                }
+
+                renderTable(game, game->state == STATE_PLAYER_TURN);
+            } else if (actionCharacter == 's' || actionCharacter == 'S') {
+                game->state = STATE_DEALER_TURN;
+                renderTable(game, 0);
+            } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
+                game->state = STATE_QUIT;
+            }
+        }
+    } else {
+        while (game->state == STATE_PLAYER_TURN) {
+            renderTable(game, 1);
+            renderMessage("Hit or stand? [h/s]: ", GAME_PROMPT_ROW);
+            actionCharacter = getchar();
+
+            if (actionCharacter == EOF) {
+                game->state = STATE_QUIT;
+                break;
+            }
+
+            while ((inputCharacter = getchar()) != '\n' && inputCharacter != EOF) {
+            }
+
+            if (actionCharacter == 'h' || actionCharacter == 'H') {
+                drawCard(&game->deck, &game->player.hand);
+
+                if (game->player.hand.value > 21) {
+                    game->state = STATE_RESULT;
+                }
+            } else if (actionCharacter == 's' || actionCharacter == 'S') {
+                game->state = STATE_DEALER_TURN;
+            } else {
+                renderMessage("Invalid action. Enter h to hit or s to stand.",
+                              GAME_PROMPT_ROW);
+            }
         }
     }
 }

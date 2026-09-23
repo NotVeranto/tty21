@@ -1,4 +1,5 @@
 #include "game.h"
+#include "input.h"
 #include "version.h"
 
 #include <locale.h>
@@ -42,6 +43,7 @@ int main(int argc, char **argv) {
     setlocale(LC_ALL, "");
     srand((unsigned int)time(NULL));
 
+    inputInit();
     initGame(&game);
     runGame(&game);
 
