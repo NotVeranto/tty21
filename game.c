@@ -1,4 +1,5 @@
 #include "game.h"
+#include "render.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,6 +7,11 @@
 
 // Keeps a safety margin before reshuffling at the start of a round.
 #define DECK_RESHUFFLE_MARGIN 15
+#define GAME_PROMPT_ROW 29
+#define GAME_RESULT_ROW 31
+#define GAME_CHIPS_ROW 32
+#define GAME_OVER_ROW 34
+#define GAME_FINAL_CHIPS_ROW 35
 
 // Draws the next card and advances the deck position.
 static void drawCard(Deck *deck, Hand *hand) {
@@ -21,6 +27,7 @@ static void drawCard(Deck *deck, Hand *hand) {
 // Returns -1 on EOF so quitting is distinct from a valid bet.
 static int readBet(int chips) {
     char input[64];
+    char prompt[64];
     char *endPointer;
     long betValue;
     size_t newlinePosition;
@@ -28,9 +35,10 @@ static int readBet(int chips) {
     int inputCharacter;
 
     validBet = 0;
+    snprintf(prompt, sizeof(prompt), "Enter bet (1-%d): ", chips);
 
     while (!validBet) {
-        printf("Enter bet (1-%d): ", chips);
+        renderMessage(prompt, GAME_PROMPT_ROW);
 
         if (fgets(input, sizeof(input), stdin) == NULL) {
             return -1;
@@ -46,7 +54,12 @@ static int readBet(int chips) {
                 return -1;
             }
 
-            printf("Invalid bet. Enter an integer between 1 and %d.\n", chips);
+            snprintf(prompt,
+                     sizeof(prompt),
+                     "Invalid bet. Enter an integer between 1 and %d.",
+                     chips);
+            renderMessage(prompt, GAME_RESULT_ROW);
+            snprintf(prompt, sizeof(prompt), "Enter bet (1-%d): ", chips);
             continue;
         }
 
@@ -57,10 +70,18 @@ static int readBet(int chips) {
             endPointer++;
         }
 
-        if (input[0] != '\0' && *endPointer == '\0' && betValue >= 1 && betValue <= chips) {
+        if (input[0] != '\0' &&
+            *endPointer == '\0' &&
+            betValue >= 1 &&
+            betValue <= chips) {
             validBet = 1;
         } else {
-            printf("Invalid bet. Enter an integer between 1 and %d.\n", chips);
+            snprintf(prompt,
+                     sizeof(prompt),
+                     "Invalid bet. Enter an integer between 1 and %d.",
+                     chips);
+            renderMessage(prompt, GAME_RESULT_ROW);
+            snprintf(prompt, sizeof(prompt), "Enter bet (1-%d): ", chips);
         }
     }
 
@@ -84,6 +105,7 @@ void startRound(Game *game) {
         shuffleDeck(&game->deck);
     }
 
+    renderTable(game, 0);
     game->player.bet = readBet(game->player.chips);
 
     if (game->player.bet < 0) {
@@ -111,8 +133,8 @@ void playerTurn(Game *game) {
     int actionCharacter;
 
     while (game->state == STATE_PLAYER_TURN) {
-        printGameState(game, 1);
-        printf("Hit or stand? [h/s]: ");
+        renderTable(game, 1);
+        renderMessage("Hit or stand? [h/s]: ", GAME_PROMPT_ROW);
         actionCharacter = getchar();
 
         if (actionCharacter == EOF) {
@@ -132,7 +154,8 @@ void playerTurn(Game *game) {
         } else if (actionCharacter == 's' || actionCharacter == 'S') {
             game->state = STATE_DEALER_TURN;
         } else {
-            printf("Invalid action. Enter h to hit or s to stand.\n");
+            renderMessage("Invalid action. Enter h to hit or s to stand.",
+                          GAME_PROMPT_ROW);
         }
     }
 }
@@ -148,9 +171,12 @@ void dealerTurn(Game *game) {
 }
 
 void resolveRound(Game *game) {
-    int playerValue, dealerValue;
-    int playerBlackjack, dealerBlackjack;
+    int playerValue;
+    int dealerValue;
+    int playerBlackjack;
+    int dealerBlackjack;
     int payout;
+    char resultMessage[128];
 
     playerValue = game->player.hand.value;
     dealerValue = game->dealer.hand.value;
@@ -158,29 +184,50 @@ void resolveRound(Game *game) {
     dealerBlackjack = game->dealer.hand.count == 2 && dealerValue == 21;
     payout = 0;
 
-    printGameState(game, 0);
-
     if (playerValue > 21) {
         game->player.chips -= game->player.bet;
-        printf("Player busts. You lose %d chips.\n", game->player.bet);
+        snprintf(resultMessage,
+                 sizeof(resultMessage),
+                 "Player busts. You lose %d chips.",
+                 game->player.bet);
     } else if (playerBlackjack && !dealerBlackjack) {
         payout = game->player.bet * 3 / 2;
         game->player.chips += payout;
-        printf("Blackjack! You win %d chips.\n", payout);
+        snprintf(resultMessage,
+                 sizeof(resultMessage),
+                 "Blackjack! You win %d chips.",
+                 payout);
     } else if (dealerBlackjack && !playerBlackjack) {
         game->player.chips -= game->player.bet;
-        printf("Dealer has blackjack. You lose %d chips.\n", game->player.bet);
+        snprintf(resultMessage,
+                 sizeof(resultMessage),
+                 "Dealer has blackjack. You lose %d chips.",
+                 game->player.bet);
     } else if (playerValue == dealerValue) {
-        printf("Push. Your bet is returned.\n");
+        snprintf(resultMessage,
+                 sizeof(resultMessage),
+                 "Push. Your bet is returned.");
     } else if (dealerValue > 21 || playerValue > dealerValue) {
         game->player.chips += game->player.bet;
-        printf("You win %d chips.\n", game->player.bet);
+        snprintf(resultMessage,
+                 sizeof(resultMessage),
+                 "You win %d chips.",
+                 game->player.bet);
     } else {
         game->player.chips -= game->player.bet;
-        printf("You lose %d chips.\n", game->player.bet);
+        snprintf(resultMessage,
+                 sizeof(resultMessage),
+                 "You lose %d chips.",
+                 game->player.bet);
     }
 
-    printf("Chips: %d\n", game->player.chips);
+    renderTable(game, 0);
+    renderMessage(resultMessage, GAME_RESULT_ROW);
+    snprintf(resultMessage,
+             sizeof(resultMessage),
+             "Chips: %d",
+             game->player.chips);
+    renderMessage(resultMessage, GAME_CHIPS_ROW);
 
     if (game->player.chips == 0) {
         game->state = STATE_QUIT;
@@ -219,11 +266,10 @@ void printGameState(const Game *game, int hideDealerCard) {
 }
 
 int runGame(Game *game) {
+    char finalChipsMessage[64];
+
     while (game->state != STATE_QUIT) {
         if (game->state == STATE_BET) {
-            if (game->roundNumber > 0) {
-                printf("--------------------\n");
-            }
             startRound(game);
         } else if (game->state == STATE_PLAYER_TURN) {
             playerTurn(game);
@@ -234,6 +280,12 @@ int runGame(Game *game) {
         }
     }
 
-    printf("Game over. Final chips: %d\n", game->player.chips);
+    renderMessage("Game over.", GAME_OVER_ROW);
+    snprintf(finalChipsMessage,
+             sizeof(finalChipsMessage),
+             "Final chips: %d",
+             game->player.chips);
+    renderMessage(finalChipsMessage, GAME_FINAL_CHIPS_ROW);
+
     return 0;
 }
