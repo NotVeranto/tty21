@@ -2,17 +2,13 @@
 #include "render.h"
 #include "input.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 // Keeps a safety margin before reshuffling at the start of a round.
 #define DECK_RESHUFFLE_MARGIN 15
-#define GAME_PROMPT_ROW 29
-#define GAME_RESULT_ROW 31
-#define GAME_CHIPS_ROW 32
-#define GAME_OVER_ROW 34
-#define GAME_FINAL_CHIPS_ROW 35
 
 // Draws the next card and advances the deck position.
 static void drawCard(Deck *deck, Hand *hand) {
@@ -27,20 +23,39 @@ static void drawCard(Deck *deck, Hand *hand) {
 
 // Bet input stays line-based so fgets can handle multi-character numeric input and backspace.
 // Returns -1 on EOF so quitting is distinct from a valid bet.
-static int readBet(int chips) {
+static int readBet(Game *game) {
     char input[64];
     char prompt[64];
     char *endPointer;
     long betValue;
     size_t newlinePosition;
+    int minBet;
     int validBet;
     int inputCharacter;
 
+    minBet = getMinBet(game->floor);
+
+    if (game->player.chips < minBet) {
+        snprintf(prompt,
+                 sizeof(prompt),
+                 "Minimum bet is %d. You have %d chips. Run over.",
+                 minBet,
+                 game->player.chips);
+        renderMessage(prompt, ROW_RESULT);
+        game->state = STATE_QUIT;
+        return -1;
+    }
+
+    snprintf(prompt,
+             sizeof(prompt),
+             "Enter bet (%d-%d): ",
+             minBet,
+             game->player.chips);
+
     validBet = 0;
-    snprintf(prompt, sizeof(prompt), "Enter bet (1-%d): ", chips);
 
     while (!validBet) {
-        renderMessage(prompt, GAME_PROMPT_ROW);
+        renderMessage(prompt, ROW_PROMPT);
 
         if (fgets(input, sizeof(input), stdin) == NULL) {
             return -1;
@@ -49,7 +64,8 @@ static int readBet(int chips) {
         newlinePosition = strcspn(input, "\n");
 
         if (input[newlinePosition] != '\n') {
-            while ((inputCharacter = getchar()) != '\n' && inputCharacter != EOF) {
+            while ((inputCharacter = getchar()) != '\n' &&
+                   inputCharacter != EOF) {
             }
 
             if (inputCharacter == EOF) {
@@ -58,10 +74,10 @@ static int readBet(int chips) {
 
             snprintf(prompt,
                      sizeof(prompt),
-                     "Invalid bet. Enter an integer between 1 and %d.",
-                     chips);
-            renderMessage(prompt, GAME_RESULT_ROW);
-            snprintf(prompt, sizeof(prompt), "Enter bet (1-%d): ", chips);
+                     "Invalid bet. Enter an integer between %d and %d.",
+                     minBet,
+                     game->player.chips);
+            renderMessage(prompt, ROW_RESULT);
             continue;
         }
 
@@ -74,16 +90,16 @@ static int readBet(int chips) {
 
         if (input[0] != '\0' &&
             *endPointer == '\0' &&
-            betValue >= 1 &&
-            betValue <= chips) {
+            betValue >= minBet &&
+            betValue <= game->player.chips) {
             validBet = 1;
         } else {
             snprintf(prompt,
                      sizeof(prompt),
-                     "Invalid bet. Enter an integer between 1 and %d.",
-                     chips);
-            renderMessage(prompt, GAME_RESULT_ROW);
-            snprintf(prompt, sizeof(prompt), "Enter bet (1-%d): ", chips);
+                     "Invalid bet. Enter an integer between %d and %d.",
+                     minBet,
+                     game->player.chips);
+            renderMessage(prompt, ROW_RESULT);
         }
     }
 
@@ -99,6 +115,28 @@ void initGame(Game *game) {
     game->player.bet = 0;
     game->state = STATE_BET;
     game->roundNumber = 0;
+    game->floor = 1;
+    game->souls = 0;
+}
+
+int getMinBet(int floor) {
+    if (floor <= 1) {
+        return 1;
+    }
+
+    if (floor <= 3) {
+        return 5;
+    }
+
+    if (floor <= 6) {
+        return 10;
+    }
+
+    if (floor <= 9) {
+        return 25;
+    }
+
+    return 50;
 }
 
 void startRound(Game *game) {
@@ -112,17 +150,18 @@ void startRound(Game *game) {
     renderTable(game, 0);
 
     rawMode = inputIsRaw();
+
     if (rawMode) {
         disableRawMode();
     }
 
-    game->player.bet = readBet(game->player.chips);
+    game->player.bet = readBet(game);
 
-    if (rawMode && game->player.bet >= 0) {
+    if (rawMode && game->state != STATE_QUIT) {
         inputInit();
     }
 
-    if (game->player.bet < 0) {
+    if (game->player.bet < 0 || game->state == STATE_QUIT) {
         game->state = STATE_QUIT;
     } else {
         resetHand(&game->player.hand);
@@ -150,7 +189,7 @@ void playerTurn(Game *game) {
         renderTable(game, 1);
 
         while (game->state == STATE_PLAYER_TURN) {
-            renderMessage("Hit or stand? [h/s]: ", GAME_PROMPT_ROW);
+            renderMessage("Hit or stand? [h/s]: ", ROW_PROMPT);
             actionCharacter = getch();
 
             if (actionCharacter == -1) {
@@ -176,7 +215,7 @@ void playerTurn(Game *game) {
     } else {
         while (game->state == STATE_PLAYER_TURN) {
             renderTable(game, 1);
-            renderMessage("Hit or stand? [h/s]: ", GAME_PROMPT_ROW);
+            renderMessage("Hit or stand? [h/s]: ", ROW_PROMPT);
             actionCharacter = getchar();
 
             if (actionCharacter == EOF) {
@@ -184,7 +223,8 @@ void playerTurn(Game *game) {
                 break;
             }
 
-            while ((inputCharacter = getchar()) != '\n' && inputCharacter != EOF) {
+            while ((inputCharacter = getchar()) != '\n' &&
+                   inputCharacter != EOF) {
             }
 
             if (actionCharacter == 'h' || actionCharacter == 'H') {
@@ -197,7 +237,7 @@ void playerTurn(Game *game) {
                 game->state = STATE_DEALER_TURN;
             } else {
                 renderMessage("Invalid action. Enter h to hit or s to stand.",
-                              GAME_PROMPT_ROW);
+                              ROW_PROMPT);
             }
         }
     }
@@ -265,17 +305,115 @@ void resolveRound(Game *game) {
     }
 
     renderTable(game, 0);
-    renderMessage(resultMessage, GAME_RESULT_ROW);
+    renderMessage(resultMessage, ROW_RESULT);
     snprintf(resultMessage,
              sizeof(resultMessage),
              "Chips: %d",
              game->player.chips);
-    renderMessage(resultMessage, GAME_CHIPS_ROW);
+    renderMessage(resultMessage, ROW_CHIPS);
 
     if (game->player.chips == 0) {
         game->state = STATE_QUIT;
     } else {
-        game->state = STATE_BET;
+        game->state = STATE_MENU;
+    }
+}
+
+void advanceFloor(Game *game) {
+    int bonus;
+    int earned;
+    char message[128];
+
+    bonus = 0;
+
+    if (game->player.chips > 100) {
+        bonus = (game->player.chips - 100) / 20;
+
+        if (bonus > 20) {
+            bonus = 20;
+        }
+    }
+
+    earned = 10 + game->floor * 3 + bonus;
+    game->souls += earned;
+    game->floor++;
+
+    resetHand(&game->player.hand);
+    resetHand(&game->dealer.hand);
+
+    snprintf(message,
+             sizeof(message),
+             "Floor %d. Souls: %d. Minimum bet: %d.",
+             game->floor,
+             game->souls,
+             getMinBet(game->floor));
+    renderMessage(message, ROW_RESULT);
+}
+
+void floorMenu(Game *game) {
+    const char *menuItems[3];
+    char continueItem[128];
+    char advanceItem[128];
+    char input[64];
+    int nextMinBet;
+    int disabledMask;
+    int actionCharacter;
+    int characterIndex;
+    int hasCharacter;
+
+    nextMinBet = getMinBet(game->floor + 1);
+    disabledMask = game->player.chips < nextMinBet ? (1 << 1) : 0;
+
+    snprintf(continueItem,
+             sizeof(continueItem),
+             "[C]ontinue playing on floor %d",
+             game->floor);
+    snprintf(advanceItem,
+             sizeof(advanceItem),
+             "[A]dvance to floor %d (earn souls)",
+             game->floor + 1);
+
+    menuItems[0] = continueItem;
+    menuItems[1] = advanceItem;
+    menuItems[2] = "[Q]uit run";
+
+    renderMenu("What's next?", menuItems, 3, disabledMask, ROW_MENU_START);
+
+    while (game->state == STATE_MENU) {
+        actionCharacter = -1;
+
+        if (inputIsRaw()) {
+            actionCharacter = getch();
+        } else if (fgets(input, sizeof(input), stdin) != NULL) {
+            characterIndex = 0;
+            hasCharacter = 0;
+
+            while (input[characterIndex] != '\0') {
+                if (!isspace((unsigned char)input[characterIndex])) {
+                    actionCharacter = input[characterIndex];
+                    hasCharacter = 1;
+                    break;
+                }
+
+                characterIndex++;
+            }
+
+            if (!hasCharacter) {
+                actionCharacter = -1;
+            }
+        }
+
+        if (actionCharacter == -1) {
+            game->state = STATE_QUIT;
+        } else if (actionCharacter == 'c' || actionCharacter == 'C') {
+            game->state = STATE_BET;
+        } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
+                   game->player.chips >= nextMinBet) {
+            advanceFloor(game);
+            game->state = STATE_BET;
+        } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
+            game->state = STATE_QUIT;
+        }
     }
 }
 
@@ -320,15 +458,17 @@ int runGame(Game *game) {
             dealerTurn(game);
         } else if (game->state == STATE_RESULT) {
             resolveRound(game);
+        } else if (game->state == STATE_MENU) {
+            floorMenu(game);
         }
     }
 
-    renderMessage("Game over.", GAME_OVER_ROW);
+    renderMessage("Game over.", ROW_OVER);
     snprintf(finalChipsMessage,
              sizeof(finalChipsMessage),
              "Final chips: %d",
              game->player.chips);
-    renderMessage(finalChipsMessage, GAME_FINAL_CHIPS_ROW);
+    renderMessage(finalChipsMessage, ROW_FINAL);
 
     return 0;
 }

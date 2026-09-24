@@ -10,9 +10,23 @@
 #define SCR_CURSOR "\033[%d;%dH"
 #define SCR_ERASE_EOL "\033[K"
 
+#define ROW_STATUS 26
+#define ROW_HINT 27
+#define ROW_PROMPT 29
+#define ROW_MENU_START 31
+#define ROW_RESULT 36
+#define ROW_CHIPS 37
+#define ROW_OVER 39
+#define ROW_FINAL 40
+
 #include "game.h"
 
 void renderTable(const Game *game, int hideDealerCard);
 void renderMessage(const char *msg, int row);
+void renderMenu(const char *title,
+                const char *const *items,
+                int itemCount,
+                int disabledMask,
+                int startRow);
 
 #endif

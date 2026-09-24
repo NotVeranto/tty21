@@ -9,6 +9,7 @@ typedef enum {
     STATE_PLAYER_TURN,
     STATE_DEALER_TURN,
     STATE_RESULT,
+    STATE_MENU,
     STATE_QUIT
 } GameState;
 
@@ -28,13 +29,18 @@ typedef struct {
     Dealer dealer;
     GameState state;
     int roundNumber;
+    int floor;
+    int souls;
 } Game;
 
 void initGame(Game *game);
+int getMinBet(int floor);
 void startRound(Game *game);
 void playerTurn(Game *game);
 void dealerTurn(Game *game);
 void resolveRound(Game *game);
+void advanceFloor(Game *game);
+void floorMenu(Game *game);
 void printGameState(const Game *game, int hideDealerCard);
 int runGame(Game *game);
 

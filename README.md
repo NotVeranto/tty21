@@ -41,6 +41,12 @@ In-game (during the player's turn):
 Betting:
 - Type a number and press Enter.
 
+### Between rounds
+
+- `c` — Continue on current floor
+- `a` — Advance to the next floor
+- `q` — Quit the run
+
 ## Project status
 
 - [x] Card deck, shuffle, basic structures.
@@ -49,7 +55,8 @@ Betting:
 - [x] CLI flags, versioning and install targets.
 - [x] ASCII rendering.
 - [x] Raw terminal input.
-- [ ] Floors and dealer modifiers.
+- [x] Floors and advance menu.
+- [ ] Named dealers and twists.
 - [ ] Perks and shop.
 - [ ] Split and Double Down.
 - [ ] Save and load (XDG).

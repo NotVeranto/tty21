@@ -6,7 +6,7 @@
 #include <unistd.h>
 
 #define TABLE_MIN_WIDTH 72
-#define TABLE_MIN_HEIGHT 35
+#define TABLE_MIN_HEIGHT 40
 #define CARD_WIDTH 11
 #define CARD_GAP 1
 #define CARDS_PER_ROW 6
@@ -21,8 +21,6 @@
 #define DEALER_CARD_ROW 8
 #define PLAYER_LABEL_ROW 16
 #define PLAYER_CARD_ROW 18
-#define STATUS_ROW 26
-#define HINT_ROW 27
 
 static const char *CARD_RANKS[] = {
     "", "A", "2", "3", "4", "5", "6",
@@ -180,7 +178,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     char roundText[64];
     char dealerTotal[32];
     char playerTotal[32];
-    char statusText[64];
+    char statusText[128];
 
     if (canRenderTable(game, &terminalWidth, &terminalHeight)) {
         tablePadding = (terminalWidth - TABLE_WIDTH) / 2;
@@ -206,7 +204,9 @@ void renderTable(const Game *game, int hideDealerCard) {
 
         snprintf(statusText,
                  sizeof(statusText),
-                 "Chips: %d    Bet: %d",
+                 "Floor: %d    Souls: %d    Chips: %d    Bet: %d",
+                 game->floor,
+                 game->souls,
                  game->player.chips,
                  game->player.bet);
 
@@ -244,16 +244,70 @@ void renderTable(const Game *game, int hideDealerCard) {
                   tablePadding,
                   0);
 
-        moveToTableRow(STATUS_ROW, tablePadding);
+        moveToTableRow(ROW_STATUS, tablePadding);
         printf("%s", statusText);
 
-        moveToTableRow(HINT_ROW, tablePadding);
+        moveToTableRow(ROW_HINT, tablePadding);
         printf(SCR_DIM "Keys: H hit   S stand" SCR_RESET);
         printf(SCR_RESET);
 
         fflush(stdout);
     } else {
         printGameState(game, hideDealerCard);
+    }
+}
+
+// Prints a fixed menu block with disabled entries dimmed.
+void renderMenu(const char *title,
+                const char *const *items,
+                int itemCount,
+                int disabledMask,
+                int startRow) {
+    int terminalWidth;
+    int terminalHeight;
+    int itemIndex;
+    int tablePadding;
+    int isDisabled;
+
+    getTerminalSize(&terminalWidth, &terminalHeight);
+
+    if (isatty(STDOUT_FILENO) &&
+        terminalWidth >= TABLE_MIN_WIDTH &&
+        terminalHeight >= TABLE_MIN_HEIGHT) {
+        tablePadding = (terminalWidth - TABLE_WIDTH) / 2;
+
+        printf(SCR_CURSOR, startRow - 1, tablePadding + 1);
+        printf(SCR_ERASE_EOL);
+        printf(SCR_BOLD "%s" SCR_RESET, title);
+
+        for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+            isDisabled = (disabledMask & (1 << itemIndex)) != 0;
+
+            moveToTableRow(startRow + itemIndex, tablePadding);
+            printf(SCR_ERASE_EOL);
+
+            if (isDisabled) {
+                printf(SCR_DIM "[ ] %s" SCR_RESET, items[itemIndex]);
+            } else {
+                printf("[x] %s", items[itemIndex]);
+            }
+        }
+
+        fflush(stdout);
+    } else {
+        printf("%s\n", title);
+
+        for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+            isDisabled = (disabledMask & (1 << itemIndex)) != 0;
+
+            if (isDisabled) {
+                printf("[ ] %s\n", items[itemIndex]);
+            } else {
+                printf("[x] %s\n", items[itemIndex]);
+            }
+        }
+
+        fflush(stdout);
     }
 }
 
