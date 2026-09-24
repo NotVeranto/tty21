@@ -31,6 +31,8 @@ static const char *CARD_SUITS[] = {
     "♥", "♦", "♣", "♠"
 };
 
+static int tablePadding;
+
 // Reads terminal dimensions and falls back to a standard terminal size.
 static void getTerminalSize(int *width, int *height) {
     struct winsize windowSize;
@@ -61,8 +63,8 @@ static int canRenderTable(const Game *game, int *width, int *height) {
 }
 
 // Moves the cursor to a table row and left-aligns content with the table.
-static void moveToTableRow(int row, int tablePadding) {
-    printf(SCR_CURSOR, row, tablePadding + 1);
+static void moveToTableRow(int row, int padding) {
+    printf(SCR_CURSOR, row, padding + 1);
 }
 
 // Prints a centered line at a fixed row.
@@ -85,7 +87,7 @@ static void printCenteredAtRow(const char *text, int row, int width) {
 static void printHandHeader(const char *label,
                             const char *totalText,
                             int row,
-                            int tablePadding) {
+                            int padding) {
     int remainingWidth;
 
     remainingWidth = TABLE_WIDTH -
@@ -96,7 +98,7 @@ static void printHandHeader(const char *label,
         remainingWidth = 1;
     }
 
-    moveToTableRow(row, tablePadding);
+    moveToTableRow(row, padding);
     printf(SCR_BOLD "%s" SCR_RESET "%*s%s",
            label,
            remainingWidth,
@@ -145,13 +147,13 @@ static void printVisibleCardLine(const Card *card, int lineIndex) {
 // Draws one complete row of cards.
 static void drawCards(const Hand *hand,
                       int startRow,
-                      int tablePadding,
+                      int padding,
                       int hideFirstCard) {
     int lineIndex;
     int cardIndex;
 
     for (lineIndex = 0; lineIndex < CARD_HEIGHT; lineIndex++) {
-        moveToTableRow(startRow + lineIndex, tablePadding);
+        moveToTableRow(startRow + lineIndex, padding);
 
         for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
             if (lineIndex == 0 || lineIndex == CARD_HEIGHT - 1) {
@@ -173,7 +175,6 @@ static void drawCards(const Hand *hand,
 void renderTable(const Game *game, int hideDealerCard) {
     int terminalWidth;
     int terminalHeight;
-    int tablePadding;
     int separatorIndex;
     char roundText[64];
     char dealerTotal[32];
@@ -266,7 +267,7 @@ void renderMenu(const char *title,
     int terminalWidth;
     int terminalHeight;
     int itemIndex;
-    int tablePadding;
+    int menuPadding;
     int isDisabled;
 
     getTerminalSize(&terminalWidth, &terminalHeight);
@@ -274,22 +275,22 @@ void renderMenu(const char *title,
     if (isatty(STDOUT_FILENO) &&
         terminalWidth >= TABLE_MIN_WIDTH &&
         terminalHeight >= TABLE_MIN_HEIGHT) {
-        tablePadding = (terminalWidth - TABLE_WIDTH) / 2;
+        menuPadding = tablePadding;
 
-        printf(SCR_CURSOR, startRow - 1, tablePadding + 1);
+        printf(SCR_CURSOR, startRow - 1, menuPadding + 1);
         printf(SCR_ERASE_EOL);
         printf(SCR_BOLD "%s" SCR_RESET, title);
 
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
 
-            moveToTableRow(startRow + itemIndex, tablePadding);
+            moveToTableRow(startRow + itemIndex, menuPadding);
             printf(SCR_ERASE_EOL);
 
             if (isDisabled) {
-                printf(SCR_DIM "[ ] %s" SCR_RESET, items[itemIndex]);
+                printf(SCR_DIM "%s" SCR_RESET, items[itemIndex]);
             } else {
-                printf("[x] %s", items[itemIndex]);
+                printf("%s", items[itemIndex]);
             }
         }
 
@@ -301,9 +302,9 @@ void renderMenu(const char *title,
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
 
             if (isDisabled) {
-                printf("[ ] %s\n", items[itemIndex]);
+                printf(SCR_DIM "%s" SCR_RESET "\n", items[itemIndex]);
             } else {
-                printf("[x] %s\n", items[itemIndex]);
+                printf("%s\n", items[itemIndex]);
             }
         }
 
@@ -315,13 +316,15 @@ void renderMenu(const char *title,
 void renderMessage(const char *msg, int row) {
     int terminalWidth;
     int terminalHeight;
+    int messagePadding;
 
     getTerminalSize(&terminalWidth, &terminalHeight);
+    messagePadding = tablePadding;
 
     if (isatty(STDOUT_FILENO) &&
         terminalWidth >= TABLE_MIN_WIDTH &&
         terminalHeight >= TABLE_MIN_HEIGHT) {
-        printf(SCR_CURSOR, row, 1);
+        printf(SCR_CURSOR, row, messagePadding + 1);
         printf(SCR_ERASE_EOL);
         printf("%s", msg);
         printf(SCR_RESET);

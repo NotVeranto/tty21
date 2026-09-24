@@ -11,10 +11,16 @@ souls earned from victories can be spent on perks.
 
 ## Features
 
-- Classic blackjack rules: Hit, Stand, Double Down, Split.
-- Roguelike progression: floors, perks, shop between runs.
-- Pure ASCII / Unicode terminal interface.
-- Save and load support.
+Implemented:
+- Classic blackjack: Hit, Stand.
+- Roguelike progression: floors, souls, advance menu.
+- Full-screen ASCII table with ANSI styling.
+- Raw terminal input via termios.
+
+Planned:
+- Double Down and Split.
+- Perks and shop between runs.
+- Save and load (XDG).
 
 ## Requirements
 

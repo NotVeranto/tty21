@@ -147,6 +147,8 @@ void startRound(Game *game) {
         shuffleDeck(&game->deck);
     }
 
+    resetHand(&game->player.hand);
+    resetHand(&game->dealer.hand);
     renderTable(game, 0);
 
     rawMode = inputIsRaw();
@@ -164,8 +166,6 @@ void startRound(Game *game) {
     if (game->player.bet < 0 || game->state == STATE_QUIT) {
         game->state = STATE_QUIT;
     } else {
-        resetHand(&game->player.hand);
-        resetHand(&game->dealer.hand);
         game->roundNumber++;
 
         drawCard(&game->deck, &game->player.hand);
@@ -360,9 +360,19 @@ void floorMenu(Game *game) {
     int actionCharacter;
     int characterIndex;
     int hasCharacter;
+    int currentMinBet;
 
     nextMinBet = getMinBet(game->floor + 1);
-    disabledMask = game->player.chips < nextMinBet ? (1 << 1) : 0;
+    currentMinBet = getMinBet(game->floor);
+    disabledMask = 0;
+
+    if (game->player.chips < currentMinBet) {
+        disabledMask |= 1;
+    }
+
+    if (game->player.chips < nextMinBet) {
+        disabledMask |= 1 << 1;
+    }
 
     snprintf(continueItem,
              sizeof(continueItem),
@@ -378,6 +388,14 @@ void floorMenu(Game *game) {
     menuItems[2] = "[Q]uit run";
 
     renderMenu("What's next?", menuItems, 3, disabledMask, ROW_MENU_START);
+
+    if (game->player.chips < currentMinBet) {
+        snprintf(continueItem,
+                 sizeof(continueItem),
+                 "Cannot afford minimum bet on floor %d.",
+                 game->floor);
+        renderMessage(continueItem, ROW_RESULT);
+    }
 
     while (game->state == STATE_MENU) {
         actionCharacter = -1;
@@ -405,12 +423,30 @@ void floorMenu(Game *game) {
 
         if (actionCharacter == -1) {
             game->state = STATE_QUIT;
-        } else if (actionCharacter == 'c' || actionCharacter == 'C') {
+        } else if ((actionCharacter == 'c' || actionCharacter == 'C') &&
+                   game->player.chips >= currentMinBet) {
             game->state = STATE_BET;
         } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
                    game->player.chips >= nextMinBet) {
             advanceFloor(game);
-            game->state = STATE_BET;
+            renderMessage("Press any key to continue.", ROW_PROMPT);
+
+            if (inputIsRaw()) {
+                actionCharacter = getch();
+            } else {
+                actionCharacter = getchar();
+
+                if (actionCharacter != EOF) {
+                    while (getchar() != '\n') {
+                    }
+                }
+            }
+
+            if (actionCharacter == -1 || actionCharacter == EOF) {
+                game->state = STATE_QUIT;
+            } else {
+                game->state = STATE_BET;
+            }
         } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
             game->state = STATE_QUIT;
         }

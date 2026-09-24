@@ -13,9 +13,9 @@
 #define ROW_STATUS 26
 #define ROW_HINT 27
 #define ROW_PROMPT 29
-#define ROW_MENU_START 31
-#define ROW_RESULT 36
-#define ROW_CHIPS 37
+#define ROW_RESULT 31
+#define ROW_CHIPS 32
+#define ROW_MENU_START 35
 #define ROW_OVER 39
 #define ROW_FINAL 40
 
