@@ -3,6 +3,7 @@
 
 #include "card.h"
 #include "hand.h"
+#include "dealers.h"
 
 typedef enum {
     STATE_BET,
@@ -31,10 +32,13 @@ typedef struct {
     int roundNumber;
     int floor;
     int souls;
+    DealerId dealerId;
+    DealerId previousDealerId;
 } Game;
 
 void initGame(Game *game);
 int getMinBet(int floor);
+int calculateDealerHandValue(const Hand *hand, DealerId id);
 void startRound(Game *game);
 void playerTurn(Game *game);
 void dealerTurn(Game *game);

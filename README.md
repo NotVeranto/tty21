@@ -62,7 +62,8 @@ Betting:
 - [x] ASCII rendering.
 - [x] Raw terminal input.
 - [x] Floors and advance menu.
-- [ ] Named dealers and twists.
+- [x] Named dealers.
+- [ ] Twists (per-round modifiers).
 - [ ] Perks and shop.
 - [ ] Split and Double Down.
 - [ ] Save and load (XDG).

@@ -6,7 +6,7 @@ PREFIX  ?= /usr/local
 DESTDIR ?=
 BINDIR  = $(PREFIX)/bin
 TARGET  = tty21
-SRCS    = main.c card.c hand.c game.c render.c input.c
+SRCS    = main.c card.c hand.c game.c render.c input.c dealers.c
 OBJS    = $(SRCS:.c=.o)
 
 all: $(TARGET)

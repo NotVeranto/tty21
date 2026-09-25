@@ -173,13 +173,22 @@ static void drawCards(const Hand *hand,
 
 // Clears and redraws the complete table on fixed rows.
 void renderTable(const Game *game, int hideDealerCard) {
+    const DealerInfo *dealerInfo;
     int terminalWidth;
     int terminalHeight;
     int separatorIndex;
+    int prefixLength;
+    int suffixLength;
+    int availableNameWidth;
+    char dealerName[64];
+    char statusText[128];
+    char rulesText[256];
+    char oracleText[64];
     char roundText[64];
     char dealerTotal[32];
     char playerTotal[32];
-    char statusText[128];
+
+    dealerInfo = getDealerInfo(game->dealerId);
 
     if (canRenderTable(game, &terminalWidth, &terminalHeight)) {
         tablePadding = (terminalWidth - TABLE_WIDTH) / 2;
@@ -189,13 +198,14 @@ void renderTable(const Game *game, int hideDealerCard) {
                  "Round: %d",
                  game->roundNumber);
 
-        if (hideDealerCard && game->dealer.hand.count > 0) {
+        if (hideDealerCard || game->dealerId == DEALER_REAPER) {
             snprintf(dealerTotal, sizeof(dealerTotal), "Total: ??");
         } else {
             snprintf(dealerTotal,
                      sizeof(dealerTotal),
                      "Total: %d",
-                     game->dealer.hand.value);
+                     calculateDealerHandValue(&game->dealer.hand,
+                                              game->dealerId));
         }
 
         snprintf(playerTotal,
@@ -205,11 +215,51 @@ void renderTable(const Game *game, int hideDealerCard) {
 
         snprintf(statusText,
                  sizeof(statusText),
-                 "Floor: %d    Souls: %d    Chips: %d    Bet: %d",
+                 "Floor: %d    Dealer: %s    Souls: %d    Chips: %d    Bet: %d",
                  game->floor,
+                 dealerInfo->name,
                  game->souls,
                  game->player.chips,
                  game->player.bet);
+
+        if ((int)strlen(statusText) > TABLE_WIDTH) {
+            snprintf(dealerName,
+                     sizeof(dealerName),
+                     "%s",
+                     dealerInfo->name);
+            snprintf(statusText,
+                     sizeof(statusText),
+                     "Floor: %d    Dealer: ",
+                     game->floor);
+            prefixLength = (int)strlen(statusText);
+            snprintf(statusText,
+                     sizeof(statusText),
+                     "    Souls: %d    Chips: %d    Bet: %d",
+                     game->souls,
+                     game->player.chips,
+                     game->player.bet);
+            suffixLength = (int)strlen(statusText);
+            availableNameWidth = TABLE_WIDTH - prefixLength - suffixLength;
+
+            if (availableNameWidth < 2) {
+                availableNameWidth = 2;
+            }
+
+            if ((int)strlen(dealerName) > availableNameWidth) {
+                dealerName[availableNameWidth - 2] = '.';
+                dealerName[availableNameWidth - 1] = '.';
+                dealerName[availableNameWidth] = '\0';
+            }
+
+            snprintf(statusText,
+                     sizeof(statusText),
+                     "Floor: %d    Dealer: %s    Souls: %d    Chips: %d    Bet: %d",
+                     game->floor,
+                     dealerName,
+                     game->souls,
+                     game->player.chips,
+                     game->player.bet);
+        }
 
         printf(SCR_RESET SCR_CLEAR SCR_HOME);
 
@@ -251,6 +301,40 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_HINT, tablePadding);
         printf(SCR_DIM "Keys: H hit   S stand" SCR_RESET);
         printf(SCR_RESET);
+
+        moveToTableRow(ROW_RULE, tablePadding);
+        printf(SCR_ERASE_EOL);
+
+        if (dealerInfo->rule1 != NULL) {
+            if (dealerInfo->rule2 == NULL) {
+                snprintf(rulesText,
+                         sizeof(rulesText),
+                         "Rule: %s",
+                         dealerInfo->rule1);
+            } else {
+                snprintf(rulesText,
+                         sizeof(rulesText),
+                         "Rules: %s | %s",
+                         dealerInfo->rule1,
+                         dealerInfo->rule2);
+            }
+
+            printf(SCR_DIM "%s" SCR_RESET, rulesText);
+        }
+
+        moveToTableRow(ROW_ORACLE, tablePadding);
+        printf(SCR_ERASE_EOL);
+
+        if (game->dealerId == DEALER_ORACLE &&
+            game->state == STATE_PLAYER_TURN &&
+            game->deck.top < DECK_SIZE) {
+            snprintf(oracleText,
+                     sizeof(oracleText),
+                     "Next card: %s%s",
+                     CARD_RANKS[game->deck.cards[game->deck.top].rank],
+                     CARD_SUITS[game->deck.cards[game->deck.top].suit]);
+            printf(SCR_DIM "%s" SCR_RESET, oracleText);
+        }
 
         fflush(stdout);
     } else {

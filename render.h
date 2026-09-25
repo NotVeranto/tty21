@@ -12,7 +12,9 @@
 
 #define ROW_STATUS 26
 #define ROW_HINT 27
+#define ROW_RULE 28
 #define ROW_PROMPT 29
+#define ROW_ORACLE 30
 #define ROW_RESULT 31
 #define ROW_CHIPS 32
 #define ROW_MENU_START 35

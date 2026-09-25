@@ -117,6 +117,8 @@ void initGame(Game *game) {
     game->roundNumber = 0;
     game->floor = 1;
     game->souls = 0;
+    game->dealerId = selectDealerForFloor(1, DEALER_CROUPIER);
+    game->previousDealerId = game->dealerId;
 }
 
 int getMinBet(int floor) {
@@ -137,6 +139,27 @@ int getMinBet(int floor) {
     }
 
     return 50;
+}
+
+int calculateDealerHandValue(const Hand *hand, DealerId id) {
+    int totalValue;
+    int cardIndex;
+
+    if (id != DEALER_ACCOUNTANT) {
+        return calculateHandValue(hand);
+    }
+
+    totalValue = 0;
+
+    for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
+        if (hand->cards[cardIndex].rank == ACE) {
+            totalValue += 1;
+        } else {
+            totalValue += getCardValue(&hand->cards[cardIndex]);
+        }
+    }
+
+    return totalValue;
 }
 
 void startRound(Game *game) {
@@ -200,6 +223,10 @@ void playerTurn(Game *game) {
             if (actionCharacter == 'h' || actionCharacter == 'H') {
                 drawCard(&game->deck, &game->player.hand);
 
+                if (game->dealerId == DEALER_MIRROR) {
+                    drawCard(&game->deck, &game->dealer.hand);
+                }
+
                 if (game->player.hand.value > 21) {
                     game->state = STATE_RESULT;
                 }
@@ -230,6 +257,10 @@ void playerTurn(Game *game) {
             if (actionCharacter == 'h' || actionCharacter == 'H') {
                 drawCard(&game->deck, &game->player.hand);
 
+                if (game->dealerId == DEALER_MIRROR) {
+                    drawCard(&game->deck, &game->dealer.hand);
+                }
+
                 if (game->player.hand.value > 21) {
                     game->state = STATE_RESULT;
                 }
@@ -244,9 +275,18 @@ void playerTurn(Game *game) {
 }
 
 void dealerTurn(Game *game) {
+    int dealerValue;
+    int targetValue;
+
     if (game->state == STATE_DEALER_TURN) {
-        while (game->dealer.hand.value < 17) {
+        targetValue = game->dealerId == DEALER_CLOCKMAKER ? 18 : 17;
+        dealerValue = calculateDealerHandValue(&game->dealer.hand,
+                                               game->dealerId);
+
+        while (dealerValue < targetValue) {
             drawCard(&game->deck, &game->dealer.hand);
+            dealerValue = calculateDealerHandValue(&game->dealer.hand,
+                                                   game->dealerId);
         }
 
         game->state = STATE_RESULT;
@@ -259,33 +299,59 @@ void resolveRound(Game *game) {
     int playerBlackjack;
     int dealerBlackjack;
     int payout;
+    int lossAmount;
     char resultMessage[128];
 
     playerValue = game->player.hand.value;
-    dealerValue = game->dealer.hand.value;
+    dealerValue = calculateDealerHandValue(&game->dealer.hand,
+                                           game->dealerId);
     playerBlackjack = game->player.hand.count == 2 && playerValue == 21;
     dealerBlackjack = game->dealer.hand.count == 2 && dealerValue == 21;
     payout = 0;
+    lossAmount = game->player.bet;
 
     if (playerValue > 21) {
-        game->player.chips -= game->player.bet;
+        if (game->dealerId == DEALER_BUTCHER) {
+            lossAmount = game->player.bet * 150 / 100;
+        }
+
+        game->player.chips -= lossAmount;
+
+        if (game->player.chips < 0) {
+            game->player.chips = 0;
+        }
+
         snprintf(resultMessage,
                  sizeof(resultMessage),
                  "Player busts. You lose %d chips.",
-                 game->player.bet);
+                 lossAmount);
     } else if (playerBlackjack && !dealerBlackjack) {
-        payout = game->player.bet * 3 / 2;
+        if (game->dealerId == DEALER_VOID) {
+            payout = game->player.bet;
+        } else {
+            payout = game->player.bet * 3 / 2;
+        }
+
         game->player.chips += payout;
         snprintf(resultMessage,
                  sizeof(resultMessage),
                  "Blackjack! You win %d chips.",
                  payout);
     } else if (dealerBlackjack && !playerBlackjack) {
-        game->player.chips -= game->player.bet;
+        if (game->dealerId == DEALER_BUTCHER) {
+            lossAmount = game->player.bet * 150 / 100;
+        }
+
+        game->player.chips -= lossAmount;
+
+        if (game->player.chips < 0) {
+            game->player.chips = 0;
+        }
+
         snprintf(resultMessage,
                  sizeof(resultMessage),
                  "Dealer has blackjack. You lose %d chips.",
-                 game->player.bet);
+                 lossAmount);
     } else if (playerValue == dealerValue) {
         snprintf(resultMessage,
                  sizeof(resultMessage),
@@ -297,11 +363,20 @@ void resolveRound(Game *game) {
                  "You win %d chips.",
                  game->player.bet);
     } else {
-        game->player.chips -= game->player.bet;
+        if (game->dealerId == DEALER_BUTCHER) {
+            lossAmount = game->player.bet * 150 / 100;
+        }
+
+        game->player.chips -= lossAmount;
+
+        if (game->player.chips < 0) {
+            game->player.chips = 0;
+        }
+
         snprintf(resultMessage,
                  sizeof(resultMessage),
                  "You lose %d chips.",
-                 game->player.bet);
+                 lossAmount);
     }
 
     renderTable(game, 0);
@@ -336,7 +411,10 @@ void advanceFloor(Game *game) {
 
     earned = 10 + game->floor * 3 + bonus;
     game->souls += earned;
+    game->previousDealerId = game->dealerId;
     game->floor++;
+    game->dealerId = selectDealerForFloor(game->floor,
+                                          game->previousDealerId);
 
     resetHand(&game->player.hand);
     resetHand(&game->dealer.hand);
@@ -361,6 +439,7 @@ void floorMenu(Game *game) {
     int characterIndex;
     int hasCharacter;
     int currentMinBet;
+    int inputCharacter;
 
     nextMinBet = getMinBet(game->floor + 1);
     currentMinBet = getMinBet(game->floor);
@@ -437,7 +516,8 @@ void floorMenu(Game *game) {
                 actionCharacter = getchar();
 
                 if (actionCharacter != EOF) {
-                    while (getchar() != '\n') {
+                    while ((inputCharacter = getchar()) != '\n' &&
+                           inputCharacter != EOF) {
                     }
                 }
             }
@@ -454,13 +534,20 @@ void floorMenu(Game *game) {
 }
 
 void printGameState(const Game *game, int hideDealerCard) {
+    const DealerInfo *dealerInfo;
+    int dealerValue;
     int cardIndex;
 
+    dealerInfo = getDealerInfo(game->dealerId);
+    dealerValue = calculateDealerHandValue(&game->dealer.hand,
+                                           game->dealerId);
+
     printf("Round: %d\n", game->roundNumber);
-    printf("Dealer: ");
+    printf("Dealer (%s): ", dealerInfo->name);
 
     for (cardIndex = 0; cardIndex < game->dealer.hand.count; cardIndex++) {
-        if (hideDealerCard && cardIndex == 0) {
+        if ((hideDealerCard || game->dealerId == DEALER_REAPER) &&
+            cardIndex == 0) {
             printf("??");
         } else {
             printCard(&game->dealer.hand.cards[cardIndex]);
@@ -471,10 +558,14 @@ void printGameState(const Game *game, int hideDealerCard) {
         }
     }
 
-    if (hideDealerCard && game->dealer.hand.count > 0) {
-        printf("\n");
+    if (hideDealerCard || game->dealerId == DEALER_REAPER) {
+        printf(" | Total value: ??\n");
     } else {
-        printf(" | Total value: %d\n", game->dealer.hand.value);
+        printf(" | Total value: %d\n", dealerValue);
+    }
+
+    if (dealerInfo->rule1 != NULL) {
+        printf("Rule: %s\n", dealerInfo->rule1);
     }
 
     printf("Player: ");
