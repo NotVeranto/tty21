@@ -42,13 +42,25 @@ typedef enum {
     MSG_INFO
 } MessageStyle;
 
+typedef enum {
+    ACTION_HIT = 0,
+    ACTION_STAND,
+    ACTION_PEEK,
+    ACTION_QUIT
+} ActionId;
+
 void renderTable(const Game *game, int hideDealerCard);
-void renderShop(const Game *game);
+void renderShop(const Game *game, int selectedIndex);
+void renderActionBar(const ActionId *actions,
+                     int actionCount,
+                     int selectedIndex,
+                     int row);
 void renderMessage(const char *msg, int row, MessageStyle style);
 void renderMenu(const char *title,
                 const char *const *items,
                 int itemCount,
                 int disabledMask,
+                int selectedIndex,
                 int startRow);
 
 #endif

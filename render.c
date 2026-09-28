@@ -380,12 +380,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         if (game->state == STATE_BET) {
             hintText = "Type a bet and press Enter.";
         } else if (game->state == STATE_PLAYER_TURN) {
-            if (game->player.perkOwned[PERK_PEEK] &&
-                game->player.perkCharges[PERK_PEEK] > 0) {
-                hintText = "Keys: H hit   S stand   P peek   Q quit";
-            } else {
-                hintText = "Keys: H hit   S stand   Q quit";
-            }
+            hintText = "";
         } else if (game->state == STATE_MENU) {
             hintText = "Keys: C continue   A advance   S shop   Q quit";
         } else {
@@ -459,12 +454,14 @@ void renderMenu(const char *title,
                 const char *const *items,
                 int itemCount,
                 int disabledMask,
+                int selectedIndex,
                 int startRow) {
     int terminalWidth;
     int terminalHeight;
     int itemIndex;
     int menuPadding;
     int isDisabled;
+    const char *prefix;
 
     initColors();
     getTerminalSize(&terminalWidth, &terminalHeight);
@@ -480,17 +477,25 @@ void renderMenu(const char *title,
 
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
+            prefix = itemIndex == selectedIndex && !isDisabled ? "> " : "  ";
 
             moveToTableRow(startRow + itemIndex, menuPadding);
             printf(SCR_ERASE_EOL);
 
             if (isDisabled) {
-                printf("%s%s%s",
+                printf("%s%s%s%s",
                        scrDim(),
+                       prefix,
+                       items[itemIndex],
+                       scrReset());
+            } else if (itemIndex == selectedIndex) {
+                printf("%s%s%s%s",
+                       scrBold(),
+                       prefix,
                        items[itemIndex],
                        scrReset());
             } else {
-                printf("%s", items[itemIndex]);
+                printf("%s%s", prefix, items[itemIndex]);
             }
         }
 
@@ -518,7 +523,7 @@ void renderMenu(const char *title,
 }
 
 // Renders the between-floor perk shop.
-void renderShop(const Game *game) {
+void renderShop(const Game *game, int selectedIndex) {
     int terminalWidth;
     int terminalHeight;
     int tableWidth;
@@ -530,7 +535,6 @@ void renderShop(const Game *game) {
     int isOwned;
     int canAfford;
     const char *statusText;
-    const char *itemPrefix;
 
     static const int ITEM_ROWS[] = {
         ROW_SHOP_ITEM_0,
@@ -577,16 +581,23 @@ void renderShop(const Game *game) {
             isOwned = game->player.perkOwned[perkIndex];
             canAfford = game->run.souls >= perkCost((PerkId)perkIndex);
             statusText = isOwned ? "OWNED" : "BUY";
-            itemPrefix = (!isOwned && !canAfford) ? scrDim() : "";
 
             moveToTableRow(itemRow, shopPadding);
-            printf("%s[%d] %s   %d souls   %s%s",
-                   itemPrefix,
+
+            if (perkIndex == selectedIndex) {
+                printf("%s> ", scrBold());
+            } else if (!isOwned && !canAfford) {
+                printf("%s  ", scrDim());
+            } else {
+                printf("  ");
+            }
+
+            printf("[%d] %s   %d souls   %s",
                    perkIndex + 1,
                    perkName((PerkId)perkIndex),
                    perkCost((PerkId)perkIndex),
-                   statusText,
-                   itemPrefix[0] != '\0' ? scrReset() : "");
+                   statusText);
+            printf("%s", scrReset());
 
             moveToTableRow(descriptionRow, shopPadding);
             printf("%s%s%s",
@@ -678,4 +689,55 @@ void renderMessage(const char *msg, int row, MessageStyle style) {
         printf("%s%s%s\n", prefix, msg, suffix);
         fflush(stdout);
     }
+}
+
+ 
+// Renders the horizontal player action bar.
+void renderActionBar(const ActionId *actions,
+                     int actionCount,
+                     int selectedIndex,
+                     int row) {
+    static const char *ACTION_NAMES[] = {
+        "Hit",
+        "Stand",
+        "Peek",
+        "Quit"
+    };
+    int actionIndex;
+    int terminalWidth;
+    int terminalHeight;
+
+    getTerminalSize(&terminalWidth, &terminalHeight);
+
+    if (!isatty(STDOUT_FILENO) ||
+        terminalWidth < 72 ||
+        terminalHeight < TABLE_MIN_HEIGHT ||
+        actionCount <= 0 ||
+        selectedIndex < 0 ||
+        selectedIndex >= actionCount) {
+        return;
+    }
+
+    printf(SCR_CURSOR, row, tablePadding + 1);
+    printf(SCR_ERASE_EOL);
+    printf("%s", scrDim());
+
+    for (actionIndex = 0; actionIndex < actionCount; actionIndex++) {
+        if (actionIndex > 0) {
+            printf("   ");
+        }
+
+        if (actionIndex == selectedIndex) {
+            printf("%s> %s%s",
+                   scrBold(),
+                   ACTION_NAMES[actions[actionIndex]],
+                   scrDim());
+        } else {
+            printf("  %s", ACTION_NAMES[actions[actionIndex]]);
+        }
+    }
+
+    printf("  ");
+    printf("%s", scrReset());
+    fflush(stdout);
 }

@@ -98,6 +98,197 @@ static void resetPlayerHandToEleven(Game *game) {
     game->player.hand.value = 11;
 }
 
+static KeyEvent makeKeyEvent(int character) {
+    KeyEvent event;
+
+    event.type = KEY_NONE;
+    event.ch = '\0';
+
+    if (character == EOF) {
+        event.type = KEY_EOF;
+    } else if (character == '\r' || character == '\n') {
+        event.type = KEY_ENTER;
+    } else if (character == 27) {
+        event.type = KEY_ESC;
+    } else {
+        event.type = KEY_CHAR;
+        event.ch = (char)character;
+    }
+
+    return event;
+}
+
+static int moveSelection(int selectedIndex,
+                         int itemCount,
+                         int skippedMask,
+                         int direction) {
+    int nextIndex;
+    int attemptCount;
+
+    nextIndex = selectedIndex;
+    attemptCount = 0;
+
+    while (attemptCount < itemCount) {
+        nextIndex += direction;
+
+        if (nextIndex < 0) {
+            nextIndex = itemCount - 1;
+        } else if (nextIndex >= itemCount) {
+            nextIndex = 0;
+        }
+
+        if ((skippedMask & (1 << nextIndex)) == 0) {
+            return nextIndex;
+        }
+
+        attemptCount++;
+    }
+
+    return selectedIndex;
+}
+
+static int allPerksOwned(const Game *game) {
+    int perkIndex;
+
+    for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+        if (!game->player.perkOwned[perkIndex]) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+static int findPlayerActionIndex(const ActionId *actions,
+                                 int actionCount,
+                                 char character) {
+    ActionId targetAction;
+    int actionIndex;
+
+    if (character == 'h' || character == 'H') {
+        targetAction = ACTION_HIT;
+    } else if (character == 's' || character == 'S') {
+        targetAction = ACTION_STAND;
+    } else if (character == 'p' || character == 'P') {
+        targetAction = ACTION_PEEK;
+    } else if (character == 'q' || character == 'Q') {
+        targetAction = ACTION_QUIT;
+    } else {
+        return -1;
+    }
+
+    for (actionIndex = 0; actionIndex < actionCount; actionIndex++) {
+        if (actions[actionIndex] == targetAction) {
+            return actionIndex;
+        }
+    }
+
+    return -1;
+}
+
+static int buildPlayerActions(const Game *game, ActionId *actions) {
+    int actionCount;
+
+    actionCount = 0;
+    actions[actionCount++] = ACTION_HIT;
+    actions[actionCount++] = ACTION_STAND;
+
+    if (game->player.perkOwned[PERK_PEEK] &&
+        game->player.perkCharges[PERK_PEEK] > 0) {
+        actions[actionCount++] = ACTION_PEEK;
+    }
+
+    actions[actionCount++] = ACTION_QUIT;
+
+    return actionCount;
+}
+
+static void dispatchPlayerAction(Game *game, ActionId action) {
+    if (action == ACTION_HIT) {
+        drawCard(&game->deck, &game->player.hand);
+
+        if (game->run.dealerId == DEALER_MIRROR) {
+            drawCard(&game->deck, &game->dealer.hand);
+        }
+
+        if (calculatePlayerHandValue(game) > 21) {
+            game->state = STATE_RESULT;
+        }
+    } else if (action == ACTION_STAND) {
+        if (game->run.twistId == TWIST_STICKY_HANDS &&
+            calculatePlayerHandValue(game) < 15) {
+            renderMessage("Sticky Hands: cannot stand below 15.",
+                          ROW_RESULT,
+                          MSG_DEFAULT);
+        } else {
+            game->state = STATE_DEALER_TURN;
+        }
+    } else if (action == ACTION_PEEK) {
+        if (!game->player.perkOwned[PERK_PEEK]) {
+            renderMessage("You do not own Peek.",
+                          ROW_RESULT,
+                          MSG_DEFAULT);
+        } else if (game->player.perkCharges[PERK_PEEK] <= 0) {
+            renderMessage("Peek already used this floor.",
+                          ROW_RESULT,
+                          MSG_DEFAULT);
+        } else if (game->peekActive) {
+            renderMessage("Peek already used this round.",
+                          ROW_RESULT,
+                          MSG_DEFAULT);
+        } else {
+            game->player.perkCharges[PERK_PEEK]--;
+            game->peekActive = 1;
+            renderTable(game, 1);
+            renderMessage("Peek: hole card revealed.",
+                          ROW_RESULT,
+                          MSG_DEFAULT);
+        }
+    } else if (action == ACTION_QUIT) {
+        game->state = STATE_QUIT;
+    }
+}
+
+static void dispatchFloorMenuAction(Game *game,
+                                    char actionCharacter,
+                                    int currentMinBet,
+                                    int nextMinBet) {
+    int inputCharacter;
+
+    if ((actionCharacter == 'c' || actionCharacter == 'C') &&
+        game->player.chips >= currentMinBet) {
+        game->state = STATE_BET;
+    } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
+               game->player.chips >= nextMinBet) {
+        advanceFloor(game);
+        renderMessage("Press any key to continue.",
+                      ROW_PROMPT,
+                      MSG_DEFAULT);
+
+        if (inputIsRaw()) {
+            inputCharacter = getch();
+        } else {
+            inputCharacter = getchar();
+
+            if (inputCharacter != EOF) {
+                while ((inputCharacter = getchar()) != '\n' &&
+                       inputCharacter != EOF) {
+                }
+            }
+        }
+
+        if (inputCharacter == -1 || inputCharacter == EOF) {
+            game->state = STATE_QUIT;
+        } else {
+            game->state = STATE_BET;
+        }
+    } else if (actionCharacter == 's' || actionCharacter == 'S') {
+        game->state = STATE_SHOP;
+    } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
+        game->state = STATE_QUIT;
+    }
+}
+
 // Bet input stays line-based so fgets can handle multi-character numeric input and backspace.
 // Returns -1 on EOF so quitting is distinct from a valid bet.
 static int readBet(Game *game) {
@@ -300,127 +491,116 @@ void startRound(Game *game) {
 }
 
 void playerTurn(Game *game) {
+    ActionId actions[4];
+    KeyEvent event;
+    int actionCount;
+    int actionIndex;
+    int matchedIndex;
     int inputCharacter;
-    int actionCharacter;
+
+    actionIndex = 0;
 
     if (inputIsRaw()) {
-        renderTable(game, 1);
-
         while (game->state == STATE_PLAYER_TURN) {
-            renderMessage("Hit or stand? [h/s]: ", ROW_PROMPT, MSG_DEFAULT);
-            actionCharacter = getch();
+            actionCount = buildPlayerActions(game, actions);
 
-            if (actionCharacter == -1) {
-                game->state = STATE_QUIT;
-                break;
+            if (actionIndex >= actionCount) {
+                actionIndex = actionCount - 1;
             }
 
-            if (actionCharacter == 'h' || actionCharacter == 'H') {
-                drawCard(&game->deck, &game->player.hand);
+            renderTable(game, 1);
+            renderActionBar(actions,
+                            actionCount,
+                            actionIndex,
+                            ROW_PROMPT);
 
-                if (game->run.dealerId == DEALER_MIRROR) {
-                    drawCard(&game->deck, &game->dealer.hand);
+            event = readKey();
+
+            if (event.type == KEY_LEFT) {
+                actionIndex = moveSelection(actionIndex,
+                                            actionCount,
+                                            0,
+                                            -1);
+            } else if (event.type == KEY_RIGHT) {
+                actionIndex = moveSelection(actionIndex,
+                                            actionCount,
+                                            0,
+                                            1);
+            } else if (event.type == KEY_ENTER) {
+                dispatchPlayerAction(game, actions[actionIndex]);
+            } else if (event.type == KEY_UP ||
+                       event.type == KEY_DOWN) {
+            } else if (event.type == KEY_CHAR) {
+                matchedIndex = findPlayerActionIndex(actions,
+                                                     actionCount,
+                                                     event.ch);
+
+                if (matchedIndex >= 0) {
+                    actionIndex = matchedIndex;
                 }
 
-                if (calculatePlayerHandValue(game) > 21) {
-                    game->state = STATE_RESULT;
+                if (event.ch == 'h' || event.ch == 'H') {
+                    dispatchPlayerAction(game, ACTION_HIT);
+                } else if (event.ch == 's' || event.ch == 'S') {
+                    dispatchPlayerAction(game, ACTION_STAND);
+                } else if (event.ch == 'p' || event.ch == 'P') {
+                    dispatchPlayerAction(game, ACTION_PEEK);
+                } else if (event.ch == 'q' || event.ch == 'Q') {
+                    dispatchPlayerAction(game, ACTION_QUIT);
                 }
-
-                renderTable(game, game->state == STATE_PLAYER_TURN);
-            } else if (actionCharacter == 's' || actionCharacter == 'S') {
-                if (game->run.twistId == TWIST_STICKY_HANDS &&
-                    calculatePlayerHandValue(game) < 15) {
-                    renderMessage("Sticky Hands: cannot stand below 15.",
-                                  ROW_RESULT,
-                                  MSG_DEFAULT);
-                } else {
-                    game->state = STATE_DEALER_TURN;
-                    renderTable(game, 0);
-                }
-            } else if (actionCharacter == 'p' || actionCharacter == 'P') {
-                if (!game->player.perkOwned[PERK_PEEK]) {
-                    renderMessage("You do not own Peek.",
-                                  ROW_RESULT,
-                                  MSG_DEFAULT);
-                } else if (game->player.perkCharges[PERK_PEEK] <= 0) {
-                    renderMessage("Peek already used this floor.",
-                                  ROW_RESULT,
-                                  MSG_DEFAULT);
-                } else if (game->peekActive) {
-                    renderMessage("Peek already used this round.",
-                                  ROW_RESULT,
-                                  MSG_DEFAULT);
-                } else {
-                    game->player.perkCharges[PERK_PEEK]--;
-                    game->peekActive = 1;
-                    renderTable(game, 1);
-                    renderMessage("Peek: hole card revealed.",
-                                  ROW_RESULT,
-                                  MSG_DEFAULT);
-                }
-            } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
+            } else if (event.type == KEY_ESC ||
+                       event.type == KEY_EOF) {
                 game->state = STATE_QUIT;
             }
         }
     } else {
         while (game->state == STATE_PLAYER_TURN) {
+            actionCount = buildPlayerActions(game, actions);
+
+            if (actionIndex >= actionCount) {
+                actionIndex = actionCount - 1;
+            }
+
             renderTable(game, 1);
             renderMessage("Hit or stand? [h/s]: ", ROW_PROMPT, MSG_DEFAULT);
-            actionCharacter = getchar();
+            inputCharacter = getchar();
 
-            if (actionCharacter == EOF) {
+            if (inputCharacter == EOF) {
                 game->state = STATE_QUIT;
-                break;
-            }
-
-            while ((inputCharacter = getchar()) != '\n' &&
-                   inputCharacter != EOF) {
-            }
-
-            if (actionCharacter == 'h' || actionCharacter == 'H') {
-                drawCard(&game->deck, &game->player.hand);
-
-                if (game->run.dealerId == DEALER_MIRROR) {
-                    drawCard(&game->deck, &game->dealer.hand);
-                }
-
-                if (calculatePlayerHandValue(game) > 21) {
-                    game->state = STATE_RESULT;
-                }
-            } else if (actionCharacter == 's' || actionCharacter == 'S') {
-                if (game->run.twistId == TWIST_STICKY_HANDS &&
-                    calculatePlayerHandValue(game) < 15) {
-                    renderMessage("Sticky Hands: cannot stand below 15.",
-                                  ROW_RESULT,
-                                  MSG_DEFAULT);
-                } else {
-                    game->state = STATE_DEALER_TURN;
-                }
-            } else if (actionCharacter == 'p' || actionCharacter == 'P') {
-                if (!game->player.perkOwned[PERK_PEEK]) {
-                    renderMessage("You do not own Peek.",
-                                  ROW_RESULT,
-                                  MSG_DEFAULT);
-                } else if (game->player.perkCharges[PERK_PEEK] <= 0) {
-                    renderMessage("Peek already used this floor.",
-                                  ROW_RESULT,
-                                  MSG_DEFAULT);
-                } else if (game->peekActive) {
-                    renderMessage("Peek already used this round.",
-                                  ROW_RESULT,
-                                  MSG_DEFAULT);
-                } else {
-                    game->player.perkCharges[PERK_PEEK]--;
-                    game->peekActive = 1;
-                    renderTable(game, 1);
-                    renderMessage("Peek: hole card revealed.",
-                                  ROW_RESULT,
-                                  MSG_DEFAULT);
-                }
             } else {
-                renderMessage("Invalid action. Enter h to hit, s to stand, or p to peek.",
-                              ROW_PROMPT,
-                              MSG_DEFAULT);
+                event = makeKeyEvent(inputCharacter);
+
+                while ((inputCharacter = getchar()) != '\n' &&
+                       inputCharacter != EOF) {
+                }
+
+                if (event.type == KEY_CHAR) {
+                    matchedIndex = findPlayerActionIndex(actions,
+                                                         actionCount,
+                                                         event.ch);
+
+                    if (matchedIndex >= 0) {
+                        actionIndex = matchedIndex;
+                    }
+
+                    if (event.ch == 'h' || event.ch == 'H') {
+                        dispatchPlayerAction(game, ACTION_HIT);
+                    } else if (event.ch == 's' || event.ch == 'S') {
+                        dispatchPlayerAction(game, ACTION_STAND);
+                    } else if (event.ch == 'p' || event.ch == 'P') {
+                        dispatchPlayerAction(game, ACTION_PEEK);
+                    } else if (event.ch == 'q' || event.ch == 'Q') {
+                        dispatchPlayerAction(game, ACTION_QUIT);
+                    } else {
+                        renderMessage("Invalid action. Enter h to hit, s to stand, or p to peek.",
+                                      ROW_PROMPT,
+                                      MSG_DEFAULT);
+                    }
+                } else {
+                    renderMessage("Invalid action. Enter h to hit, s to stand, or p to peek.",
+                                  ROW_PROMPT,
+                                  MSG_DEFAULT);
+                }
             }
         }
     }
@@ -629,13 +809,16 @@ void floorMenu(Game *game) {
     char advanceItem[128];
     char shopItem[128];
     char input[64];
+    KeyEvent event;
     int nextMinBet;
     int disabledMask;
+    int selectedIndex;
     int actionCharacter;
     int characterIndex;
     int hasCharacter;
     int currentMinBet;
     int inputCharacter;
+    int rawMode;
 
     currentMinBet = getMinBet(game->run.floor);
 
@@ -672,71 +855,104 @@ void floorMenu(Game *game) {
     menuItems[2] = shopItem;
     menuItems[3] = "[Q]uit run";
 
-    renderMenu("What's next?", menuItems, 4, disabledMask, ROW_MENU_START);
+    selectedIndex = 0;
+    rawMode = inputIsRaw();
+
+    if (!rawMode) {
+        renderMenu("What's next?",
+                   menuItems,
+                   4,
+                   disabledMask,
+                   selectedIndex,
+                   ROW_MENU_START);
+    }
 
     while (game->state == STATE_MENU) {
-        actionCharacter = -1;
+        if (rawMode) {
+            renderMenu("What's next?",
+                       menuItems,
+                       4,
+                       disabledMask,
+                       selectedIndex,
+                       ROW_MENU_START);
 
-        if (inputIsRaw()) {
-            actionCharacter = getch();
-        } else if (fgets(input, sizeof(input), stdin) != NULL) {
-            if (strchr(input, '\n') == NULL) {
-                while ((inputCharacter = getchar()) != '\n' &&
-                       inputCharacter != EOF) {
+            event = readKey();
+
+            if (event.type == KEY_UP) {
+                selectedIndex = moveSelection(selectedIndex,
+                                              4,
+                                              disabledMask,
+                                              -1);
+            } else if (event.type == KEY_DOWN) {
+                selectedIndex = moveSelection(selectedIndex,
+                                              4,
+                                              disabledMask,
+                                              1);
+            } else if (event.type == KEY_LEFT ||
+                       event.type == KEY_RIGHT) {
+            } else if (event.type == KEY_ENTER) {
+                actionCharacter = "casq"[selectedIndex];
+                dispatchFloorMenuAction(game,
+                                        (char)actionCharacter,
+                                        currentMinBet,
+                                        nextMinBet);
+            } else if (event.type == KEY_CHAR) {
+                actionCharacter = event.ch;
+
+                if (actionCharacter == 'c' || actionCharacter == 'C') {
+                    selectedIndex = 0;
+                } else if (actionCharacter == 'a' || actionCharacter == 'A') {
+                    selectedIndex = 1;
+                } else if (actionCharacter == 's' || actionCharacter == 'S') {
+                    selectedIndex = 2;
+                } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
+                    selectedIndex = 3;
                 }
+
+                dispatchFloorMenuAction(game,
+                                        (char)actionCharacter,
+                                        currentMinBet,
+                                        nextMinBet);
+            } else if (event.type == KEY_ESC ||
+                       event.type == KEY_EOF) {
+                game->state = STATE_QUIT;
             }
+        } else {
+            actionCharacter = -1;
 
-            characterIndex = 0;
-            hasCharacter = 0;
-
-            while (input[characterIndex] != '\0') {
-                if (!isspace((unsigned char)input[characterIndex])) {
-                    actionCharacter = input[characterIndex];
-                    hasCharacter = 1;
-                    break;
-                }
-
-                characterIndex++;
-            }
-
-            if (!hasCharacter) {
-                actionCharacter = -1;
-            }
-        }
-
-        if (actionCharacter == -1) {
-            game->state = STATE_QUIT;
-        } else if ((actionCharacter == 'c' || actionCharacter == 'C') &&
-                   game->player.chips >= currentMinBet) {
-            game->state = STATE_BET;
-        } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
-                   game->player.chips >= nextMinBet) {
-            advanceFloor(game);
-            renderMessage("Press any key to continue.",
-                          ROW_PROMPT,
-                          MSG_DEFAULT);
-
-            if (inputIsRaw()) {
-                actionCharacter = getch();
-            } else {
-                actionCharacter = getchar();
-
-                if (actionCharacter != EOF) {
+            if (fgets(input, sizeof(input), stdin) != NULL) {
+                if (strchr(input, '\n') == NULL) {
                     while ((inputCharacter = getchar()) != '\n' &&
                            inputCharacter != EOF) {
                     }
                 }
+
+                characterIndex = 0;
+                hasCharacter = 0;
+
+                while (input[characterIndex] != '\0') {
+                    if (!isspace((unsigned char)input[characterIndex])) {
+                        actionCharacter = input[characterIndex];
+                        hasCharacter = 1;
+                        break;
+                    }
+
+                    characterIndex++;
+                }
+
+                if (!hasCharacter) {
+                    actionCharacter = -1;
+                }
             }
 
-            if (actionCharacter == -1 || actionCharacter == EOF) {
+            if (actionCharacter == -1) {
                 game->state = STATE_QUIT;
             } else {
-                game->state = STATE_BET;
+                dispatchFloorMenuAction(game,
+                                        (char)actionCharacter,
+                                        currentMinBet,
+                                        nextMinBet);
             }
-        } else if (actionCharacter == 's' || actionCharacter == 'S') {
-            game->state = STATE_SHOP;
-        } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
-            game->state = STATE_QUIT;
         }
     }
 }
@@ -806,72 +1022,160 @@ void printGameState(const Game *game, int hideDealerCard) {
 
 void runShop(Game *game) {
     char input[64];
+    KeyEvent event;
     int actionCharacter;
     int inputCharacter;
     int perkIndex;
+    int selectedIndex;
+    int ownedMask;
+    int rawMode;
+    int characterIndex;
+
     const char *pendingMessage = NULL;
 
-    while (game->state == STATE_SHOP) {
-        renderShop(game);
+    selectedIndex = 0;
+    rawMode = inputIsRaw();
 
-        // Defer purchase feedback so the next shop redraw does not erase it.
+    while (game->state == STATE_SHOP) {
+        ownedMask = 0;
+
+        for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+            if (game->player.perkOwned[perkIndex]) {
+                ownedMask |= 1 << perkIndex;
+            }
+        }
+
+        renderShop(game, selectedIndex);
+
         if (pendingMessage != NULL) {
             renderMessage(pendingMessage, ROW_RESULT, MSG_DEFAULT);
         }
 
-        if (inputIsRaw()) {
-            actionCharacter = getch();
-        } else if (fgets(input, sizeof(input), stdin) != NULL) {
-            if (strchr(input, '\n') == NULL) {
-                while ((inputCharacter = getchar()) != '\n' &&
-                       inputCharacter != EOF) {
+        if (rawMode) {
+            event = readKey();
+
+            if (event.type == KEY_UP) {
+                selectedIndex = moveSelection(selectedIndex,
+                                              PERK_COUNT,
+                                              ownedMask,
+                                              -1);
+                pendingMessage = NULL;
+            } else if (event.type == KEY_DOWN) {
+                selectedIndex = moveSelection(selectedIndex,
+                                              PERK_COUNT,
+                                              ownedMask,
+                                              1);
+                pendingMessage = NULL;
+            } else if (event.type == KEY_LEFT ||
+                       event.type == KEY_RIGHT) {
+                pendingMessage = NULL;
+            } else if (event.type == KEY_ENTER) {
+                if (allPerksOwned(game)) {
+                    pendingMessage = NULL;
+                } else if (game->player.perkOwned[selectedIndex]) {
+                    pendingMessage = "Already owned.";
+                } else if (game->run.souls < perkCost((PerkId)selectedIndex)) {
+                    pendingMessage = "Not enough souls.";
+                } else {
+                    game->run.souls -= perkCost((PerkId)selectedIndex);
+                    game->player.perkOwned[selectedIndex] = 1;
+
+                    if (selectedIndex == PERK_PEEK ||
+                        selectedIndex == PERK_SECOND_WIND) {
+                        game->player.perkCharges[selectedIndex] = 1;
+                    }
+
+                    pendingMessage = NULL;
                 }
-            }
+            } else if (event.type == KEY_CHAR) {
+                actionCharacter = event.ch;
 
-            actionCharacter = -1;
-            inputCharacter = 0;
+                if (actionCharacter >= '1' &&
+                    actionCharacter <= '5') {
+                    selectedIndex = actionCharacter - '1';
 
-            while (input[inputCharacter] != '\0') {
-                if (!isspace((unsigned char)input[inputCharacter])) {
-                    actionCharacter = input[inputCharacter];
-                    break;
+                    if (game->player.perkOwned[selectedIndex]) {
+                        pendingMessage = "Already owned.";
+                    } else if (game->run.souls <
+                               perkCost((PerkId)selectedIndex)) {
+                        pendingMessage = "Not enough souls.";
+                    } else {
+                        game->run.souls -=
+                            perkCost((PerkId)selectedIndex);
+                        game->player.perkOwned[selectedIndex] = 1;
+
+                        if (selectedIndex == PERK_PEEK ||
+                            selectedIndex == PERK_SECOND_WIND) {
+                            game->player.perkCharges[selectedIndex] = 1;
+                        }
+
+                        pendingMessage = NULL;
+                    }
+                } else if (actionCharacter == 'q' ||
+                           actionCharacter == 'Q') {
+                    pendingMessage = NULL;
+                    game->state = STATE_MENU;
+                } else {
+                    pendingMessage = NULL;
                 }
-
-                inputCharacter++;
+            } else if (event.type == KEY_ESC ||
+                       event.type == KEY_EOF) {
+                pendingMessage = NULL;
+                game->state = STATE_MENU;
             }
         } else {
             actionCharacter = -1;
-        }
 
-        if (actionCharacter == -1) {
-            pendingMessage = NULL;
-            game->state = STATE_MENU;
-        } else if (actionCharacter == 'q' ||
-                   actionCharacter == 'Q' ||
-                   actionCharacter == 27) {
-            pendingMessage = NULL;
-            game->state = STATE_MENU;
-        } else if (actionCharacter >= '1' &&
-                   actionCharacter <= '5') {
-            perkIndex = actionCharacter - '1';
-
-            if (game->player.perkOwned[perkIndex]) {
-                pendingMessage = "Already owned.";
-            } else if (game->run.souls < perkCost((PerkId)perkIndex)) {
-                pendingMessage = "Not enough souls.";
-            } else {
-                game->run.souls -= perkCost((PerkId)perkIndex);
-                game->player.perkOwned[perkIndex] = 1;
-
-                if (perkIndex == PERK_PEEK ||
-                    perkIndex == PERK_SECOND_WIND) {
-                    game->player.perkCharges[perkIndex] = 1;
+            if (fgets(input, sizeof(input), stdin) != NULL) {
+                if (strchr(input, '\n') == NULL) {
+                    while ((inputCharacter = getchar()) != '\n' &&
+                           inputCharacter != EOF) {
+                    }
                 }
 
+                characterIndex = 0;
+
+                while (input[characterIndex] != '\0') {
+                    if (!isspace((unsigned char)input[characterIndex])) {
+                        actionCharacter = input[characterIndex];
+                        break;
+                    }
+
+                    characterIndex++;
+                }
+            }
+
+            if (actionCharacter == -1) {
+                pendingMessage = NULL;
+                game->state = STATE_MENU;
+            } else if (actionCharacter == 'q' ||
+                       actionCharacter == 'Q' ||
+                       actionCharacter == 27) {
+                pendingMessage = NULL;
+                game->state = STATE_MENU;
+            } else if (actionCharacter >= '1' &&
+                       actionCharacter <= '5') {
+                selectedIndex = actionCharacter - '1';
+
+                if (game->player.perkOwned[selectedIndex]) {
+                    pendingMessage = "Already owned.";
+                } else if (game->run.souls <
+                           perkCost((PerkId)selectedIndex)) {
+                    pendingMessage = "Not enough souls.";
+                } else {
+                    game->run.souls -= perkCost((PerkId)selectedIndex);
+                    game->player.perkOwned[selectedIndex] = 1;
+
+                    if (selectedIndex == PERK_PEEK ||
+                        selectedIndex == PERK_SECOND_WIND) {
+                        game->player.perkCharges[selectedIndex] = 1;
+                    }
+
+                    pendingMessage = NULL;
+                }
+            } else {
                 pendingMessage = NULL;
             }
-        } else {
-            pendingMessage = NULL;
         }
     }
 }

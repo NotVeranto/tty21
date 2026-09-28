@@ -46,6 +46,7 @@ In-game (during the player's turn):
 - `s` — stand
 - `q` — quit the current run
 - `p` — Peek at dealer hole card (requires Peek perk)
+- Arrow keys + Enter — navigate and confirm menus and player actions
 - `Ctrl+C` — force quit, terminal state restored
 
 Betting:

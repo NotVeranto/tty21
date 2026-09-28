@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <sys/select.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -156,4 +157,68 @@ int getch(void) {
     }
 
     return -1;
+}
+
+static int waitForInputByte(void) {
+    fd_set readSet;
+    struct timeval timeout;
+
+    FD_ZERO(&readSet);
+    FD_SET(STDIN_FILENO, &readSet);
+    timeout = (struct timeval){0, 100000};
+
+    return select(STDIN_FILENO + 1, &readSet, NULL, NULL, &timeout);
+}
+
+KeyEvent readKey(void) {
+    KeyEvent event;
+    int character;
+    int selectResult;
+
+    event.type = KEY_NONE;
+    event.ch = '\0';
+    character = getch();
+
+    if (character == -1) {
+        event.type = KEY_EOF;
+    } else if (character == '\r' || character == '\n') {
+        event.type = KEY_ENTER;
+    } else if (character == 27) {
+        selectResult = waitForInputByte();
+
+        if (selectResult <= 0) {
+            event.type = KEY_ESC;
+        } else {
+            character = getch();
+
+            if (character != '[') {
+                event.type = KEY_ESC;
+            } else {
+                selectResult = waitForInputByte();
+
+                if (selectResult <= 0) {
+                    event.type = KEY_ESC;
+                } else {
+                    character = getch();
+
+                    if (character == 'A') {
+                        event.type = KEY_UP;
+                    } else if (character == 'B') {
+                        event.type = KEY_DOWN;
+                    } else if (character == 'C') {
+                        event.type = KEY_RIGHT;
+                    } else if (character == 'D') {
+                        event.type = KEY_LEFT;
+                    } else {
+                        event.type = KEY_ESC;
+                    }
+                }
+            }
+        }
+    } else {
+        event.type = KEY_CHAR;
+        event.ch = (char)character;
+    }
+
+    return event;
 }
