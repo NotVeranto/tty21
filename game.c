@@ -74,11 +74,9 @@ static int applyLoss(Game *game, long long lossValue) {
 
     if (game->player.perkOwned[PERK_SURVIVAL] &&
         lossValue >= chipsBeforeLoss) {
+        // Survival halves the pre-loss chips. With 1 chip this is 0,
+        // which ends the run as specified.
         remainingChips = chipsBeforeLoss / 2;
-
-        if (remainingChips < 1) {
-            remainingChips = 1;
-        }
 
         game->player.chips = remainingChips;
         lossAmount = chipsBeforeLoss - remainingChips;
@@ -89,39 +87,14 @@ static int applyLoss(Game *game, long long lossValue) {
     return lossAmount;
 }
 
-// Resets the player to a visible ace with value 11.
+// Resets the player to a synthetic ace with value 11.
 static void resetPlayerHandToEleven(Game *game) {
     Card recoveryCard;
-    int attemptCount;
-    int foundAce;
 
     resetHand(&game->player.hand);
-    attemptCount = 0;
-    foundAce = 0;
-
-    while (attemptCount < DECK_SIZE * 2 && !foundAce) {
-        if (game->deck.top >= DECK_SIZE) {
-            initDeck(&game->deck);
-            shuffleDeck(&game->deck);
-        }
-
-        recoveryCard = game->deck.cards[game->deck.top];
-        game->deck.top++;
-
-        if (recoveryCard.rank == ACE) {
-            addCardToHand(&game->player.hand, &recoveryCard);
-            foundAce = 1;
-        }
-
-        attemptCount++;
-    }
-
-    if (!foundAce) {
-        recoveryCard.suit = HEARTS;
-        recoveryCard.rank = ACE;
-        addCardToHand(&game->player.hand, &recoveryCard);
-    }
-
+    recoveryCard.suit = HEARTS;
+    recoveryCard.rank = ACE;
+    addCardToHand(&game->player.hand, &recoveryCard);
     game->player.hand.value = 11;
 }
 
@@ -688,13 +661,18 @@ void floorMenu(Game *game) {
     int currentMinBet;
     int inputCharacter;
 
-    nextMinBet = getMinBet(game->floor + 1);
     currentMinBet = getMinBet(game->floor);
-    disabledMask = 0;
 
     if (game->player.chips < currentMinBet) {
-        disabledMask |= 1;
+        renderMessage("You cannot afford the minimum bet. Run over.",
+                      ROW_RESULT,
+                      MSG_LOSS);
+        game->state = STATE_QUIT;
+        return;
     }
+
+    nextMinBet = getMinBet(game->floor + 1);
+    disabledMask = 0;
 
     if (game->player.chips < nextMinBet) {
         disabledMask |= 1 << 1;
@@ -719,14 +697,6 @@ void floorMenu(Game *game) {
     menuItems[3] = "[Q]uit run";
 
     renderMenu("What's next?", menuItems, 4, disabledMask, ROW_MENU_START);
-
-    if (game->player.chips < currentMinBet) {
-        snprintf(continueItem,
-                 sizeof(continueItem),
-                 "Cannot afford minimum bet on floor %d.",
-                 game->floor);
-        renderMessage(continueItem, ROW_RESULT, MSG_DEFAULT);
-    }
 
     while (game->state == STATE_MENU) {
         actionCharacter = -1;
@@ -863,11 +833,15 @@ void runShop(Game *game) {
     int actionCharacter;
     int inputCharacter;
     int perkIndex;
-    const char *message;
+    const char *pendingMessage = NULL;
 
     while (game->state == STATE_SHOP) {
-        message = NULL;
         renderShop(game);
+
+        // Defer purchase feedback so the next shop redraw does not erase it.
+        if (pendingMessage != NULL) {
+            renderMessage(pendingMessage, ROW_RESULT, MSG_DEFAULT);
+        }
 
         if (inputIsRaw()) {
             actionCharacter = getch();
@@ -894,19 +868,21 @@ void runShop(Game *game) {
         }
 
         if (actionCharacter == -1) {
+            pendingMessage = NULL;
             game->state = STATE_MENU;
         } else if (actionCharacter == 'q' ||
                    actionCharacter == 'Q' ||
                    actionCharacter == 27) {
+            pendingMessage = NULL;
             game->state = STATE_MENU;
         } else if (actionCharacter >= '1' &&
                    actionCharacter <= '5') {
             perkIndex = actionCharacter - '1';
 
             if (game->player.perkOwned[perkIndex]) {
-                message = "Already owned.";
+                pendingMessage = "Already owned.";
             } else if (game->souls < perkCost((PerkId)perkIndex)) {
-                message = "Not enough souls.";
+                pendingMessage = "Not enough souls.";
             } else {
                 game->souls -= perkCost((PerkId)perkIndex);
                 game->player.perkOwned[perkIndex] = 1;
@@ -915,13 +891,11 @@ void runShop(Game *game) {
                     perkIndex == PERK_SECOND_WIND) {
                     game->player.perkCharges[perkIndex] = 1;
                 }
-            }
 
-            renderShop(game);
-
-            if (message != NULL) {
-                renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+                pendingMessage = NULL;
             }
+        } else {
+            pendingMessage = NULL;
         }
     }
 }

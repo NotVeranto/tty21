@@ -387,7 +387,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                 hintText = "Keys: H hit   S stand   Q quit";
             }
         } else if (game->state == STATE_MENU) {
-            hintText = "Keys: C continue   A advance   Q quit";
+            hintText = "Keys: C continue   A advance   S shop   Q quit";
         } else {
             hintText = "";
         }
