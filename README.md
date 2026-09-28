@@ -22,7 +22,6 @@ Implemented:
 
 Planned:
 - Double Down and Split.
-- Perks and shop between runs.
 - Save and load (XDG).
 
 ## Requirements
@@ -46,7 +45,7 @@ In-game (during the player's turn):
 - `h` — hit
 - `s` — stand
 - `q` — quit the current run
-- `p` — Peek at dealer hole card (requires Peek perk).
+- `p` — Peek at dealer hole card (requires Peek perk)
 - `Ctrl+C` — force quit, terminal state restored
 
 Betting:
@@ -56,7 +55,7 @@ Betting:
 
 - `c` — Continue on current floor
 - `a` — Advance to the next floor
-- `s` — Open the shop.
+- `s` — Open the shop
 - `q` — Quit the run
 
 ## Project status
@@ -80,7 +79,7 @@ Betting:
 ## Known issues
 
 - Signal handlers call tcsetattr; not strictly async-signal-safe.
-- game.c combines round, run, economy and dealer logic; planned refactor before Stage 8.
+- game.c combines round, run, economy and dealer logic; refactor planned as Stage 8.5.
 
 ## License
 
