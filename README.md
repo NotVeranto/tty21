@@ -71,6 +71,12 @@ Betting:
 - [ ] Man page.
 - [ ] Packaging and release.
 
+## Known issues
+
+- Signal handlers call tcsetattr; not strictly async-signal-safe.
+- game.c combines round, run, economy and dealer logic; planned refactor before Stage 8.
+- RNG uses global rand(); planned to become an object for --seed and save/load support.
+
 ## License
 
 MIT

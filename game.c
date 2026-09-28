@@ -3,6 +3,8 @@
 #include "input.h"
 
 #include <ctype.h>
+#include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,7 +33,6 @@ static int readBet(Game *game) {
     size_t newlinePosition;
     int minBet;
     int validBet;
-    int inputCharacter;
 
     minBet = getMinBet(game->floor);
 
@@ -58,33 +59,23 @@ static int readBet(Game *game) {
         renderMessage(prompt, ROW_PROMPT);
 
         if (fgets(input, sizeof(input), stdin) == NULL) {
+            if (ferror(stdin) && errno == EINTR) {
+                clearerr(stdin);
+                continue;
+            }
+
             return -1;
         }
 
-        newlinePosition = strcspn(input, "\n");
+        newlinePosition = strcspn(input, "\r\n");
 
-        if (input[newlinePosition] != '\n') {
-            while ((inputCharacter = getchar()) != '\n' &&
-                   inputCharacter != EOF) {
-            }
-
-            if (inputCharacter == EOF) {
-                return -1;
-            }
-
-            snprintf(prompt,
-                     sizeof(prompt),
-                     "Invalid bet. Enter an integer between %d and %d.",
-                     minBet,
-                     game->player.chips);
-            renderMessage(prompt, ROW_RESULT);
-            continue;
+        if (input[newlinePosition] != '\0') {
+            input[newlinePosition] = '\0';
         }
 
-        input[newlinePosition] = '\0';
         betValue = strtol(input, &endPointer, 10);
 
-        while (*endPointer == ' ' || *endPointer == '\t') {
+        while (isspace((unsigned char)*endPointer)) {
             endPointer++;
         }
 
@@ -300,6 +291,8 @@ void resolveRound(Game *game) {
     int dealerBlackjack;
     int payout;
     int lossAmount;
+    long long payoutValue;
+    long long lossValue;
     char resultMessage[128];
 
     playerValue = game->player.hand.value;
@@ -309,17 +302,23 @@ void resolveRound(Game *game) {
     dealerBlackjack = game->dealer.hand.count == 2 && dealerValue == 21;
     payout = 0;
     lossAmount = game->player.bet;
+    payoutValue = 0;
+    lossValue = game->player.bet;
 
     if (playerValue > 21) {
         if (game->dealerId == DEALER_BUTCHER) {
-            lossAmount = game->player.bet * 150 / 100;
+            lossValue = ((long long)game->player.bet * 150) / 100;
+        }
+
+        if (lossValue > game->player.chips) {
+            lossAmount = game->player.chips;
+        } else if (lossValue > INT_MAX) {
+            lossAmount = INT_MAX;
+        } else {
+            lossAmount = (int)lossValue;
         }
 
         game->player.chips -= lossAmount;
-
-        if (game->player.chips < 0) {
-            game->player.chips = 0;
-        }
 
         snprintf(resultMessage,
                  sizeof(resultMessage),
@@ -327,9 +326,15 @@ void resolveRound(Game *game) {
                  lossAmount);
     } else if (playerBlackjack && !dealerBlackjack) {
         if (game->dealerId == DEALER_VOID) {
-            payout = game->player.bet;
+            payoutValue = game->player.bet;
         } else {
-            payout = game->player.bet * 3 / 2;
+            payoutValue = ((long long)game->player.bet * 3) / 2;
+        }
+
+        if (payoutValue > INT_MAX - game->player.chips) {
+            payout = INT_MAX - game->player.chips;
+        } else {
+            payout = (int)payoutValue;
         }
 
         game->player.chips += payout;
@@ -339,14 +344,18 @@ void resolveRound(Game *game) {
                  payout);
     } else if (dealerBlackjack && !playerBlackjack) {
         if (game->dealerId == DEALER_BUTCHER) {
-            lossAmount = game->player.bet * 150 / 100;
+            lossValue = ((long long)game->player.bet * 150) / 100;
+        }
+
+        if (lossValue > game->player.chips) {
+            lossAmount = game->player.chips;
+        } else if (lossValue > INT_MAX) {
+            lossAmount = INT_MAX;
+        } else {
+            lossAmount = (int)lossValue;
         }
 
         game->player.chips -= lossAmount;
-
-        if (game->player.chips < 0) {
-            game->player.chips = 0;
-        }
 
         snprintf(resultMessage,
                  sizeof(resultMessage),
@@ -357,21 +366,30 @@ void resolveRound(Game *game) {
                  sizeof(resultMessage),
                  "Push. Your bet is returned.");
     } else if (dealerValue > 21 || playerValue > dealerValue) {
-        game->player.chips += game->player.bet;
+        if ((long long)game->player.chips + game->player.bet > INT_MAX) {
+            game->player.chips = INT_MAX;
+        } else {
+            game->player.chips += game->player.bet;
+        }
+
         snprintf(resultMessage,
                  sizeof(resultMessage),
                  "You win %d chips.",
                  game->player.bet);
     } else {
         if (game->dealerId == DEALER_BUTCHER) {
-            lossAmount = game->player.bet * 150 / 100;
+            lossValue = ((long long)game->player.bet * 150) / 100;
+        }
+
+        if (lossValue > game->player.chips) {
+            lossAmount = game->player.chips;
+        } else if (lossValue > INT_MAX) {
+            lossAmount = INT_MAX;
+        } else {
+            lossAmount = (int)lossValue;
         }
 
         game->player.chips -= lossAmount;
-
-        if (game->player.chips < 0) {
-            game->player.chips = 0;
-        }
 
         snprintf(resultMessage,
                  sizeof(resultMessage),
@@ -482,6 +500,12 @@ void floorMenu(Game *game) {
         if (inputIsRaw()) {
             actionCharacter = getch();
         } else if (fgets(input, sizeof(input), stdin) != NULL) {
+            if (strchr(input, '\n') == NULL) {
+                while ((inputCharacter = getchar()) != '\n' &&
+                       inputCharacter != EOF) {
+                }
+            }
+
             characterIndex = 0;
             hasCharacter = 0;
 
@@ -546,8 +570,7 @@ void printGameState(const Game *game, int hideDealerCard) {
     printf("Dealer (%s): ", dealerInfo->name);
 
     for (cardIndex = 0; cardIndex < game->dealer.hand.count; cardIndex++) {
-        if ((hideDealerCard || game->dealerId == DEALER_REAPER) &&
-            cardIndex == 0) {
+        if (hideDealerCard && cardIndex == 0) {
             printf("??");
         } else {
             printCard(&game->dealer.hand.cards[cardIndex]);

@@ -5,14 +5,11 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#define TABLE_MIN_WIDTH 72
 #define TABLE_MIN_HEIGHT 40
 #define CARD_WIDTH 11
 #define CARD_GAP 1
-#define CARDS_PER_ROW 6
 #define CARD_CONTENT_WIDTH 9
 #define CARD_HEIGHT 7
-#define TABLE_WIDTH (CARDS_PER_ROW * CARD_WIDTH + (CARDS_PER_ROW - 1) * CARD_GAP)
 
 #define TITLE_ROW 1
 #define SEPARATOR_ROW 2
@@ -51,15 +48,32 @@ static void getTerminalSize(int *width, int *height) {
     }
 }
 
-// Checks whether the fixed table grid fits the current terminal.
-static int canRenderTable(const Game *game, int *width, int *height) {
+// Calculates the table width from the largest hand with a stable minimum.
+static int getDynamicTableWidth(const Game *game) {
+    int maxCards;
+
+    maxCards = game->dealer.hand.count;
+
+    if (game->player.hand.count > maxCards) {
+        maxCards = game->player.hand.count;
+    }
+
+    if (maxCards < 5) {
+        maxCards = 5;
+    }
+
+    return maxCards * CARD_WIDTH + (maxCards - 1) * CARD_GAP;
+}
+
+// Checks whether the dynamic table grid fits the current terminal.
+static int canRenderTable(int tableWidth,
+                          int *width,
+                          int *height) {
     getTerminalSize(width, height);
 
     return isatty(STDOUT_FILENO) &&
-           *width >= TABLE_MIN_WIDTH &&
-           *height >= TABLE_MIN_HEIGHT &&
-           game->dealer.hand.count <= CARDS_PER_ROW &&
-           game->player.hand.count <= CARDS_PER_ROW;
+           *width >= tableWidth + 2 &&
+           *height >= TABLE_MIN_HEIGHT;
 }
 
 // Moves the cursor to a table row and left-aligns content with the table.
@@ -87,10 +101,11 @@ static void printCenteredAtRow(const char *text, int row, int width) {
 static void printHandHeader(const char *label,
                             const char *totalText,
                             int row,
-                            int padding) {
+                            int padding,
+                            int tableWidth) {
     int remainingWidth;
 
-    remainingWidth = TABLE_WIDTH -
+    remainingWidth = tableWidth -
                      (int)strlen(label) -
                      (int)strlen(totalText);
 
@@ -174,8 +189,10 @@ static void drawCards(const Hand *hand,
 // Clears and redraws the complete table on fixed rows.
 void renderTable(const Game *game, int hideDealerCard) {
     const DealerInfo *dealerInfo;
+    const char *hintText;
     int terminalWidth;
     int terminalHeight;
+    int tableWidth;
     int separatorIndex;
     int prefixLength;
     int suffixLength;
@@ -189,9 +206,12 @@ void renderTable(const Game *game, int hideDealerCard) {
     char playerTotal[32];
 
     dealerInfo = getDealerInfo(game->dealerId);
+    tableWidth = getDynamicTableWidth(game);
 
-    if (canRenderTable(game, &terminalWidth, &terminalHeight)) {
-        tablePadding = (terminalWidth - TABLE_WIDTH) / 2;
+    if (canRenderTable(tableWidth,
+                       &terminalWidth,
+                       &terminalHeight)) {
+        tablePadding = (terminalWidth - tableWidth) / 2;
 
         snprintf(roundText,
                  sizeof(roundText),
@@ -222,7 +242,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                  game->player.chips,
                  game->player.bet);
 
-        if ((int)strlen(statusText) > TABLE_WIDTH) {
+        if ((int)strlen(statusText) > tableWidth) {
             snprintf(dealerName,
                      sizeof(dealerName),
                      "%s",
@@ -239,7 +259,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                      game->player.chips,
                      game->player.bet);
             suffixLength = (int)strlen(statusText);
-            availableNameWidth = TABLE_WIDTH - prefixLength - suffixLength;
+            availableNameWidth = tableWidth - prefixLength - suffixLength;
 
             if (availableNameWidth < 2) {
                 availableNameWidth = 2;
@@ -271,7 +291,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(SEPARATOR_ROW, tablePadding);
 
         for (separatorIndex = 0;
-             separatorIndex < TABLE_WIDTH;
+             separatorIndex < tableWidth;
              separatorIndex++) {
             printf("-");
         }
@@ -280,7 +300,8 @@ void renderTable(const Game *game, int hideDealerCard) {
         printHandHeader("DEALER",
                         dealerTotal,
                         DEALER_LABEL_ROW,
-                        tablePadding);
+                        tablePadding,
+                        tableWidth);
         drawCards(&game->dealer.hand,
                   DEALER_CARD_ROW,
                   tablePadding,
@@ -289,7 +310,8 @@ void renderTable(const Game *game, int hideDealerCard) {
         printHandHeader("PLAYER",
                         playerTotal,
                         PLAYER_LABEL_ROW,
-                        tablePadding);
+                        tablePadding,
+                        tableWidth);
         drawCards(&game->player.hand,
                   PLAYER_CARD_ROW,
                   tablePadding,
@@ -298,9 +320,22 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_STATUS, tablePadding);
         printf("%s", statusText);
 
+        if (game->state == STATE_BET) {
+            hintText = "Type a bet and press Enter.";
+        } else if (game->state == STATE_PLAYER_TURN) {
+            hintText = "Keys: H hit   S stand   Q quit";
+        } else if (game->state == STATE_MENU) {
+            hintText = "Keys: C continue   A advance   Q quit";
+        } else {
+            hintText = "";
+        }
+
         moveToTableRow(ROW_HINT, tablePadding);
-        printf(SCR_DIM "Keys: H hit   S stand" SCR_RESET);
-        printf(SCR_RESET);
+        printf(SCR_ERASE_EOL);
+
+        if (hintText[0] != '\0') {
+            printf(SCR_DIM "%s" SCR_RESET, hintText);
+        }
 
         moveToTableRow(ROW_RULE, tablePadding);
         printf(SCR_ERASE_EOL);
@@ -357,7 +392,7 @@ void renderMenu(const char *title,
     getTerminalSize(&terminalWidth, &terminalHeight);
 
     if (isatty(STDOUT_FILENO) &&
-        terminalWidth >= TABLE_MIN_WIDTH &&
+        terminalWidth >= 72 &&
         terminalHeight >= TABLE_MIN_HEIGHT) {
         menuPadding = tablePadding;
 
@@ -406,7 +441,7 @@ void renderMessage(const char *msg, int row) {
     messagePadding = tablePadding;
 
     if (isatty(STDOUT_FILENO) &&
-        terminalWidth >= TABLE_MIN_WIDTH &&
+        terminalWidth >= 72 &&
         terminalHeight >= TABLE_MIN_HEIGHT) {
         printf(SCR_CURSOR, row, messagePadding + 1);
         printf(SCR_ERASE_EOL);
