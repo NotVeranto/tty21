@@ -54,6 +54,77 @@ static void redrawFirstPlayerCard(Game *game, int requireHighCard) {
     game->player.hand.value = calculateHandValue(&game->player.hand);
 }
 
+// Applies a loss and activates Survival when the loss would end the run.
+static int applyLoss(Game *game, long long lossValue) {
+    int chipsBeforeLoss;
+    int lossAmount;
+    int remainingChips;
+
+    chipsBeforeLoss = game->player.chips;
+
+    if (chipsBeforeLoss <= 0) {
+        return 0;
+    }
+
+    if (lossValue > chipsBeforeLoss) {
+        lossAmount = chipsBeforeLoss;
+    } else {
+        lossAmount = (int)lossValue;
+    }
+
+    if (game->player.perkOwned[PERK_SURVIVAL] &&
+        lossValue >= chipsBeforeLoss) {
+        remainingChips = chipsBeforeLoss / 2;
+
+        if (remainingChips < 1) {
+            remainingChips = 1;
+        }
+
+        game->player.chips = remainingChips;
+        lossAmount = chipsBeforeLoss - remainingChips;
+    } else {
+        game->player.chips -= lossAmount;
+    }
+
+    return lossAmount;
+}
+
+// Resets the player to a visible ace with value 11.
+static void resetPlayerHandToEleven(Game *game) {
+    Card recoveryCard;
+    int attemptCount;
+    int foundAce;
+
+    resetHand(&game->player.hand);
+    attemptCount = 0;
+    foundAce = 0;
+
+    while (attemptCount < DECK_SIZE * 2 && !foundAce) {
+        if (game->deck.top >= DECK_SIZE) {
+            initDeck(&game->deck);
+            shuffleDeck(&game->deck);
+        }
+
+        recoveryCard = game->deck.cards[game->deck.top];
+        game->deck.top++;
+
+        if (recoveryCard.rank == ACE) {
+            addCardToHand(&game->player.hand, &recoveryCard);
+            foundAce = 1;
+        }
+
+        attemptCount++;
+    }
+
+    if (!foundAce) {
+        recoveryCard.suit = HEARTS;
+        recoveryCard.rank = ACE;
+        addCardToHand(&game->player.hand, &recoveryCard);
+    }
+
+    game->player.hand.value = 11;
+}
+
 // Bet input stays line-based so fgets can handle multi-character numeric input and backspace.
 // Returns -1 on EOF so quitting is distinct from a valid bet.
 static int readBet(Game *game) {
@@ -158,6 +229,9 @@ void initGame(Game *game) {
     game->dealerId = selectDealerForFloor(1, DEALER_CROUPIER);
     game->previousDealerId = game->dealerId;
     game->previousTwistId = TWIST_NONE;
+    game->peekActive = 0;
+    memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
+    memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->twistId = TWIST_NONE;
 }
 
@@ -202,8 +276,28 @@ int calculateDealerHandValue(const Hand *hand, DealerId id) {
     return totalValue;
 }
 
+int calculatePlayerHandValue(const Game *game) {
+    int totalValue;
+    int cardIndex;
+
+    if (!game->player.perkOwned[PERK_ACE_HIGH]) {
+        return game->player.hand.value;
+    }
+
+    totalValue = 0;
+
+    for (cardIndex = 0; cardIndex < game->player.hand.count; cardIndex++) {
+        totalValue += getCardValue(&game->player.hand.cards[cardIndex]);
+    }
+
+    return totalValue;
+}
+
 void startRound(Game *game) {
     int rawMode;
+    int playerValue;
+
+    game->peekActive = 0;
 
     if (game->twistId == TWIST_SIX_DECK) {
         initDeck(&game->deck);
@@ -246,7 +340,9 @@ void startRound(Game *game) {
             redrawFirstPlayerCard(game, 0);
         }
 
-        if (game->player.hand.value == 21) {
+        playerValue = calculatePlayerHandValue(game);
+
+        if (playerValue >= 21) {
             game->state = STATE_RESULT;
         } else {
             game->state = STATE_PLAYER_TURN;
@@ -277,20 +373,41 @@ void playerTurn(Game *game) {
                     drawCard(&game->deck, &game->dealer.hand);
                 }
 
-                if (game->player.hand.value > 21) {
+                if (calculatePlayerHandValue(game) > 21) {
                     game->state = STATE_RESULT;
                 }
 
                 renderTable(game, game->state == STATE_PLAYER_TURN);
             } else if (actionCharacter == 's' || actionCharacter == 'S') {
                 if (game->twistId == TWIST_STICKY_HANDS &&
-                    game->player.hand.value < 15) {
+                    calculatePlayerHandValue(game) < 15) {
                     renderMessage("Sticky Hands: cannot stand below 15.",
                                   ROW_RESULT,
                                   MSG_DEFAULT);
                 } else {
                     game->state = STATE_DEALER_TURN;
                     renderTable(game, 0);
+                }
+            } else if (actionCharacter == 'p' || actionCharacter == 'P') {
+                if (!game->player.perkOwned[PERK_PEEK]) {
+                    renderMessage("You do not own Peek.",
+                                  ROW_RESULT,
+                                  MSG_DEFAULT);
+                } else if (game->player.perkCharges[PERK_PEEK] <= 0) {
+                    renderMessage("Peek already used this floor.",
+                                  ROW_RESULT,
+                                  MSG_DEFAULT);
+                } else if (game->peekActive) {
+                    renderMessage("Peek already used this round.",
+                                  ROW_RESULT,
+                                  MSG_DEFAULT);
+                } else {
+                    game->player.perkCharges[PERK_PEEK]--;
+                    game->peekActive = 1;
+                    renderTable(game, 1);
+                    renderMessage("Peek: hole card revealed.",
+                                  ROW_RESULT,
+                                  MSG_DEFAULT);
                 }
             } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
                 game->state = STATE_QUIT;
@@ -318,20 +435,41 @@ void playerTurn(Game *game) {
                     drawCard(&game->deck, &game->dealer.hand);
                 }
 
-                if (game->player.hand.value > 21) {
+                if (calculatePlayerHandValue(game) > 21) {
                     game->state = STATE_RESULT;
                 }
             } else if (actionCharacter == 's' || actionCharacter == 'S') {
                 if (game->twistId == TWIST_STICKY_HANDS &&
-                    game->player.hand.value < 15) {
+                    calculatePlayerHandValue(game) < 15) {
                     renderMessage("Sticky Hands: cannot stand below 15.",
                                   ROW_RESULT,
                                   MSG_DEFAULT);
                 } else {
                     game->state = STATE_DEALER_TURN;
                 }
+            } else if (actionCharacter == 'p' || actionCharacter == 'P') {
+                if (!game->player.perkOwned[PERK_PEEK]) {
+                    renderMessage("You do not own Peek.",
+                                  ROW_RESULT,
+                                  MSG_DEFAULT);
+                } else if (game->player.perkCharges[PERK_PEEK] <= 0) {
+                    renderMessage("Peek already used this floor.",
+                                  ROW_RESULT,
+                                  MSG_DEFAULT);
+                } else if (game->peekActive) {
+                    renderMessage("Peek already used this round.",
+                                  ROW_RESULT,
+                                  MSG_DEFAULT);
+                } else {
+                    game->player.perkCharges[PERK_PEEK]--;
+                    game->peekActive = 1;
+                    renderTable(game, 1);
+                    renderMessage("Peek: hole card revealed.",
+                                  ROW_RESULT,
+                                  MSG_DEFAULT);
+                }
             } else {
-                renderMessage("Invalid action. Enter h to hit or s to stand.",
+                renderMessage("Invalid action. Enter h to hit, s to stand, or p to peek.",
                               ROW_PROMPT,
                               MSG_DEFAULT);
             }
@@ -370,7 +508,7 @@ void resolveRound(Game *game) {
     MessageStyle resultStyle;
     char resultMessage[128];
 
-    playerValue = game->player.hand.value;
+    playerValue = calculatePlayerHandValue(game);
     dealerValue = calculateDealerHandValue(&game->dealer.hand,
                                            game->dealerId);
     playerBlackjack = game->player.hand.count == 2 && playerValue == 21;
@@ -388,14 +526,21 @@ void resolveRound(Game *game) {
         baseLoss /= 2;
     }
 
-    if (playerValue > 21) {
-        if (baseLoss > game->player.chips) {
-            lossAmount = game->player.chips;
-        } else {
-            lossAmount = (int)baseLoss;
-        }
+    if (playerValue > 21 &&
+        game->player.perkOwned[PERK_SECOND_WIND] &&
+        game->player.perkCharges[PERK_SECOND_WIND] > 0) {
+        game->player.perkCharges[PERK_SECOND_WIND]--;
+        resetPlayerHandToEleven(game);
+        game->state = STATE_PLAYER_TURN;
+        renderTable(game, 1);
+        renderMessage("Second Wind! Hand reset to 11.",
+                      ROW_RESULT,
+                      MSG_INFO);
+        return;
+    }
 
-        game->player.chips -= lossAmount;
+    if (playerValue > 21) {
+        lossAmount = applyLoss(game, baseLoss);
         resultStyle = MSG_LOSS;
         snprintf(resultMessage,
                  sizeof(resultMessage),
@@ -421,13 +566,7 @@ void resolveRound(Game *game) {
                  "Blackjack! You win %d chips.",
                  payout);
     } else if (dealerBlackjack && !playerBlackjack) {
-        if (baseLoss > game->player.chips) {
-            lossAmount = game->player.chips;
-        } else {
-            lossAmount = (int)baseLoss;
-        }
-
-        game->player.chips -= lossAmount;
+        lossAmount = applyLoss(game, baseLoss);
         resultStyle = MSG_LOSS;
         snprintf(resultMessage,
                  sizeof(resultMessage),
@@ -458,13 +597,7 @@ void resolveRound(Game *game) {
                  "You win %d chips.",
                  payout);
     } else {
-        if (baseLoss > game->player.chips) {
-            lossAmount = game->player.chips;
-        } else {
-            lossAmount = (int)baseLoss;
-        }
-
-        game->player.chips -= lossAmount;
+        lossAmount = applyLoss(game, baseLoss);
         resultStyle = MSG_LOSS;
         snprintf(resultMessage,
                  sizeof(resultMessage),
@@ -509,8 +642,25 @@ void advanceFloor(Game *game) {
     game->floor++;
     game->dealerId = selectDealerForFloor(game->floor,
                                           game->previousDealerId);
-    game->twistId = selectTwistForFloor(game->floor,
-                                        game->previousTwistId);
+
+    if (game->player.perkOwned[PERK_PEEK]) {
+        game->player.perkCharges[PERK_PEEK] = 1;
+    }
+
+    {
+        int attempts;
+
+        attempts = 0;
+
+        do {
+            game->twistId = selectTwistForFloor(game->floor,
+                                                game->previousTwistId);
+            attempts++;
+        } while (game->player.perkOwned[PERK_SIXTH_SENSE] &&
+                 game->floor >= 4 &&
+                 getTwistInfo(game->twistId)->category == TWIST_CAT_HOSTILE &&
+                 attempts < 10);
+    }
 
     resetHand(&game->player.hand);
     resetHand(&game->dealer.hand);
@@ -525,9 +675,10 @@ void advanceFloor(Game *game) {
 }
 
 void floorMenu(Game *game) {
-    const char *menuItems[3];
+    const char *menuItems[4];
     char continueItem[128];
     char advanceItem[128];
+    char shopItem[128];
     char input[64];
     int nextMinBet;
     int disabledMask;
@@ -557,12 +708,17 @@ void floorMenu(Game *game) {
              sizeof(advanceItem),
              "[A]dvance to floor %d (earn souls)",
              game->floor + 1);
+    snprintf(shopItem,
+             sizeof(shopItem),
+             "[S]hop (%d souls)",
+             game->souls);
 
     menuItems[0] = continueItem;
     menuItems[1] = advanceItem;
-    menuItems[2] = "[Q]uit run";
+    menuItems[2] = shopItem;
+    menuItems[3] = "[Q]uit run";
 
-    renderMenu("What's next?", menuItems, 3, disabledMask, ROW_MENU_START);
+    renderMenu("What's next?", menuItems, 4, disabledMask, ROW_MENU_START);
 
     if (game->player.chips < currentMinBet) {
         snprintf(continueItem,
@@ -631,6 +787,8 @@ void floorMenu(Game *game) {
             } else {
                 game->state = STATE_BET;
             }
+        } else if (actionCharacter == 's' || actionCharacter == 'S') {
+            game->state = STATE_SHOP;
         } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
             game->state = STATE_QUIT;
         }
@@ -648,11 +806,9 @@ void printGameState(const Game *game, int hideDealerCard) {
     twistInfo = getTwistInfo(game->twistId);
     dealerValue = calculateDealerHandValue(&game->dealer.hand,
                                            game->dealerId);
-    dealerCardHidden = hideDealerCard;
-
-    if (game->twistId == TWIST_SNIPER) {
-        dealerCardHidden = 0;
-    }
+    dealerCardHidden = hideDealerCard &&
+                       !game->peekActive &&
+                       game->twistId != TWIST_SNIPER;
 
     printf("Round: %d\n", game->roundNumber);
     printf("Dealer (%s): ", dealerInfo->name);
@@ -686,8 +842,88 @@ void printGameState(const Game *game, int hideDealerCard) {
     }
 
     printf("Player: ");
-    printHand(&game->player.hand);
-    printf("Chips: %d | Bet: %d\n", game->player.chips, game->player.bet);
+
+    for (cardIndex = 0; cardIndex < game->player.hand.count; cardIndex++) {
+        if (cardIndex > 0) {
+            printf(" ");
+        }
+
+        printCard(&game->player.hand.cards[cardIndex]);
+    }
+
+    printf(" | Total value: %d\n",
+           calculatePlayerHandValue(game));
+    printf("Chips: %d | Bet: %d\n",
+           game->player.chips,
+           game->player.bet);
+}
+
+void runShop(Game *game) {
+    char input[64];
+    int actionCharacter;
+    int inputCharacter;
+    int perkIndex;
+    const char *message;
+
+    while (game->state == STATE_SHOP) {
+        message = NULL;
+        renderShop(game);
+
+        if (inputIsRaw()) {
+            actionCharacter = getch();
+        } else if (fgets(input, sizeof(input), stdin) != NULL) {
+            if (strchr(input, '\n') == NULL) {
+                while ((inputCharacter = getchar()) != '\n' &&
+                       inputCharacter != EOF) {
+                }
+            }
+
+            actionCharacter = -1;
+            inputCharacter = 0;
+
+            while (input[inputCharacter] != '\0') {
+                if (!isspace((unsigned char)input[inputCharacter])) {
+                    actionCharacter = input[inputCharacter];
+                    break;
+                }
+
+                inputCharacter++;
+            }
+        } else {
+            actionCharacter = -1;
+        }
+
+        if (actionCharacter == -1) {
+            game->state = STATE_MENU;
+        } else if (actionCharacter == 'q' ||
+                   actionCharacter == 'Q' ||
+                   actionCharacter == 27) {
+            game->state = STATE_MENU;
+        } else if (actionCharacter >= '1' &&
+                   actionCharacter <= '5') {
+            perkIndex = actionCharacter - '1';
+
+            if (game->player.perkOwned[perkIndex]) {
+                message = "Already owned.";
+            } else if (game->souls < perkCost((PerkId)perkIndex)) {
+                message = "Not enough souls.";
+            } else {
+                game->souls -= perkCost((PerkId)perkIndex);
+                game->player.perkOwned[perkIndex] = 1;
+
+                if (perkIndex == PERK_PEEK ||
+                    perkIndex == PERK_SECOND_WIND) {
+                    game->player.perkCharges[perkIndex] = 1;
+                }
+            }
+
+            renderShop(game);
+
+            if (message != NULL) {
+                renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+            }
+        }
+    }
 }
 
 int runGame(Game *game) {
@@ -702,6 +938,8 @@ int runGame(Game *game) {
             dealerTurn(game);
         } else if (game->state == STATE_RESULT) {
             resolveRound(game);
+        } else if (game->state == STATE_SHOP) {
+            runShop(game);
         } else if (game->state == STATE_MENU) {
             floorMenu(game);
         }
@@ -716,3 +954,4 @@ int runGame(Game *game) {
 
     return 0;
 }
+

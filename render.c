@@ -261,11 +261,9 @@ void renderTable(const Game *game, int hideDealerCard) {
     dealerInfo = getDealerInfo(game->dealerId);
     twistInfo = getTwistInfo(game->twistId);
     tableWidth = getDynamicTableWidth(game);
-    dealerCardHidden = hideDealerCard;
-
-    if (game->twistId == TWIST_SNIPER) {
-        dealerCardHidden = 0;
-    }
+    dealerCardHidden = hideDealerCard &&
+                       !game->peekActive &&
+                       game->twistId != TWIST_SNIPER;
 
     if (canRenderTable(tableWidth,
                        &terminalWidth,
@@ -290,7 +288,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         snprintf(playerTotal,
                  sizeof(playerTotal),
                  "Total: %d",
-                 game->player.hand.value);
+                 calculatePlayerHandValue(game));
 
         snprintf(statusText,
                  sizeof(statusText),
@@ -382,7 +380,12 @@ void renderTable(const Game *game, int hideDealerCard) {
         if (game->state == STATE_BET) {
             hintText = "Type a bet and press Enter.";
         } else if (game->state == STATE_PLAYER_TURN) {
-            hintText = "Keys: H hit   S stand   Q quit";
+            if (game->player.perkOwned[PERK_PEEK] &&
+                game->player.perkCharges[PERK_PEEK] > 0) {
+                hintText = "Keys: H hit   S stand   P peek   Q quit";
+            } else {
+                hintText = "Keys: H hit   S stand   Q quit";
+            }
         } else if (game->state == STATE_MENU) {
             hintText = "Keys: C continue   A advance   Q quit";
         } else {
@@ -510,6 +513,127 @@ void renderMenu(const char *title,
             printf("\n");
         }
 
+        fflush(stdout);
+    }
+}
+
+// Renders the between-floor perk shop.
+void renderShop(const Game *game) {
+    int terminalWidth;
+    int terminalHeight;
+    int tableWidth;
+    int shopPadding;
+    int titlePadding;
+    int itemRow;
+    int descriptionRow;
+    int perkIndex;
+    int isOwned;
+    int canAfford;
+    const char *statusText;
+    const char *itemPrefix;
+
+    static const int ITEM_ROWS[] = {
+        ROW_SHOP_ITEM_0,
+        ROW_SHOP_ITEM_1,
+        ROW_SHOP_ITEM_2,
+        ROW_SHOP_ITEM_3,
+        ROW_SHOP_ITEM_4
+    };
+
+    static const int DESCRIPTION_ROWS[] = {
+        ROW_SHOP_DESC_0,
+        ROW_SHOP_DESC_1,
+        ROW_SHOP_DESC_2,
+        ROW_SHOP_DESC_3,
+        ROW_SHOP_DESC_4
+    };
+
+    initColors();
+    getTerminalSize(&terminalWidth, &terminalHeight);
+    tableWidth = getDynamicTableWidth(game);
+
+    if (isatty(STDOUT_FILENO) &&
+        terminalWidth >= 72 &&
+        terminalHeight >= TABLE_MIN_HEIGHT) {
+        shopPadding = (terminalWidth - tableWidth) / 2;
+
+        if (shopPadding < 0) {
+            shopPadding = 0;
+        }
+
+        titlePadding = shopPadding +
+                        (tableWidth - (int)strlen("SHOP")) / 2;
+
+        printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
+        printf(SCR_CURSOR, ROW_SHOP_TITLE, titlePadding + 1);
+        printf("%sSHOP%s", scrBold(), scrReset());
+
+        moveToTableRow(ROW_SHOP_SOULS, shopPadding);
+        printf("Souls: %d", game->souls);
+
+        for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+            itemRow = ITEM_ROWS[perkIndex];
+            descriptionRow = DESCRIPTION_ROWS[perkIndex];
+            isOwned = game->player.perkOwned[perkIndex];
+            canAfford = game->souls >= perkCost((PerkId)perkIndex);
+            statusText = isOwned ? "OWNED" : "BUY";
+            itemPrefix = (!isOwned && !canAfford) ? scrDim() : "";
+
+            moveToTableRow(itemRow, shopPadding);
+            printf("%s[%d] %s   %d souls   %s%s",
+                   itemPrefix,
+                   perkIndex + 1,
+                   perkName((PerkId)perkIndex),
+                   perkCost((PerkId)perkIndex),
+                   statusText,
+                   itemPrefix[0] != '\0' ? scrReset() : "");
+
+            moveToTableRow(descriptionRow, shopPadding);
+            printf("%s%s%s",
+                   scrDim(),
+                   perkDescription((PerkId)perkIndex),
+                   scrReset());
+        }
+
+        moveToTableRow(ROW_SHOP_HINT, shopPadding);
+        printf("%sKeys: 1-5 buy   Q close%s",
+               scrDim(),
+               scrReset());
+        fflush(stdout);
+    } else {
+        printf("SHOP\n");
+        printf("Souls: %d\n\n", game->souls);
+
+        for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+            isOwned = game->player.perkOwned[perkIndex];
+            canAfford = game->souls >= perkCost((PerkId)perkIndex);
+            statusText = isOwned ? "OWNED" : "BUY";
+
+            if (!isOwned && !canAfford) {
+                printf("%s[%d] %s   %d souls   %s%s",
+                       scrDim(),
+                       perkIndex + 1,
+                       perkName((PerkId)perkIndex),
+                       perkCost((PerkId)perkIndex),
+                       statusText,
+                       scrReset());
+            } else {
+                printf("[%d] %s   %d souls   %s",
+                       perkIndex + 1,
+                       perkName((PerkId)perkIndex),
+                       perkCost((PerkId)perkIndex),
+                       statusText);
+            }
+
+            printf("\n%s%s%s\n",
+                   scrDim(),
+                   perkDescription((PerkId)perkIndex),
+                   scrReset());
+        }
+
+        printf("%sKeys: 1-5 buy   Q close%s\n",
+               scrDim(),
+               scrReset());
         fflush(stdout);
     }
 }

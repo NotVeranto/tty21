@@ -5,12 +5,14 @@
 #include "hand.h"
 #include "dealers.h"
 #include "twists.h"
+#include "perks.h"
 
 typedef enum {
     STATE_BET,
     STATE_PLAYER_TURN,
     STATE_DEALER_TURN,
     STATE_RESULT,
+    STATE_SHOP,
     STATE_MENU,
     STATE_QUIT
 } GameState;
@@ -19,6 +21,8 @@ typedef struct {
     Hand hand;
     int chips;
     int bet;
+    int perkOwned[PERK_COUNT];
+    int perkCharges[PERK_COUNT];
 } Player;
 
 typedef struct {
@@ -37,17 +41,20 @@ typedef struct {
     DealerId previousDealerId;
     TwistId twistId;
     TwistId previousTwistId;
+    int peekActive;
 } Game;
 
 void initGame(Game *game);
 int getMinBet(int floor);
 int calculateDealerHandValue(const Hand *hand, DealerId id);
+int calculatePlayerHandValue(const Game *game);
 void startRound(Game *game);
 void playerTurn(Game *game);
 void dealerTurn(Game *game);
 void resolveRound(Game *game);
 void advanceFloor(Game *game);
 void floorMenu(Game *game);
+void runShop(Game *game);
 void printGameState(const Game *game, int hideDealerCard);
 int runGame(Game *game);
 

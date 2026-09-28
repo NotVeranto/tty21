@@ -18,6 +18,20 @@
 #define ROW_OVER 39
 #define ROW_FINAL 40
 
+#define ROW_SHOP_TITLE 10
+#define ROW_SHOP_SOULS 11
+#define ROW_SHOP_ITEM_0 13
+#define ROW_SHOP_ITEM_1 15
+#define ROW_SHOP_ITEM_2 17
+#define ROW_SHOP_ITEM_3 19
+#define ROW_SHOP_ITEM_4 21
+#define ROW_SHOP_DESC_0 14
+#define ROW_SHOP_DESC_1 16
+#define ROW_SHOP_DESC_2 18
+#define ROW_SHOP_DESC_3 20
+#define ROW_SHOP_DESC_4 22
+#define ROW_SHOP_HINT 24
+
 #include "game.h"
 
 typedef enum {
@@ -29,6 +43,7 @@ typedef enum {
 } MessageStyle;
 
 void renderTable(const Game *game, int hideDealerCard);
+void renderShop(const Game *game);
 void renderMessage(const char *msg, int row, MessageStyle style);
 void renderMenu(const char *title,
                 const char *const *items,

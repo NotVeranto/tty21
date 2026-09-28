@@ -18,6 +18,7 @@ Implemented:
 - Raw terminal input via termios.
 - Twists: per-floor rule modifiers.
 - Deterministic runs via --seed.
+- Perks and between-floor shop (5 perks).
 
 Planned:
 - Double Down and Split.
@@ -45,6 +46,7 @@ In-game (during the player's turn):
 - `h` — hit
 - `s` — stand
 - `q` — quit the current run
+- `p` — Peek at dealer hole card (requires Peek perk).
 - `Ctrl+C` — force quit, terminal state restored
 
 Betting:
@@ -54,6 +56,7 @@ Betting:
 
 - `c` — Continue on current floor
 - `a` — Advance to the next floor
+- `s` — Open the shop.
 - `q` — Quit the run
 
 ## Project status
@@ -67,7 +70,7 @@ Betting:
 - [x] Floors and advance menu.
 - [x] Named dealers.
 - [x] Twists.
-- [ ] Perks and shop.
+- [x] Perks and shop.
 - [ ] Split and Double Down.
 - [ ] Save and load (XDG).
 - [ ] Polish and animations.
