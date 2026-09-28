@@ -16,6 +16,7 @@ Implemented:
 - Roguelike progression: floors, souls, advance menu.
 - Full-screen ASCII table with ANSI styling.
 - Raw terminal input via termios.
+- Twists: per-floor rule modifiers.
 
 Planned:
 - Double Down and Split.
@@ -63,7 +64,7 @@ Betting:
 - [x] Raw terminal input.
 - [x] Floors and advance menu.
 - [x] Named dealers.
-- [ ] Twists (per-round modifiers).
+- [x] Twists.
 - [ ] Perks and shop.
 - [ ] Split and Double Down.
 - [ ] Save and load (XDG).

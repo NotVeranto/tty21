@@ -11,6 +11,7 @@
 
 // Keeps a safety margin before reshuffling at the start of a round.
 #define DECK_RESHUFFLE_MARGIN 15
+#define FIRST_CARD_RETRY_LIMIT 50
 
 // Draws the next card and advances the deck position.
 static void drawCard(Deck *deck, Hand *hand) {
@@ -23,14 +24,45 @@ static void drawCard(Deck *deck, Hand *hand) {
     deck->top++;
 }
 
+// Replaces the player's first card while keeping the other dealt cards intact.
+static void redrawFirstPlayerCard(Game *game, int requireHighCard) {
+    int attemptCount;
+    int accepted;
+    Card replacementCard;
+
+    attemptCount = 0;
+    accepted = 0;
+
+    while (attemptCount < FIRST_CARD_RETRY_LIMIT && !accepted) {
+        if (game->deck.top >= DECK_SIZE) {
+            initDeck(&game->deck);
+            shuffleDeck(&game->deck);
+        }
+
+        replacementCard = game->deck.cards[game->deck.top];
+        game->deck.top++;
+
+        if ((requireHighCard && replacementCard.rank >= EIGHT) ||
+            (!requireHighCard && replacementCard.rank <= FIVE)) {
+            game->player.hand.cards[0] = replacementCard;
+            accepted = 1;
+        }
+
+        attemptCount++;
+    }
+
+    game->player.hand.value = calculateHandValue(&game->player.hand);
+}
+
 // Bet input stays line-based so fgets can handle multi-character numeric input and backspace.
 // Returns -1 on EOF so quitting is distinct from a valid bet.
 static int readBet(Game *game) {
     char input[64];
     char prompt[64];
+    char message[64];
     char *endPointer;
     long betValue;
-    size_t newlinePosition;
+    size_t delimiterPosition;
     int minBet;
     int validBet;
 
@@ -42,7 +74,7 @@ static int readBet(Game *game) {
                  "Minimum bet is %d. You have %d chips. Run over.",
                  minBet,
                  game->player.chips);
-        renderMessage(prompt, ROW_RESULT);
+        renderMessage(prompt, ROW_RESULT, MSG_DEFAULT);
         game->state = STATE_QUIT;
         return -1;
     }
@@ -56,7 +88,7 @@ static int readBet(Game *game) {
     validBet = 0;
 
     while (!validBet) {
-        renderMessage(prompt, ROW_PROMPT);
+        renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
 
         if (fgets(input, sizeof(input), stdin) == NULL) {
             if (ferror(stdin) && errno == EINTR) {
@@ -67,10 +99,25 @@ static int readBet(Game *game) {
             return -1;
         }
 
-        newlinePosition = strcspn(input, "\r\n");
+        delimiterPosition = strcspn(input, "\r\n");
 
-        if (input[newlinePosition] != '\0') {
-            input[newlinePosition] = '\0';
+        if (delimiterPosition == sizeof(input) - 1) {
+            int ch;
+
+            while ((ch = getchar()) != '\n' && ch != EOF) {
+            }
+
+            snprintf(message,
+                     sizeof(message),
+                     "Invalid bet. Enter an integer between %d and %d.",
+                     minBet,
+                     game->player.chips);
+            renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+            continue;
+        }
+
+        if (input[delimiterPosition] != '\0') {
+            input[delimiterPosition] = '\0';
         }
 
         betValue = strtol(input, &endPointer, 10);
@@ -85,12 +132,12 @@ static int readBet(Game *game) {
             betValue <= game->player.chips) {
             validBet = 1;
         } else {
-            snprintf(prompt,
-                     sizeof(prompt),
+            snprintf(message,
+                     sizeof(message),
                      "Invalid bet. Enter an integer between %d and %d.",
                      minBet,
                      game->player.chips);
-            renderMessage(prompt, ROW_RESULT);
+            renderMessage(message, ROW_RESULT, MSG_DEFAULT);
         }
     }
 
@@ -110,6 +157,7 @@ void initGame(Game *game) {
     game->souls = 0;
     game->dealerId = selectDealerForFloor(1, DEALER_CROUPIER);
     game->previousDealerId = game->dealerId;
+    game->twistId = TWIST_NONE;
 }
 
 int getMinBet(int floor) {
@@ -156,7 +204,11 @@ int calculateDealerHandValue(const Hand *hand, DealerId id) {
 void startRound(Game *game) {
     int rawMode;
 
-    if (game->deck.top > DECK_SIZE - DECK_RESHUFFLE_MARGIN) {
+    if (game->twistId == TWIST_SIX_DECK) {
+        initDeck(&game->deck);
+        shuffleDeck(&game->deck);
+    } else if (game->twistId != TWIST_NO_RESHUFFLE &&
+               game->deck.top > DECK_SIZE - DECK_RESHUFFLE_MARGIN) {
         initDeck(&game->deck);
         shuffleDeck(&game->deck);
     }
@@ -187,6 +239,12 @@ void startRound(Game *game) {
         drawCard(&game->deck, &game->player.hand);
         drawCard(&game->deck, &game->dealer.hand);
 
+        if (game->twistId == TWIST_LUCKY_DRAW) {
+            redrawFirstPlayerCard(game, 1);
+        } else if (game->twistId == TWIST_COLD_DECK) {
+            redrawFirstPlayerCard(game, 0);
+        }
+
         if (game->player.hand.value == 21) {
             game->state = STATE_RESULT;
         } else {
@@ -203,7 +261,7 @@ void playerTurn(Game *game) {
         renderTable(game, 1);
 
         while (game->state == STATE_PLAYER_TURN) {
-            renderMessage("Hit or stand? [h/s]: ", ROW_PROMPT);
+            renderMessage("Hit or stand? [h/s]: ", ROW_PROMPT, MSG_DEFAULT);
             actionCharacter = getch();
 
             if (actionCharacter == -1) {
@@ -224,8 +282,15 @@ void playerTurn(Game *game) {
 
                 renderTable(game, game->state == STATE_PLAYER_TURN);
             } else if (actionCharacter == 's' || actionCharacter == 'S') {
-                game->state = STATE_DEALER_TURN;
-                renderTable(game, 0);
+                if (game->twistId == TWIST_STICKY_HANDS &&
+                    game->player.hand.value < 15) {
+                    renderMessage("Sticky Hands: cannot stand below 15.",
+                                  ROW_PROMPT,
+                                  MSG_DEFAULT);
+                } else {
+                    game->state = STATE_DEALER_TURN;
+                    renderTable(game, 0);
+                }
             } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
                 game->state = STATE_QUIT;
             }
@@ -233,7 +298,7 @@ void playerTurn(Game *game) {
     } else {
         while (game->state == STATE_PLAYER_TURN) {
             renderTable(game, 1);
-            renderMessage("Hit or stand? [h/s]: ", ROW_PROMPT);
+            renderMessage("Hit or stand? [h/s]: ", ROW_PROMPT, MSG_DEFAULT);
             actionCharacter = getchar();
 
             if (actionCharacter == EOF) {
@@ -256,10 +321,18 @@ void playerTurn(Game *game) {
                     game->state = STATE_RESULT;
                 }
             } else if (actionCharacter == 's' || actionCharacter == 'S') {
-                game->state = STATE_DEALER_TURN;
+                if (game->twistId == TWIST_STICKY_HANDS &&
+                    game->player.hand.value < 15) {
+                    renderMessage("Sticky Hands: cannot stand below 15.",
+                                  ROW_PROMPT,
+                                  MSG_DEFAULT);
+                } else {
+                    game->state = STATE_DEALER_TURN;
+                }
             } else {
                 renderMessage("Invalid action. Enter h to hit or s to stand.",
-                              ROW_PROMPT);
+                              ROW_PROMPT,
+                              MSG_DEFAULT);
             }
         }
     }
@@ -292,7 +365,8 @@ void resolveRound(Game *game) {
     int payout;
     int lossAmount;
     long long payoutValue;
-    long long lossValue;
+    long long baseLoss;
+    MessageStyle resultStyle;
     char resultMessage[128];
 
     playerValue = game->player.hand.value;
@@ -303,23 +377,25 @@ void resolveRound(Game *game) {
     payout = 0;
     lossAmount = game->player.bet;
     payoutValue = 0;
-    lossValue = game->player.bet;
+    baseLoss = game->player.bet;
+
+    if (game->dealerId == DEALER_BUTCHER) {
+        baseLoss = ((long long)game->player.bet * 150) / 100;
+    }
+
+    if (game->twistId == TWIST_CHARITY) {
+        baseLoss /= 2;
+    }
 
     if (playerValue > 21) {
-        if (game->dealerId == DEALER_BUTCHER) {
-            lossValue = ((long long)game->player.bet * 150) / 100;
-        }
-
-        if (lossValue > game->player.chips) {
+        if (baseLoss > game->player.chips) {
             lossAmount = game->player.chips;
-        } else if (lossValue > INT_MAX) {
-            lossAmount = INT_MAX;
         } else {
-            lossAmount = (int)lossValue;
+            lossAmount = (int)baseLoss;
         }
 
         game->player.chips -= lossAmount;
-
+        resultStyle = MSG_LOSS;
         snprintf(resultMessage,
                  sizeof(resultMessage),
                  "Player busts. You lose %d chips.",
@@ -338,59 +414,57 @@ void resolveRound(Game *game) {
         }
 
         game->player.chips += payout;
+        resultStyle = MSG_WIN;
         snprintf(resultMessage,
                  sizeof(resultMessage),
                  "Blackjack! You win %d chips.",
                  payout);
     } else if (dealerBlackjack && !playerBlackjack) {
-        if (game->dealerId == DEALER_BUTCHER) {
-            lossValue = ((long long)game->player.bet * 150) / 100;
-        }
-
-        if (lossValue > game->player.chips) {
+        if (baseLoss > game->player.chips) {
             lossAmount = game->player.chips;
-        } else if (lossValue > INT_MAX) {
-            lossAmount = INT_MAX;
         } else {
-            lossAmount = (int)lossValue;
+            lossAmount = (int)baseLoss;
         }
 
         game->player.chips -= lossAmount;
-
+        resultStyle = MSG_LOSS;
         snprintf(resultMessage,
                  sizeof(resultMessage),
                  "Dealer has blackjack. You lose %d chips.",
                  lossAmount);
     } else if (playerValue == dealerValue) {
+        resultStyle = MSG_PUSH;
         snprintf(resultMessage,
                  sizeof(resultMessage),
                  "Push. Your bet is returned.");
     } else if (dealerValue > 21 || playerValue > dealerValue) {
-        if ((long long)game->player.chips + game->player.bet > INT_MAX) {
-            game->player.chips = INT_MAX;
+        if (game->twistId == TWIST_HALF_PAYOUT) {
+            payoutValue = game->player.bet / 2;
         } else {
-            game->player.chips += game->player.bet;
+            payoutValue = game->player.bet;
         }
 
+        if (payoutValue > INT_MAX - game->player.chips) {
+            payout = INT_MAX - game->player.chips;
+        } else {
+            payout = (int)payoutValue;
+        }
+
+        game->player.chips += payout;
+        resultStyle = MSG_WIN;
         snprintf(resultMessage,
                  sizeof(resultMessage),
                  "You win %d chips.",
-                 game->player.bet);
+                 payout);
     } else {
-        if (game->dealerId == DEALER_BUTCHER) {
-            lossValue = ((long long)game->player.bet * 150) / 100;
-        }
-
-        if (lossValue > game->player.chips) {
+        if (baseLoss > game->player.chips) {
             lossAmount = game->player.chips;
-        } else if (lossValue > INT_MAX) {
-            lossAmount = INT_MAX;
         } else {
-            lossAmount = (int)lossValue;
+            lossAmount = (int)baseLoss;
         }
 
         game->player.chips -= lossAmount;
-
+        resultStyle = MSG_LOSS;
         snprintf(resultMessage,
                  sizeof(resultMessage),
                  "You lose %d chips.",
@@ -398,12 +472,12 @@ void resolveRound(Game *game) {
     }
 
     renderTable(game, 0);
-    renderMessage(resultMessage, ROW_RESULT);
+    renderMessage(resultMessage, ROW_RESULT, resultStyle);
     snprintf(resultMessage,
              sizeof(resultMessage),
              "Chips: %d",
              game->player.chips);
-    renderMessage(resultMessage, ROW_CHIPS);
+    renderMessage(resultMessage, ROW_CHIPS, MSG_DEFAULT);
 
     if (game->player.chips == 0) {
         game->state = STATE_QUIT;
@@ -433,6 +507,7 @@ void advanceFloor(Game *game) {
     game->floor++;
     game->dealerId = selectDealerForFloor(game->floor,
                                           game->previousDealerId);
+    game->twistId = selectTwistForFloor(game->floor);
 
     resetHand(&game->player.hand);
     resetHand(&game->dealer.hand);
@@ -443,7 +518,7 @@ void advanceFloor(Game *game) {
              game->floor,
              game->souls,
              getMinBet(game->floor));
-    renderMessage(message, ROW_RESULT);
+    renderMessage(message, ROW_RESULT, MSG_DEFAULT);
 }
 
 void floorMenu(Game *game) {
@@ -491,7 +566,7 @@ void floorMenu(Game *game) {
                  sizeof(continueItem),
                  "Cannot afford minimum bet on floor %d.",
                  game->floor);
-        renderMessage(continueItem, ROW_RESULT);
+        renderMessage(continueItem, ROW_RESULT, MSG_DEFAULT);
     }
 
     while (game->state == STATE_MENU) {
@@ -532,7 +607,9 @@ void floorMenu(Game *game) {
         } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
                    game->player.chips >= nextMinBet) {
             advanceFloor(game);
-            renderMessage("Press any key to continue.", ROW_PROMPT);
+            renderMessage("Press any key to continue.",
+                          ROW_PROMPT,
+                          MSG_DEFAULT);
 
             if (inputIsRaw()) {
                 actionCharacter = getch();
@@ -559,18 +636,26 @@ void floorMenu(Game *game) {
 
 void printGameState(const Game *game, int hideDealerCard) {
     const DealerInfo *dealerInfo;
+    const TwistInfo *twistInfo;
     int dealerValue;
+    int dealerCardHidden;
     int cardIndex;
 
     dealerInfo = getDealerInfo(game->dealerId);
+    twistInfo = getTwistInfo(game->twistId);
     dealerValue = calculateDealerHandValue(&game->dealer.hand,
                                            game->dealerId);
+    dealerCardHidden = hideDealerCard;
+
+    if (game->twistId == TWIST_SNIPER) {
+        dealerCardHidden = 0;
+    }
 
     printf("Round: %d\n", game->roundNumber);
     printf("Dealer (%s): ", dealerInfo->name);
 
     for (cardIndex = 0; cardIndex < game->dealer.hand.count; cardIndex++) {
-        if (hideDealerCard && cardIndex == 0) {
+        if (dealerCardHidden && cardIndex == 0) {
             printf("??");
         } else {
             printCard(&game->dealer.hand.cards[cardIndex]);
@@ -581,7 +666,7 @@ void printGameState(const Game *game, int hideDealerCard) {
         }
     }
 
-    if (hideDealerCard || game->dealerId == DEALER_REAPER) {
+    if (dealerCardHidden || game->dealerId == DEALER_REAPER) {
         printf(" | Total value: ??\n");
     } else {
         printf(" | Total value: %d\n", dealerValue);
@@ -589,6 +674,12 @@ void printGameState(const Game *game, int hideDealerCard) {
 
     if (dealerInfo->rule1 != NULL) {
         printf("Rule: %s\n", dealerInfo->rule1);
+    }
+
+    if (twistInfo->id != TWIST_NONE) {
+        printf("Twist: %s — %s\n",
+               twistInfo->name,
+               twistInfo->description);
     }
 
     printf("Player: ");
@@ -613,12 +704,12 @@ int runGame(Game *game) {
         }
     }
 
-    renderMessage("Game over.", ROW_OVER);
+    renderMessage("Game over.", ROW_OVER, MSG_DEFAULT);
     snprintf(finalChipsMessage,
              sizeof(finalChipsMessage),
              "Final chips: %d",
              game->player.chips);
-    renderMessage(finalChipsMessage, ROW_FINAL);
+    renderMessage(finalChipsMessage, ROW_FINAL, MSG_DEFAULT);
 
     return 0;
 }

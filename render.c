@@ -1,6 +1,7 @@
 #include "render.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -29,6 +30,47 @@ static const char *CARD_SUITS[] = {
 };
 
 static int tablePadding;
+static int colorEnabled = 1;
+
+// Reads NO_COLOR once before the first visible render.
+static void initColors(void) {
+    static int initialized;
+
+    if (!initialized) {
+        colorEnabled = getenv("NO_COLOR") == NULL;
+        initialized = 1;
+    }
+}
+
+// Returns the ANSI reset sequence when colors are enabled.
+static const char *scrReset(void) {
+    return colorEnabled ? "\033[0m" : "";
+}
+
+// Returns the ANSI red sequence when colors are enabled.
+static const char *scrRed(void) {
+    return colorEnabled ? "\033[31m" : "";
+}
+
+// Returns the ANSI green sequence when colors are enabled.
+static const char *scrGreen(void) {
+    return colorEnabled ? "\033[32m" : "";
+}
+
+// Returns the ANSI yellow sequence when colors are enabled.
+static const char *scrYellow(void) {
+    return colorEnabled ? "\033[33m" : "";
+}
+
+// Returns the ANSI bold sequence when colors are enabled.
+static const char *scrBold(void) {
+    return colorEnabled ? "\033[1m" : "";
+}
+
+// Returns the ANSI dim sequence when colors are enabled.
+static const char *scrDim(void) {
+    return colorEnabled ? "\033[2m" : "";
+}
 
 // Reads terminal dimensions and falls back to a standard terminal size.
 static void getTerminalSize(int *width, int *height) {
@@ -114,8 +156,10 @@ static void printHandHeader(const char *label,
     }
 
     moveToTableRow(row, padding);
-    printf(SCR_BOLD "%s" SCR_RESET "%*s%s",
+    printf("%s%s%s%*s%s",
+           scrBold(),
            label,
+           scrReset(),
            remainingWidth,
            "",
            totalText);
@@ -148,11 +192,14 @@ static void printVisibleCardLine(const Card *card, int lineIndex) {
         printf("|    ");
 
         if (card->suit == HEARTS || card->suit == DIAMONDS) {
-            printf(SCR_RED);
+            printf("%s%s%s",
+                   scrRed(),
+                   CARD_SUITS[card->suit],
+                   scrReset());
+        } else {
+            printf("%s", CARD_SUITS[card->suit]);
         }
 
-        printf("%s", CARD_SUITS[card->suit]);
-        printf(SCR_RESET);
         printf("    |");
     } else {
         printf("|       %2s|", rankName);
@@ -189,10 +236,12 @@ static void drawCards(const Hand *hand,
 // Clears and redraws the complete table on fixed rows.
 void renderTable(const Game *game, int hideDealerCard) {
     const DealerInfo *dealerInfo;
+    const TwistInfo *twistInfo;
     const char *hintText;
     int terminalWidth;
     int terminalHeight;
     int tableWidth;
+    int dealerCardHidden;
     int separatorIndex;
     int prefixLength;
     int suffixLength;
@@ -200,13 +249,22 @@ void renderTable(const Game *game, int hideDealerCard) {
     char dealerName[64];
     char statusText[128];
     char rulesText[256];
+    char twistText[256];
     char oracleText[64];
     char roundText[64];
     char dealerTotal[32];
     char playerTotal[32];
 
+    initColors();
+
     dealerInfo = getDealerInfo(game->dealerId);
+    twistInfo = getTwistInfo(game->twistId);
     tableWidth = getDynamicTableWidth(game);
+    dealerCardHidden = hideDealerCard;
+
+    if (game->twistId == TWIST_SNIPER) {
+        dealerCardHidden = 0;
+    }
 
     if (canRenderTable(tableWidth,
                        &terminalWidth,
@@ -218,7 +276,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                  "Round: %d",
                  game->roundNumber);
 
-        if (hideDealerCard || game->dealerId == DEALER_REAPER) {
+        if (dealerCardHidden || game->dealerId == DEALER_REAPER) {
             snprintf(dealerTotal, sizeof(dealerTotal), "Total: ??");
         } else {
             snprintf(dealerTotal,
@@ -281,12 +339,12 @@ void renderTable(const Game *game, int hideDealerCard) {
                      game->player.bet);
         }
 
-        printf(SCR_RESET SCR_CLEAR SCR_HOME);
+        printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
 
         printf(SCR_CURSOR,
                TITLE_ROW,
                (terminalWidth - (int)strlen("TTY21")) / 2 + 1);
-        printf(SCR_BOLD "TTY21" SCR_RESET);
+        printf("%sTTY21%s", scrBold(), scrReset());
 
         moveToTableRow(SEPARATOR_ROW, tablePadding);
 
@@ -305,7 +363,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         drawCards(&game->dealer.hand,
                   DEALER_CARD_ROW,
                   tablePadding,
-                  hideDealerCard);
+                  dealerCardHidden);
 
         printHandHeader("PLAYER",
                         playerTotal,
@@ -334,7 +392,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         printf(SCR_ERASE_EOL);
 
         if (hintText[0] != '\0') {
-            printf(SCR_DIM "%s" SCR_RESET, hintText);
+            printf("%s%s%s", scrDim(), hintText, scrReset());
         }
 
         moveToTableRow(ROW_RULE, tablePadding);
@@ -354,7 +412,22 @@ void renderTable(const Game *game, int hideDealerCard) {
                          dealerInfo->rule2);
             }
 
-            printf(SCR_DIM "%s" SCR_RESET, rulesText);
+            printf("%s%s%s", scrDim(), rulesText, scrReset());
+        }
+
+        moveToTableRow(ROW_TWIST, tablePadding);
+        printf(SCR_ERASE_EOL);
+
+        if (twistInfo->id != TWIST_NONE) {
+            snprintf(twistText,
+                     sizeof(twistText),
+                     "Twist: %s — %s",
+                     twistInfo->name,
+                     twistInfo->description);
+            printf("%s%s%s",
+                   scrDim(),
+                   twistText,
+                   scrReset());
         }
 
         moveToTableRow(ROW_ORACLE, tablePadding);
@@ -368,7 +441,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                      "Next card: %s%s",
                      CARD_RANKS[game->deck.cards[game->deck.top].rank],
                      CARD_SUITS[game->deck.cards[game->deck.top].suit]);
-            printf(SCR_DIM "%s" SCR_RESET, oracleText);
+            printf("%s%s%s", scrDim(), oracleText, scrReset());
         }
 
         fflush(stdout);
@@ -389,6 +462,7 @@ void renderMenu(const char *title,
     int menuPadding;
     int isDisabled;
 
+    initColors();
     getTerminalSize(&terminalWidth, &terminalHeight);
 
     if (isatty(STDOUT_FILENO) &&
@@ -398,7 +472,7 @@ void renderMenu(const char *title,
 
         printf(SCR_CURSOR, startRow - 1, menuPadding + 1);
         printf(SCR_ERASE_EOL);
-        printf(SCR_BOLD "%s" SCR_RESET, title);
+        printf("%s%s%s", scrBold(), title, scrReset());
 
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
@@ -407,7 +481,10 @@ void renderMenu(const char *title,
             printf(SCR_ERASE_EOL);
 
             if (isDisabled) {
-                printf(SCR_DIM "%s" SCR_RESET, items[itemIndex]);
+                printf("%s%s%s",
+                       scrDim(),
+                       items[itemIndex],
+                       scrReset());
             } else {
                 printf("%s", items[itemIndex]);
             }
@@ -421,10 +498,15 @@ void renderMenu(const char *title,
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
 
             if (isDisabled) {
-                printf(SCR_DIM "%s" SCR_RESET "\n", items[itemIndex]);
+                printf("%s%s%s",
+                       scrDim(),
+                       items[itemIndex],
+                       scrReset());
             } else {
-                printf("%s\n", items[itemIndex]);
+                printf("%s", items[itemIndex]);
             }
+
+            printf("\n");
         }
 
         fflush(stdout);
@@ -432,10 +514,30 @@ void renderMenu(const char *title,
 }
 
 // Prints a message on a fixed row after erasing the rest of that line.
-void renderMessage(const char *msg, int row) {
+void renderMessage(const char *msg, int row, MessageStyle style) {
+    const char *prefix;
+    const char *suffix;
     int terminalWidth;
     int terminalHeight;
     int messagePadding;
+
+    initColors();
+    prefix = "";
+    suffix = "";
+
+    if (style == MSG_WIN) {
+        prefix = scrGreen();
+        suffix = scrReset();
+    } else if (style == MSG_LOSS) {
+        prefix = scrRed();
+        suffix = scrReset();
+    } else if (style == MSG_PUSH) {
+        prefix = scrYellow();
+        suffix = scrReset();
+    } else if (style == MSG_INFO) {
+        prefix = scrDim();
+        suffix = scrReset();
+    }
 
     getTerminalSize(&terminalWidth, &terminalHeight);
     messagePadding = tablePadding;
@@ -445,11 +547,10 @@ void renderMessage(const char *msg, int row) {
         terminalHeight >= TABLE_MIN_HEIGHT) {
         printf(SCR_CURSOR, row, messagePadding + 1);
         printf(SCR_ERASE_EOL);
-        printf("%s", msg);
-        printf(SCR_RESET);
+        printf("%s%s%s", prefix, msg, suffix);
         fflush(stdout);
     } else {
-        printf("%s\n", msg);
+        printf("%s%s%s\n", prefix, msg, suffix);
         fflush(stdout);
     }
 }

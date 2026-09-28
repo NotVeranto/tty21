@@ -4,6 +4,7 @@
 #include "card.h"
 #include "hand.h"
 #include "dealers.h"
+#include "twists.h"
 
 typedef enum {
     STATE_BET,
@@ -34,6 +35,7 @@ typedef struct {
     int souls;
     DealerId dealerId;
     DealerId previousDealerId;
+    TwistId twistId;
 } Game;
 
 void initGame(Game *game);
