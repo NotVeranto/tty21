@@ -36,6 +36,7 @@ typedef struct {
     DealerId dealerId;
     DealerId previousDealerId;
     TwistId twistId;
+    TwistId previousTwistId;
 } Game;
 
 void initGame(Game *game);

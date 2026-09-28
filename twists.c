@@ -1,6 +1,5 @@
 #include "twists.h"
-
-#include <stdlib.h>
+#include "rng.h"
 
 static const TwistInfo TWIST_INFO[] = {
     {TWIST_NONE, "None", "No floor modifier.", TWIST_CAT_NEUTRAL},
@@ -56,9 +55,12 @@ static const TwistId HOSTILE_TWISTS[] = {
 };
 
 // Returns a twist from one category with uniform selection.
-static TwistId selectTwistFromCategory(TwistCategory category) {
+static TwistId selectTwistFromCategory(TwistCategory category,
+                                         TwistId previousTwist) {
     const TwistId *twists;
     int twistCount;
+    TwistId selectedTwist;
+    int attemptCount;
 
     if (category == TWIST_CAT_FAVORABLE) {
         twists = FAVORABLE_TWISTS;
@@ -74,7 +76,17 @@ static TwistId selectTwistFromCategory(TwistCategory category) {
                            sizeof(HOSTILE_TWISTS[0]));
     }
 
-    return twists[rand() % twistCount];
+    selectedTwist = TWIST_NONE;
+
+    for (attemptCount = 0; attemptCount < 10; attemptCount++) {
+        selectedTwist = twists[rngRange(0, twistCount - 1)];
+
+        if (selectedTwist != previousTwist) {
+            return selectedTwist;
+        }
+    }
+
+    return selectedTwist;
 }
 
 const TwistInfo *getTwistInfo(TwistId id) {
@@ -85,7 +97,7 @@ const TwistInfo *getTwistInfo(TwistId id) {
     return &TWIST_INFO[id];
 }
 
-TwistId selectTwistForFloor(int floor) {
+TwistId selectTwistForFloor(int floor, TwistId previousTwist) {
     int roll;
     TwistCategory category;
 
@@ -93,7 +105,7 @@ TwistId selectTwistForFloor(int floor) {
         return TWIST_NONE;
     }
 
-    roll = rand() % 100;
+    roll = rngRange(0, 99);
 
     if (floor <= 7) {
         if (roll < 50) {
@@ -111,5 +123,5 @@ TwistId selectTwistForFloor(int floor) {
         category = TWIST_CAT_HOSTILE;
     }
 
-    return selectTwistFromCategory(category);
+    return selectTwistFromCategory(category, previousTwist);
 }

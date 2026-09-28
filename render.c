@@ -37,7 +37,8 @@ static void initColors(void) {
     static int initialized;
 
     if (!initialized) {
-        colorEnabled = getenv("NO_COLOR") == NULL;
+        colorEnabled = getenv("NO_COLOR") == NULL &&
+                       isatty(STDOUT_FILENO);
         initialized = 1;
     }
 }

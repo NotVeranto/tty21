@@ -1,7 +1,7 @@
 #include "card.h"
+#include "rng.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 
 static const char *RANK_NAMES[] = {
     "", "A", "2", "3", "4", "5", "6",
@@ -35,7 +35,7 @@ void shuffleDeck(Deck *deck) {
     Card temporaryCard;
 
     for (cardIndex = DECK_SIZE - 1; cardIndex > 0; cardIndex--) {
-        randomIndex = rand() % (cardIndex + 1);
+        randomIndex = rngRange(0, cardIndex);
 
         temporaryCard = deck->cards[cardIndex];
         deck->cards[cardIndex] = deck->cards[randomIndex];

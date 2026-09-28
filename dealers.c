@@ -1,6 +1,7 @@
 #include "dealers.h"
+#include "rng.h"
 
-#include <stdlib.h>
+#include <stddef.h>
 
 static const DealerInfo DEALER_INFO[] = {
     {DEALER_CROUPIER, "Croupier", NULL, NULL},
@@ -33,8 +34,6 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
     int candidateCount;
     int dealerIndex;
     int randomIndex;
-    int randomValue;
-    int randomLimit;
 
     if (floor == 1) {
         return DEALER_CROUPIER;
@@ -61,13 +60,7 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
         return DEALER_CROUPIER;
     }
 
-    randomLimit = RAND_MAX - RAND_MAX % candidateCount;
-
-    do {
-        randomValue = rand();
-    } while (randomValue >= randomLimit);
-
-    randomIndex = randomValue % candidateCount;
+    randomIndex = rngRange(0, candidateCount - 1);
     return candidates[randomIndex];
 }
 

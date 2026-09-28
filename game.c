@@ -157,6 +157,7 @@ void initGame(Game *game) {
     game->souls = 0;
     game->dealerId = selectDealerForFloor(1, DEALER_CROUPIER);
     game->previousDealerId = game->dealerId;
+    game->previousTwistId = TWIST_NONE;
     game->twistId = TWIST_NONE;
 }
 
@@ -285,7 +286,7 @@ void playerTurn(Game *game) {
                 if (game->twistId == TWIST_STICKY_HANDS &&
                     game->player.hand.value < 15) {
                     renderMessage("Sticky Hands: cannot stand below 15.",
-                                  ROW_PROMPT,
+                                  ROW_RESULT,
                                   MSG_DEFAULT);
                 } else {
                     game->state = STATE_DEALER_TURN;
@@ -324,7 +325,7 @@ void playerTurn(Game *game) {
                 if (game->twistId == TWIST_STICKY_HANDS &&
                     game->player.hand.value < 15) {
                     renderMessage("Sticky Hands: cannot stand below 15.",
-                                  ROW_PROMPT,
+                                  ROW_RESULT,
                                   MSG_DEFAULT);
                 } else {
                     game->state = STATE_DEALER_TURN;
@@ -504,10 +505,12 @@ void advanceFloor(Game *game) {
     earned = 10 + game->floor * 3 + bonus;
     game->souls += earned;
     game->previousDealerId = game->dealerId;
+    game->previousTwistId = game->twistId;
     game->floor++;
     game->dealerId = selectDealerForFloor(game->floor,
                                           game->previousDealerId);
-    game->twistId = selectTwistForFloor(game->floor);
+    game->twistId = selectTwistForFloor(game->floor,
+                                        game->previousTwistId);
 
     resetHand(&game->player.hand);
     resetHand(&game->dealer.hand);

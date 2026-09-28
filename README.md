@@ -17,6 +17,7 @@ Implemented:
 - Full-screen ASCII table with ANSI styling.
 - Raw terminal input via termios.
 - Twists: per-floor rule modifiers.
+- Deterministic runs via --seed.
 
 Planned:
 - Double Down and Split.
@@ -36,6 +37,7 @@ Planned:
 ## Run
 
     ./tty21
+    ./tty21 --seed 12345
 
 ## Controls
 
@@ -76,7 +78,6 @@ Betting:
 
 - Signal handlers call tcsetattr; not strictly async-signal-safe.
 - game.c combines round, run, economy and dealer logic; planned refactor before Stage 8.
-- RNG uses global rand(); planned to become an object for --seed and save/load support.
 
 ## License
 

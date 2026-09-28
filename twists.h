@@ -28,6 +28,6 @@ typedef struct {
 } TwistInfo;
 
 const TwistInfo *getTwistInfo(TwistId id);
-TwistId selectTwistForFloor(int floor);
+TwistId selectTwistForFloor(int floor, TwistId previousTwist);
 
 #endif
