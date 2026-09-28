@@ -258,12 +258,12 @@ void renderTable(const Game *game, int hideDealerCard) {
 
     initColors();
 
-    dealerInfo = getDealerInfo(game->dealerId);
-    twistInfo = getTwistInfo(game->twistId);
+    dealerInfo = getDealerInfo(game->run.dealerId);
+    twistInfo = getTwistInfo(game->run.twistId);
     tableWidth = getDynamicTableWidth(game);
     dealerCardHidden = hideDealerCard &&
                        !game->peekActive &&
-                       game->twistId != TWIST_SNIPER;
+                       game->run.twistId != TWIST_SNIPER;
 
     if (canRenderTable(tableWidth,
                        &terminalWidth,
@@ -275,14 +275,14 @@ void renderTable(const Game *game, int hideDealerCard) {
                  "Round: %d",
                  game->roundNumber);
 
-        if (dealerCardHidden || game->dealerId == DEALER_REAPER) {
+        if (dealerCardHidden || game->run.dealerId == DEALER_REAPER) {
             snprintf(dealerTotal, sizeof(dealerTotal), "Total: ??");
         } else {
             snprintf(dealerTotal,
                      sizeof(dealerTotal),
                      "Total: %d",
                      calculateDealerHandValue(&game->dealer.hand,
-                                              game->dealerId));
+                                              game->run.dealerId));
         }
 
         snprintf(playerTotal,
@@ -293,9 +293,9 @@ void renderTable(const Game *game, int hideDealerCard) {
         snprintf(statusText,
                  sizeof(statusText),
                  "Floor: %d    Dealer: %s    Souls: %d    Chips: %d    Bet: %d",
-                 game->floor,
+                 game->run.floor,
                  dealerInfo->name,
-                 game->souls,
+                 game->run.souls,
                  game->player.chips,
                  game->player.bet);
 
@@ -307,12 +307,12 @@ void renderTable(const Game *game, int hideDealerCard) {
             snprintf(statusText,
                      sizeof(statusText),
                      "Floor: %d    Dealer: ",
-                     game->floor);
+                     game->run.floor);
             prefixLength = (int)strlen(statusText);
             snprintf(statusText,
                      sizeof(statusText),
                      "    Souls: %d    Chips: %d    Bet: %d",
-                     game->souls,
+                     game->run.souls,
                      game->player.chips,
                      game->player.bet);
             suffixLength = (int)strlen(statusText);
@@ -331,9 +331,9 @@ void renderTable(const Game *game, int hideDealerCard) {
             snprintf(statusText,
                      sizeof(statusText),
                      "Floor: %d    Dealer: %s    Souls: %d    Chips: %d    Bet: %d",
-                     game->floor,
+                     game->run.floor,
                      dealerName,
-                     game->souls,
+                     game->run.souls,
                      game->player.chips,
                      game->player.bet);
         }
@@ -437,7 +437,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_ORACLE, tablePadding);
         printf(SCR_ERASE_EOL);
 
-        if (game->dealerId == DEALER_ORACLE &&
+        if (game->run.dealerId == DEALER_ORACLE &&
             game->state == STATE_PLAYER_TURN &&
             game->deck.top < DECK_SIZE) {
             snprintf(oracleText,
@@ -569,13 +569,13 @@ void renderShop(const Game *game) {
         printf("%sSHOP%s", scrBold(), scrReset());
 
         moveToTableRow(ROW_SHOP_SOULS, shopPadding);
-        printf("Souls: %d", game->souls);
+        printf("Souls: %d", game->run.souls);
 
         for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
             itemRow = ITEM_ROWS[perkIndex];
             descriptionRow = DESCRIPTION_ROWS[perkIndex];
             isOwned = game->player.perkOwned[perkIndex];
-            canAfford = game->souls >= perkCost((PerkId)perkIndex);
+            canAfford = game->run.souls >= perkCost((PerkId)perkIndex);
             statusText = isOwned ? "OWNED" : "BUY";
             itemPrefix = (!isOwned && !canAfford) ? scrDim() : "";
 
@@ -602,11 +602,11 @@ void renderShop(const Game *game) {
         fflush(stdout);
     } else {
         printf("SHOP\n");
-        printf("Souls: %d\n\n", game->souls);
+        printf("Souls: %d\n\n", game->run.souls);
 
         for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
             isOwned = game->player.perkOwned[perkIndex];
-            canAfford = game->souls >= perkCost((PerkId)perkIndex);
+            canAfford = game->run.souls >= perkCost((PerkId)perkIndex);
             statusText = isOwned ? "OWNED" : "BUY";
 
             if (!isOwned && !canAfford) {

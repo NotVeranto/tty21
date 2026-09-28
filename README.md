@@ -79,7 +79,7 @@ Betting:
 ## Known issues
 
 - Signal handlers call tcsetattr; not strictly async-signal-safe.
-- game.c combines round, run, economy and dealer logic; refactor planned as Stage 8.5.
+- game.c still mixes round mechanics and run orchestration; further split planned after Stage 9.
 
 ## License
 

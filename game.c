@@ -110,7 +110,7 @@ static int readBet(Game *game) {
     int minBet;
     int validBet;
 
-    minBet = getMinBet(game->floor);
+    minBet = getMinBet(game->run.floor);
 
     if (game->player.chips < minBet) {
         snprintf(prompt,
@@ -197,36 +197,12 @@ void initGame(Game *game) {
     game->player.bet = 0;
     game->state = STATE_BET;
     game->roundNumber = 0;
-    game->floor = 1;
-    game->souls = 0;
-    game->dealerId = selectDealerForFloor(1, DEALER_CROUPIER);
-    game->previousDealerId = game->dealerId;
-    game->previousTwistId = TWIST_NONE;
+    initRun(&game->run);
     game->peekActive = 0;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
-    game->twistId = TWIST_NONE;
 }
 
-int getMinBet(int floor) {
-    if (floor <= 1) {
-        return 1;
-    }
-
-    if (floor <= 3) {
-        return 5;
-    }
-
-    if (floor <= 6) {
-        return 10;
-    }
-
-    if (floor <= 9) {
-        return 25;
-    }
-
-    return 50;
-}
 
 int calculateDealerHandValue(const Hand *hand, DealerId id) {
     int totalValue;
@@ -272,10 +248,10 @@ void startRound(Game *game) {
 
     game->peekActive = 0;
 
-    if (game->twistId == TWIST_SIX_DECK) {
+    if (game->run.twistId == TWIST_SIX_DECK) {
         initDeck(&game->deck);
         shuffleDeck(&game->deck);
-    } else if (game->twistId != TWIST_NO_RESHUFFLE &&
+    } else if (game->run.twistId != TWIST_NO_RESHUFFLE &&
                game->deck.top > DECK_SIZE - DECK_RESHUFFLE_MARGIN) {
         initDeck(&game->deck);
         shuffleDeck(&game->deck);
@@ -307,9 +283,9 @@ void startRound(Game *game) {
         drawCard(&game->deck, &game->player.hand);
         drawCard(&game->deck, &game->dealer.hand);
 
-        if (game->twistId == TWIST_LUCKY_DRAW) {
+        if (game->run.twistId == TWIST_LUCKY_DRAW) {
             redrawFirstPlayerCard(game, 1);
-        } else if (game->twistId == TWIST_COLD_DECK) {
+        } else if (game->run.twistId == TWIST_COLD_DECK) {
             redrawFirstPlayerCard(game, 0);
         }
 
@@ -342,7 +318,7 @@ void playerTurn(Game *game) {
             if (actionCharacter == 'h' || actionCharacter == 'H') {
                 drawCard(&game->deck, &game->player.hand);
 
-                if (game->dealerId == DEALER_MIRROR) {
+                if (game->run.dealerId == DEALER_MIRROR) {
                     drawCard(&game->deck, &game->dealer.hand);
                 }
 
@@ -352,7 +328,7 @@ void playerTurn(Game *game) {
 
                 renderTable(game, game->state == STATE_PLAYER_TURN);
             } else if (actionCharacter == 's' || actionCharacter == 'S') {
-                if (game->twistId == TWIST_STICKY_HANDS &&
+                if (game->run.twistId == TWIST_STICKY_HANDS &&
                     calculatePlayerHandValue(game) < 15) {
                     renderMessage("Sticky Hands: cannot stand below 15.",
                                   ROW_RESULT,
@@ -404,7 +380,7 @@ void playerTurn(Game *game) {
             if (actionCharacter == 'h' || actionCharacter == 'H') {
                 drawCard(&game->deck, &game->player.hand);
 
-                if (game->dealerId == DEALER_MIRROR) {
+                if (game->run.dealerId == DEALER_MIRROR) {
                     drawCard(&game->deck, &game->dealer.hand);
                 }
 
@@ -412,7 +388,7 @@ void playerTurn(Game *game) {
                     game->state = STATE_RESULT;
                 }
             } else if (actionCharacter == 's' || actionCharacter == 'S') {
-                if (game->twistId == TWIST_STICKY_HANDS &&
+                if (game->run.twistId == TWIST_STICKY_HANDS &&
                     calculatePlayerHandValue(game) < 15) {
                     renderMessage("Sticky Hands: cannot stand below 15.",
                                   ROW_RESULT,
@@ -455,14 +431,14 @@ void dealerTurn(Game *game) {
     int targetValue;
 
     if (game->state == STATE_DEALER_TURN) {
-        targetValue = game->dealerId == DEALER_CLOCKMAKER ? 18 : 17;
+        targetValue = game->run.dealerId == DEALER_CLOCKMAKER ? 18 : 17;
         dealerValue = calculateDealerHandValue(&game->dealer.hand,
-                                               game->dealerId);
+                                               game->run.dealerId);
 
         while (dealerValue < targetValue) {
             drawCard(&game->deck, &game->dealer.hand);
             dealerValue = calculateDealerHandValue(&game->dealer.hand,
-                                                   game->dealerId);
+                                                   game->run.dealerId);
         }
 
         game->state = STATE_RESULT;
@@ -483,7 +459,7 @@ void resolveRound(Game *game) {
 
     playerValue = calculatePlayerHandValue(game);
     dealerValue = calculateDealerHandValue(&game->dealer.hand,
-                                           game->dealerId);
+                                           game->run.dealerId);
     playerBlackjack = game->player.hand.count == 2 && playerValue == 21;
     dealerBlackjack = game->dealer.hand.count == 2 && dealerValue == 21;
     payout = 0;
@@ -491,11 +467,11 @@ void resolveRound(Game *game) {
     payoutValue = 0;
     baseLoss = game->player.bet;
 
-    if (game->dealerId == DEALER_BUTCHER) {
+    if (game->run.dealerId == DEALER_BUTCHER) {
         baseLoss = ((long long)game->player.bet * 150) / 100;
     }
 
-    if (game->twistId == TWIST_CHARITY) {
+    if (game->run.twistId == TWIST_CHARITY) {
         baseLoss /= 2;
     }
 
@@ -520,7 +496,7 @@ void resolveRound(Game *game) {
                  "Player busts. You lose %d chips.",
                  lossAmount);
     } else if (playerBlackjack && !dealerBlackjack) {
-        if (game->dealerId == DEALER_VOID) {
+        if (game->run.dealerId == DEALER_VOID) {
             payoutValue = game->player.bet;
         } else {
             payoutValue = ((long long)game->player.bet * 3) / 2;
@@ -551,7 +527,7 @@ void resolveRound(Game *game) {
                  sizeof(resultMessage),
                  "Push. Your bet is returned.");
     } else if (dealerValue > 21 || playerValue > dealerValue) {
-        if (game->twistId == TWIST_HALF_PAYOUT) {
+        if (game->run.twistId == TWIST_HALF_PAYOUT) {
             payoutValue = game->player.bet / 2;
         } else {
             payoutValue = game->player.bet;
@@ -608,13 +584,13 @@ void advanceFloor(Game *game) {
         }
     }
 
-    earned = 10 + game->floor * 3 + bonus;
-    game->souls += earned;
-    game->previousDealerId = game->dealerId;
-    game->previousTwistId = game->twistId;
-    game->floor++;
-    game->dealerId = selectDealerForFloor(game->floor,
-                                          game->previousDealerId);
+    earned = 10 + game->run.floor * 3 + bonus;
+    game->run.souls += earned;
+    game->run.previousDealerId = game->run.dealerId;
+    game->run.previousTwistId = game->run.twistId;
+    game->run.floor++;
+    game->run.dealerId = selectDealerForFloor(game->run.floor,
+                                          game->run.previousDealerId);
 
     if (game->player.perkOwned[PERK_PEEK]) {
         game->player.perkCharges[PERK_PEEK] = 1;
@@ -626,12 +602,12 @@ void advanceFloor(Game *game) {
         attempts = 0;
 
         do {
-            game->twistId = selectTwistForFloor(game->floor,
-                                                game->previousTwistId);
+            game->run.twistId = selectTwistForFloor(game->run.floor,
+                                                game->run.previousTwistId);
             attempts++;
         } while (game->player.perkOwned[PERK_SIXTH_SENSE] &&
-                 game->floor >= 4 &&
-                 getTwistInfo(game->twistId)->category == TWIST_CAT_HOSTILE &&
+                 game->run.floor >= 4 &&
+                 getTwistInfo(game->run.twistId)->category == TWIST_CAT_HOSTILE &&
                  attempts < 10);
     }
 
@@ -641,9 +617,9 @@ void advanceFloor(Game *game) {
     snprintf(message,
              sizeof(message),
              "Floor %d. Souls: %d. Minimum bet: %d.",
-             game->floor,
-             game->souls,
-             getMinBet(game->floor));
+             game->run.floor,
+             game->run.souls,
+             getMinBet(game->run.floor));
     renderMessage(message, ROW_RESULT, MSG_DEFAULT);
 }
 
@@ -661,7 +637,7 @@ void floorMenu(Game *game) {
     int currentMinBet;
     int inputCharacter;
 
-    currentMinBet = getMinBet(game->floor);
+    currentMinBet = getMinBet(game->run.floor);
 
     if (game->player.chips < currentMinBet) {
         renderMessage("You cannot afford the minimum bet. Run over.",
@@ -671,7 +647,7 @@ void floorMenu(Game *game) {
         return;
     }
 
-    nextMinBet = getMinBet(game->floor + 1);
+    nextMinBet = getMinBet(game->run.floor + 1);
     disabledMask = 0;
 
     if (game->player.chips < nextMinBet) {
@@ -681,15 +657,15 @@ void floorMenu(Game *game) {
     snprintf(continueItem,
              sizeof(continueItem),
              "[C]ontinue playing on floor %d",
-             game->floor);
+             game->run.floor);
     snprintf(advanceItem,
              sizeof(advanceItem),
              "[A]dvance to floor %d (earn souls)",
-             game->floor + 1);
+             game->run.floor + 1);
     snprintf(shopItem,
              sizeof(shopItem),
              "[S]hop (%d souls)",
-             game->souls);
+             game->run.souls);
 
     menuItems[0] = continueItem;
     menuItems[1] = advanceItem;
@@ -772,13 +748,13 @@ void printGameState(const Game *game, int hideDealerCard) {
     int dealerCardHidden;
     int cardIndex;
 
-    dealerInfo = getDealerInfo(game->dealerId);
-    twistInfo = getTwistInfo(game->twistId);
+    dealerInfo = getDealerInfo(game->run.dealerId);
+    twistInfo = getTwistInfo(game->run.twistId);
     dealerValue = calculateDealerHandValue(&game->dealer.hand,
-                                           game->dealerId);
+                                           game->run.dealerId);
     dealerCardHidden = hideDealerCard &&
                        !game->peekActive &&
-                       game->twistId != TWIST_SNIPER;
+                       game->run.twistId != TWIST_SNIPER;
 
     printf("Round: %d\n", game->roundNumber);
     printf("Dealer (%s): ", dealerInfo->name);
@@ -795,7 +771,7 @@ void printGameState(const Game *game, int hideDealerCard) {
         }
     }
 
-    if (dealerCardHidden || game->dealerId == DEALER_REAPER) {
+    if (dealerCardHidden || game->run.dealerId == DEALER_REAPER) {
         printf(" | Total value: ??\n");
     } else {
         printf(" | Total value: %d\n", dealerValue);
@@ -881,10 +857,10 @@ void runShop(Game *game) {
 
             if (game->player.perkOwned[perkIndex]) {
                 pendingMessage = "Already owned.";
-            } else if (game->souls < perkCost((PerkId)perkIndex)) {
+            } else if (game->run.souls < perkCost((PerkId)perkIndex)) {
                 pendingMessage = "Not enough souls.";
             } else {
-                game->souls -= perkCost((PerkId)perkIndex);
+                game->run.souls -= perkCost((PerkId)perkIndex);
                 game->player.perkOwned[perkIndex] = 1;
 
                 if (perkIndex == PERK_PEEK ||

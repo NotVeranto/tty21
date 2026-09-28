@@ -6,6 +6,7 @@
 #include "dealers.h"
 #include "twists.h"
 #include "perks.h"
+#include "run.h"
 
 typedef enum {
     STATE_BET,
@@ -35,17 +36,11 @@ typedef struct {
     Dealer dealer;
     GameState state;
     int roundNumber;
-    int floor;
-    int souls;
-    DealerId dealerId;
-    DealerId previousDealerId;
-    TwistId twistId;
-    TwistId previousTwistId;
+    Run run;
     int peekActive;
 } Game;
 
 void initGame(Game *game);
-int getMinBet(int floor);
 int calculateDealerHandValue(const Hand *hand, DealerId id);
 int calculatePlayerHandValue(const Game *game);
 void startRound(Game *game);
