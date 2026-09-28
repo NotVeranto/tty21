@@ -700,6 +700,7 @@ void renderActionBar(const ActionId *actions,
     static const char *ACTION_NAMES[] = {
         "Hit",
         "Stand",
+        "Double",
         "Peek",
         "Quit"
     };

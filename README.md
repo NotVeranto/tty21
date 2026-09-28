@@ -44,6 +44,7 @@ Planned:
 In-game (during the player's turn):
 - `h` — hit
 - `s` — stand
+- `d` — double down (first two cards only)
 - `q` — quit the current run
 - `p` — Peek at dealer hole card (requires Peek perk)
 - Arrow keys + Enter — navigate and confirm menus and player actions

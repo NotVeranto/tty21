@@ -159,6 +159,12 @@ static int allPerksOwned(const Game *game) {
     return 1;
 }
 
+static int canDouble(const Game *game) {
+    return game->player.hand.count == 2 &&
+           (long long)game->player.chips >=
+               (long long)game->player.bet * 2;
+}
+
 static int findPlayerActionIndex(const ActionId *actions,
                                  int actionCount,
                                  char character) {
@@ -169,6 +175,8 @@ static int findPlayerActionIndex(const ActionId *actions,
         targetAction = ACTION_HIT;
     } else if (character == 's' || character == 'S') {
         targetAction = ACTION_STAND;
+    } else if (character == 'd' || character == 'D') {
+        targetAction = ACTION_DOUBLE;
     } else if (character == 'p' || character == 'P') {
         targetAction = ACTION_PEEK;
     } else if (character == 'q' || character == 'Q') {
@@ -192,6 +200,10 @@ static int buildPlayerActions(const Game *game, ActionId *actions) {
     actionCount = 0;
     actions[actionCount++] = ACTION_HIT;
     actions[actionCount++] = ACTION_STAND;
+
+    if (canDouble(game)) {
+        actions[actionCount++] = ACTION_DOUBLE;
+    }
 
     if (game->player.perkOwned[PERK_PEEK] &&
         game->player.perkCharges[PERK_PEEK] > 0) {
@@ -222,6 +234,25 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                           MSG_DEFAULT);
         } else {
             game->state = STATE_DEALER_TURN;
+        }
+    } else if (action == ACTION_DOUBLE) {
+        if (!canDouble(game)) {
+            renderMessage("Cannot double now.",
+                          ROW_RESULT,
+                          MSG_DEFAULT);
+        } else {
+            game->player.bet *= 2;
+            drawCard(&game->deck, &game->player.hand);
+
+            if (game->run.dealerId == DEALER_MIRROR) {
+                drawCard(&game->deck, &game->dealer.hand);
+            }
+
+            if (calculatePlayerHandValue(game) > 21) {
+                game->state = STATE_RESULT;
+            } else {
+                game->state = STATE_DEALER_TURN;
+            }
         }
     } else if (action == ACTION_PEEK) {
         if (!game->player.perkOwned[PERK_PEEK]) {
@@ -491,7 +522,7 @@ void startRound(Game *game) {
 }
 
 void playerTurn(Game *game) {
-    ActionId actions[4];
+    ActionId actions[8];
     KeyEvent event;
     int actionCount;
     int actionIndex;
@@ -543,6 +574,8 @@ void playerTurn(Game *game) {
                     dispatchPlayerAction(game, ACTION_HIT);
                 } else if (event.ch == 's' || event.ch == 'S') {
                     dispatchPlayerAction(game, ACTION_STAND);
+                } else if (event.ch == 'd' || event.ch == 'D') {
+                    dispatchPlayerAction(game, ACTION_DOUBLE);
                 } else if (event.ch == 'p' || event.ch == 'P') {
                     dispatchPlayerAction(game, ACTION_PEEK);
                 } else if (event.ch == 'q' || event.ch == 'Q') {
@@ -587,17 +620,19 @@ void playerTurn(Game *game) {
                         dispatchPlayerAction(game, ACTION_HIT);
                     } else if (event.ch == 's' || event.ch == 'S') {
                         dispatchPlayerAction(game, ACTION_STAND);
+                    } else if (event.ch == 'd' || event.ch == 'D') {
+                        dispatchPlayerAction(game, ACTION_DOUBLE);
                     } else if (event.ch == 'p' || event.ch == 'P') {
                         dispatchPlayerAction(game, ACTION_PEEK);
                     } else if (event.ch == 'q' || event.ch == 'Q') {
                         dispatchPlayerAction(game, ACTION_QUIT);
                     } else {
-                        renderMessage("Invalid action. Enter h to hit, s to stand, or p to peek.",
+                        renderMessage("Invalid action. Enter h, s, d, p, or q.",
                                       ROW_PROMPT,
                                       MSG_DEFAULT);
                     }
                 } else {
-                    renderMessage("Invalid action. Enter h to hit, s to stand, or p to peek.",
+                    renderMessage("Invalid action. Enter h, s, d, p, or q.",
                                   ROW_PROMPT,
                                   MSG_DEFAULT);
                 }
