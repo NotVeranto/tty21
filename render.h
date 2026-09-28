@@ -14,7 +14,7 @@
 #define ROW_ORACLE 31
 #define ROW_RESULT 32
 #define ROW_CHIPS 33
-#define ROW_MENU_START 36
+#define ROW_MENU_START 34
 #define ROW_OVER 39
 #define ROW_FINAL 40
 
