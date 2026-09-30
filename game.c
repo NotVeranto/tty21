@@ -323,12 +323,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                 drawCard(&game->deck, &game->dealer.hand);
             }
 
-            if (calculatePlayerHandValue(game) > 21) {
-                advanceActiveHand(game);
-            } else {
-                advanceActiveHand(game);
-            }
-
+            advanceActiveHand(game);
             renderTable(game, game->state == STATE_PLAYER_TURN);
         }
     } else if (action == ACTION_SPLIT) {
