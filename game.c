@@ -626,6 +626,24 @@ int calculatePlayerHandValue(const Game *game) {
     return totalValue;
 }
 
+static int calculatePlayerHandValueForIndex(const Game *game,
+                                                    int handIndex) {
+    int totalValue;
+    int cardIndex;
+
+    if (!game->player.perkOwned[PERK_ACE_HIGH]) {
+        return game->player.hands[handIndex].value;
+    }
+
+    totalValue = 0;
+
+    for (cardIndex = 0; cardIndex < game->player.hands[handIndex].count; cardIndex++) {
+        totalValue += getCardValue(&game->player.hands[handIndex].cards[cardIndex]);
+    }
+
+    return totalValue;
+}
+
 void startRound(Game *game) {
     int playerValue;
 
@@ -894,7 +912,7 @@ void resolveRound(Game *game) {
     for (handIndex = 0;
          handIndex < game->player.handCount;
          handIndex++) {
-        handValue = calculateHandValue(&game->player.hands[handIndex]);
+        handValue = calculatePlayerHandValueForIndex(game, handIndex);
         handBet = game->player.bets[handIndex];
         playerBlackjack = game->player.hands[handIndex].count == 2 &&
                           handValue == 21;
