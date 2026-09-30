@@ -342,7 +342,7 @@ static void drawPlayerHands(const Game *game,
     }
 }
 
-// Clears and redraws the complete table on fixed rows.// Clears and redraws the complete table on fixed rows.
+// Clears and redraws the complete table on fixed rows.
 void renderTable(const Game *game, int hideDealerCard) {
     const DealerInfo *dealerInfo;
     const TwistInfo *twistInfo;
@@ -477,7 +477,7 @@ void renderTable(const Game *game, int hideDealerCard) {
             if ((int)strlen(dealerName) > availableNameWidth) {
                 dealerName[availableNameWidth - 2] = '.';
                 dealerName[availableNameWidth - 1] = '.';
-                dealerName[availableNameWidth] = ' ';
+                dealerName[availableNameWidth] = '\\0';
             }
 
             if (game->player.handCount == 1) {
@@ -552,7 +552,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_HINT, tablePadding);
         printf(SCR_ERASE_EOL);
 
-        if (hintText[0] != ' ') {
+        if (hintText[0] != '\\0') {
             printf("%s%s%s", scrDim(), hintText, scrReset());
         }
 
@@ -611,7 +611,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     }
 }
 
-// Prints a fixed menu block with disabled entries dimmed.// Prints a fixed menu block with disabled entries dimmed.
+// Prints a fixed menu block with disabled entries dimmed.
 void renderMenu(const char *title,
                 const char *const *items,
                 int itemCount,
