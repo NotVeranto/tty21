@@ -358,7 +358,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     int displayHandIndex;
     int displayHandValue;
     char dealerName[64];
-    char statusText[128];
+    char statusText[256];
     char rulesText[256];
     char twistText[256];
     char oracleText[64];
