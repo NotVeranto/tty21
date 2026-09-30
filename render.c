@@ -251,6 +251,10 @@ static void drawCards(const Hand *hand,
 static void printPlayerHandStatus(const Game *game,
                                   int handIndex,
                                   int padding) {
+    if (game->player.hands[handIndex].count == 0) {
+        return;
+    }
+
     int handWidth;
     int handValue;
     int textWidth;

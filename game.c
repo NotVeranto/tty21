@@ -215,6 +215,13 @@ static void splitHand(Game *game) {
         game->player.isSplitAce[dst] = 1;
         advanceActiveHand(game);
         advanceActiveHand(game);
+    } else if (calculateHandValue(&game->player.hands[src]) == 21) {
+        advanceActiveHand(game);
+
+        if (game->player.activeHand == dst &&
+            calculateHandValue(&game->player.hands[dst]) == 21) {
+            advanceActiveHand(game);
+        }
     }
 
     renderTable(game, game->state == STATE_PLAYER_TURN);
@@ -278,6 +285,8 @@ static int buildPlayerActions(const Game *game, ActionId *actions) {
 }
 
 static void dispatchPlayerAction(Game *game, ActionId action) {
+    int value;
+
     if (action == ACTION_HIT) {
         drawCard(&game->deck, &game->player.hands[game->player.activeHand]);
 
@@ -285,7 +294,9 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             drawCard(&game->deck, &game->dealer.hand);
         }
 
-        if (calculatePlayerHandValue(game) > 21) {
+        value = calculatePlayerHandValue(game);
+
+        if (value > 21) {
             if (game->player.perkOwned[PERK_SECOND_WIND] &&
                 game->player.perkCharges[PERK_SECOND_WIND] > 0) {
                 game->player.perkCharges[PERK_SECOND_WIND]--;
@@ -297,6 +308,8 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             } else {
                 advanceActiveHand(game);
             }
+        } else if (value == 21) {
+            advanceActiveHand(game);
         }
 
         renderTable(game, game->state == STATE_PLAYER_TURN);
