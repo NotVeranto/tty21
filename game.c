@@ -165,6 +165,62 @@ static int canDouble(const Game *game) {
                (long long)game->player.bets[game->player.activeHand] * 2;
 }
 
+static int canSplit(const Game *game) {
+    return game->player.hands[game->player.activeHand].count == 2 &&
+           game->player.hands[game->player.activeHand].cards[0].rank ==
+               game->player.hands[game->player.activeHand].cards[1].rank &&
+           game->player.handCount < MAX_PLAYER_HANDS &&
+           (long long)game->player.chips >=
+               (long long)game->player.bets[game->player.activeHand] &&
+           !game->player.isSplitAce[game->player.activeHand];
+}
+
+static void advanceActiveHand(Game *game) {
+    game->player.activeHand++;
+
+    if (game->player.activeHand >= game->player.handCount) {
+        game->state = STATE_DEALER_TURN;
+    }
+}
+
+static void splitHand(Game *game) {
+    int src;
+    int dst;
+    int isAceSplit;
+
+    src = game->player.activeHand;
+    dst = game->player.handCount;
+
+    game->player.hands[dst].cards[0] =
+        game->player.hands[src].cards[1];
+    game->player.hands[dst].count = 1;
+    game->player.hands[dst].value =
+        calculateHandValue(&game->player.hands[dst]);
+
+    game->player.hands[src].count = 1;
+    game->player.hands[src].value =
+        calculateHandValue(&game->player.hands[src]);
+
+    game->player.bets[dst] = game->player.bets[src];
+    game->player.isSplitAce[dst] = 0;
+    game->player.handCount++;
+
+    isAceSplit = game->player.hands[src].cards[0].rank == ACE;
+
+    drawCard(&game->deck, &game->player.hands[src]);
+    drawCard(&game->deck, &game->player.hands[dst]);
+
+    if (isAceSplit) {
+        game->player.isSplitAce[src] = 1;
+        game->player.isSplitAce[dst] = 1;
+        advanceActiveHand(game);
+        advanceActiveHand(game);
+    }
+
+    renderTable(game, game->state == STATE_PLAYER_TURN);
+}
+
+
 static int findPlayerActionIndex(const ActionId *actions,
                                  int actionCount,
                                  char character) {
@@ -178,6 +234,8 @@ static int findPlayerActionIndex(const ActionId *actions,
     } else if (character == 'd' || character == 'D') {
         targetAction = ACTION_DOUBLE;
     } else if (character == 'p' || character == 'P') {
+        targetAction = ACTION_SPLIT;
+    } else if (character == 'k' || character == 'K') {
         targetAction = ACTION_PEEK;
     } else if (character == 'q' || character == 'Q') {
         targetAction = ACTION_QUIT;
@@ -205,6 +263,10 @@ static int buildPlayerActions(const Game *game, ActionId *actions) {
         actions[actionCount++] = ACTION_DOUBLE;
     }
 
+    if (canSplit(game)) {
+        actions[actionCount++] = ACTION_SPLIT;
+    }
+
     if (game->player.perkOwned[PERK_PEEK] &&
         game->player.perkCharges[PERK_PEEK] > 0) {
         actions[actionCount++] = ACTION_PEEK;
@@ -224,8 +286,20 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
         }
 
         if (calculatePlayerHandValue(game) > 21) {
-            game->state = STATE_RESULT;
+            if (game->player.perkOwned[PERK_SECOND_WIND] &&
+                game->player.perkCharges[PERK_SECOND_WIND] > 0) {
+                game->player.perkCharges[PERK_SECOND_WIND]--;
+                resetPlayerHandToEleven(game);
+                renderTable(game, 1);
+                renderMessage("Second Wind! Hand reset to 11.",
+                              ROW_RESULT,
+                              MSG_INFO);
+            } else {
+                advanceActiveHand(game);
+            }
         }
+
+        renderTable(game, game->state == STATE_PLAYER_TURN);
     } else if (action == ACTION_STAND) {
         if (game->run.twistId == TWIST_STICKY_HANDS &&
             calculatePlayerHandValue(game) < 15) {
@@ -233,7 +307,8 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                           ROW_RESULT,
                           MSG_DEFAULT);
         } else {
-            game->state = STATE_DEALER_TURN;
+            advanceActiveHand(game);
+            renderTable(game, game->state == STATE_PLAYER_TURN);
         }
     } else if (action == ACTION_DOUBLE) {
         if (!canDouble(game)) {
@@ -249,10 +324,20 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             }
 
             if (calculatePlayerHandValue(game) > 21) {
-                game->state = STATE_RESULT;
+                advanceActiveHand(game);
             } else {
-                game->state = STATE_DEALER_TURN;
+                advanceActiveHand(game);
             }
+
+            renderTable(game, game->state == STATE_PLAYER_TURN);
+        }
+    } else if (action == ACTION_SPLIT) {
+        if (!canSplit(game)) {
+            renderMessage("Cannot split now.",
+                          ROW_RESULT,
+                          MSG_DEFAULT);
+        } else {
+            splitHand(game);
         }
     } else if (action == ACTION_PEEK) {
         if (!game->player.perkOwned[PERK_PEEK]) {
@@ -646,6 +731,8 @@ void playerTurn(Game *game) {
                 } else if (event.ch == 'd' || event.ch == 'D') {
                     dispatchPlayerAction(game, ACTION_DOUBLE);
                 } else if (event.ch == 'p' || event.ch == 'P') {
+                    dispatchPlayerAction(game, ACTION_SPLIT);
+                } else if (event.ch == 'k' || event.ch == 'K') {
                     dispatchPlayerAction(game, ACTION_PEEK);
                 } else if (event.ch == 'q' || event.ch == 'Q') {
                     dispatchPlayerAction(game, ACTION_QUIT);
@@ -664,7 +751,9 @@ void playerTurn(Game *game) {
             }
 
             renderTable(game, 1);
-            renderMessage("Hit or stand? [h/s]: ", ROW_PROMPT, MSG_DEFAULT);
+            renderMessage("Choose action: [h/s/d/p/k/q]: ",
+                          ROW_PROMPT,
+                          MSG_DEFAULT);
             inputCharacter = getchar();
 
             if (inputCharacter == EOF) {
@@ -692,16 +781,18 @@ void playerTurn(Game *game) {
                     } else if (event.ch == 'd' || event.ch == 'D') {
                         dispatchPlayerAction(game, ACTION_DOUBLE);
                     } else if (event.ch == 'p' || event.ch == 'P') {
+                        dispatchPlayerAction(game, ACTION_SPLIT);
+                    } else if (event.ch == 'k' || event.ch == 'K') {
                         dispatchPlayerAction(game, ACTION_PEEK);
                     } else if (event.ch == 'q' || event.ch == 'Q') {
                         dispatchPlayerAction(game, ACTION_QUIT);
                     } else {
-                        renderMessage("Invalid action. Enter h, s, d, p, or q.",
+                        renderMessage("Invalid action. Enter h, s, d, p, k, or q.",
                                       ROW_PROMPT,
                                       MSG_DEFAULT);
                     }
                 } else {
-                    renderMessage("Invalid action. Enter h, s, d, p, or q.",
+                    renderMessage("Invalid action. Enter h, s, d, p, k, or q.",
                                   ROW_PROMPT,
                                   MSG_DEFAULT);
                 }
@@ -729,113 +820,285 @@ void dealerTurn(Game *game) {
     }
 }
 
-void resolveRound(Game *game) {
-    int playerValue;
-    int dealerValue;
-    int playerBlackjack;
-    int dealerBlackjack;
-    int payout;
-    int lossAmount;
-    long long payoutValue;
-    long long baseLoss;
-    MessageStyle resultStyle;
-    char resultMessage[128];
+// Appends one hand result without overflowing the result buffer.
+static void appendResultMessage(char *buffer,
+                                size_t bufferSize,
+                                const char *message,
+                                int *truncated) {
+    size_t currentLength;
+    const char *separator;
+    int written;
 
-    playerValue = calculatePlayerHandValue(game);
-    dealerValue = calculateDealerHandValue(&game->dealer.hand,
-                                           game->run.dealerId);
-    playerBlackjack = game->player.hands[game->player.activeHand].count == 2 && playerValue == 21;
-    dealerBlackjack = game->dealer.hand.count == 2 && dealerValue == 21;
-    payout = 0;
-    lossAmount = game->player.bets[game->player.activeHand];
-    payoutValue = 0;
-    baseLoss = game->player.bets[game->player.activeHand];
-
-    if (game->run.dealerId == DEALER_BUTCHER) {
-        baseLoss = ((long long)game->player.bets[game->player.activeHand] * 150) / 100;
-    }
-
-    if (game->run.twistId == TWIST_CHARITY) {
-        baseLoss /= 2;
-    }
-
-    if (playerValue > 21 &&
-        game->player.perkOwned[PERK_SECOND_WIND] &&
-        game->player.perkCharges[PERK_SECOND_WIND] > 0) {
-        game->player.perkCharges[PERK_SECOND_WIND]--;
-        resetPlayerHandToEleven(game);
-        game->state = STATE_PLAYER_TURN;
-        renderTable(game, 1);
-        renderMessage("Second Wind! Hand reset to 11.",
-                      ROW_RESULT,
-                      MSG_INFO);
+    if (*truncated) {
         return;
     }
 
-    if (playerValue > 21) {
-        lossAmount = applyLoss(game, baseLoss);
-        resultStyle = MSG_LOSS;
-        snprintf(resultMessage,
-                 sizeof(resultMessage),
-                 "Player busts. You lose %d chips.",
-                 lossAmount);
-    } else if (playerBlackjack && !dealerBlackjack) {
-        if (game->run.dealerId == DEALER_VOID) {
-            payoutValue = game->player.bets[game->player.activeHand];
-        } else {
-            payoutValue = ((long long)game->player.bets[game->player.activeHand] * 3) / 2;
+    currentLength = strlen(buffer);
+    separator = currentLength > 0 ? "   " : "";
+    written = snprintf(buffer + currentLength,
+                       bufferSize - currentLength,
+                       "%s%s",
+                       separator,
+                       message);
+
+    if (written < 0) {
+        *truncated = 1;
+    } else if ((size_t)written >= bufferSize - currentLength) {
+        if (bufferSize >= 4) {
+            buffer[bufferSize - 4] = '.';
+            buffer[bufferSize - 3] = '.';
+            buffer[bufferSize - 2] = '.';
+            buffer[bufferSize - 1] = '\0';
         }
 
-        if (payoutValue > INT_MAX - game->player.chips) {
-            payout = INT_MAX - game->player.chips;
-        } else {
-            payout = (int)payoutValue;
+        *truncated = 1;
+    }
+}
+
+
+void resolveRound(Game *game) {
+    int dealerValue;
+    int dealerBlackjack;
+    int handIndex;
+    int handValue;
+    int handBet;
+    int payout;
+    int lossAmount;
+    int playerBlackjack;
+    int messageLength;
+    int messageTruncated;
+    long long payoutValue;
+    long long baseLoss;
+    long long payoutTotal;
+    long long lossTotal;
+    MessageStyle resultStyle;
+    char resultMessage[256];
+    char handMessage[64];
+
+    dealerValue = calculateDealerHandValue(&game->dealer.hand,
+                                           game->run.dealerId);
+    dealerBlackjack = game->dealer.hand.count == 2 && dealerValue == 21;
+    payoutTotal = 0;
+    lossTotal = 0;
+    resultMessage[0] = '\0';
+    messageTruncated = 0;
+
+    for (handIndex = 0;
+         handIndex < game->player.handCount;
+         handIndex++) {
+        handValue = calculateHandValue(&game->player.hands[handIndex]);
+        handBet = game->player.bets[handIndex];
+        playerBlackjack = game->player.hands[handIndex].count == 2 &&
+                          handValue == 21;
+        payout = 0;
+        lossAmount = 0;
+        payoutValue = 0;
+        baseLoss = handBet;
+
+        if (game->run.dealerId == DEALER_BUTCHER) {
+            baseLoss = ((long long)handBet * 150) / 100;
         }
 
-        game->player.chips += payout;
+        if (game->run.twistId == TWIST_CHARITY) {
+            baseLoss /= 2;
+        }
+
+        if (handValue > 21) {
+            lossAmount = applyLoss(game, baseLoss);
+            lossTotal += lossAmount;
+
+            if (game->player.handCount == 1) {
+                snprintf(resultMessage,
+                         sizeof(resultMessage),
+                         "Player busts. You lose %d chips.",
+                         lossAmount);
+            } else {
+                messageLength = snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: bust (-%d)",
+                                         handIndex + 1,
+                                         lossAmount);
+
+                if (messageLength < 0) {
+                    snprintf(handMessage,
+                             sizeof(handMessage),
+                             "Hand %d: bust",
+                             handIndex + 1);
+                }
+
+                appendResultMessage(resultMessage,
+                                    sizeof(resultMessage),
+                                    handMessage,
+                                    &messageTruncated);
+            }
+        } else if (playerBlackjack && !dealerBlackjack) {
+            if (game->run.dealerId == DEALER_VOID) {
+                payoutValue = handBet;
+            } else {
+                payoutValue = ((long long)handBet * 3) / 2;
+            }
+
+            if (payoutValue > INT_MAX - game->player.chips) {
+                payout = INT_MAX - game->player.chips;
+            } else {
+                payout = (int)payoutValue;
+            }
+
+            game->player.chips += payout;
+            payoutTotal += payout;
+
+            if (game->player.handCount == 1) {
+                snprintf(resultMessage,
+                         sizeof(resultMessage),
+                         "Blackjack! You win %d chips.",
+                         payout);
+            } else {
+                messageLength = snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: blackjack (+%d)",
+                                         handIndex + 1,
+                                         payout);
+
+                if (messageLength < 0) {
+                    snprintf(handMessage,
+                             sizeof(handMessage),
+                             "Hand %d: blackjack",
+                             handIndex + 1);
+                }
+
+                appendResultMessage(resultMessage,
+                                    sizeof(resultMessage),
+                                    handMessage,
+                                    &messageTruncated);
+            }
+        } else if (dealerBlackjack && !playerBlackjack) {
+            lossAmount = applyLoss(game, baseLoss);
+            lossTotal += lossAmount;
+
+            if (game->player.handCount == 1) {
+                snprintf(resultMessage,
+                         sizeof(resultMessage),
+                         "Dealer has blackjack. You lose %d chips.",
+                         lossAmount);
+            } else {
+                messageLength = snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: dealer BJ (-%d)",
+                                         handIndex + 1,
+                                         lossAmount);
+
+                if (messageLength < 0) {
+                    snprintf(handMessage,
+                             sizeof(handMessage),
+                             "Hand %d: dealer BJ",
+                             handIndex + 1);
+                }
+
+                appendResultMessage(resultMessage,
+                                    sizeof(resultMessage),
+                                    handMessage,
+                                    &messageTruncated);
+            }
+        } else if (handValue == dealerValue) {
+            if (game->player.handCount == 1) {
+                snprintf(resultMessage,
+                         sizeof(resultMessage),
+                         "Push. Your bet is returned.");
+            } else {
+                messageLength = snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: push",
+                                         handIndex + 1);
+
+                if (messageLength < 0) {
+                    snprintf(handMessage,
+                             sizeof(handMessage),
+                             "Hand %d: push",
+                             handIndex + 1);
+                }
+
+                appendResultMessage(resultMessage,
+                                    sizeof(resultMessage),
+                                    handMessage,
+                                    &messageTruncated);
+            }
+        } else if (dealerValue > 21 || handValue > dealerValue) {
+            if (game->run.twistId == TWIST_HALF_PAYOUT) {
+                payoutValue = handBet / 2;
+            } else {
+                payoutValue = handBet;
+            }
+
+            if (payoutValue > INT_MAX - game->player.chips) {
+                payout = INT_MAX - game->player.chips;
+            } else {
+                payout = (int)payoutValue;
+            }
+
+            game->player.chips += payout;
+            payoutTotal += payout;
+
+            if (game->player.handCount == 1) {
+                snprintf(resultMessage,
+                         sizeof(resultMessage),
+                         "You win %d chips.",
+                         payout);
+            } else {
+                messageLength = snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: win (+%d)",
+                                         handIndex + 1,
+                                         payout);
+
+                if (messageLength < 0) {
+                    snprintf(handMessage,
+                             sizeof(handMessage),
+                             "Hand %d: win",
+                             handIndex + 1);
+                }
+
+                appendResultMessage(resultMessage,
+                                    sizeof(resultMessage),
+                                    handMessage,
+                                    &messageTruncated);
+            }
+        } else {
+            lossAmount = applyLoss(game, baseLoss);
+            lossTotal += lossAmount;
+
+            if (game->player.handCount == 1) {
+                snprintf(resultMessage,
+                         sizeof(resultMessage),
+                         "You lose %d chips.",
+                         lossAmount);
+            } else {
+                messageLength = snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: loss (-%d)",
+                                         handIndex + 1,
+                                         lossAmount);
+
+                if (messageLength < 0) {
+                    snprintf(handMessage,
+                             sizeof(handMessage),
+                             "Hand %d: loss",
+                             handIndex + 1);
+                }
+
+                appendResultMessage(resultMessage,
+                                    sizeof(resultMessage),
+                                    handMessage,
+                                    &messageTruncated);
+            }
+        }
+    }
+
+    if (payoutTotal > lossTotal) {
         resultStyle = MSG_WIN;
-        snprintf(resultMessage,
-                 sizeof(resultMessage),
-                 "Blackjack! You win %d chips.",
-                 payout);
-    } else if (dealerBlackjack && !playerBlackjack) {
-        lossAmount = applyLoss(game, baseLoss);
+    } else if (payoutTotal < lossTotal) {
         resultStyle = MSG_LOSS;
-        snprintf(resultMessage,
-                 sizeof(resultMessage),
-                 "Dealer has blackjack. You lose %d chips.",
-                 lossAmount);
-    } else if (playerValue == dealerValue) {
-        resultStyle = MSG_PUSH;
-        snprintf(resultMessage,
-                 sizeof(resultMessage),
-                 "Push. Your bet is returned.");
-    } else if (dealerValue > 21 || playerValue > dealerValue) {
-        if (game->run.twistId == TWIST_HALF_PAYOUT) {
-            payoutValue = game->player.bets[game->player.activeHand] / 2;
-        } else {
-            payoutValue = game->player.bets[game->player.activeHand];
-        }
-
-        if (payoutValue > INT_MAX - game->player.chips) {
-            payout = INT_MAX - game->player.chips;
-        } else {
-            payout = (int)payoutValue;
-        }
-
-        game->player.chips += payout;
-        resultStyle = MSG_WIN;
-        snprintf(resultMessage,
-                 sizeof(resultMessage),
-                 "You win %d chips.",
-                 payout);
     } else {
-        lossAmount = applyLoss(game, baseLoss);
-        resultStyle = MSG_LOSS;
-        snprintf(resultMessage,
-                 sizeof(resultMessage),
-                 "You lose %d chips.",
-                 lossAmount);
+        resultStyle = MSG_PUSH;
     }
 
     renderTable(game, 0);
@@ -1076,6 +1339,8 @@ void printGameState(const Game *game, int hideDealerCard) {
     const TwistInfo *twistInfo;
     int dealerValue;
     int dealerCardHidden;
+    int displayHandIndex;
+    int playerValue;
     int cardIndex;
 
     dealerInfo = getDealerInfo(game->run.dealerId);
@@ -1085,6 +1350,22 @@ void printGameState(const Game *game, int hideDealerCard) {
     dealerCardHidden = hideDealerCard &&
                        !game->peekActive &&
                        game->run.twistId != TWIST_SNIPER;
+
+    displayHandIndex = game->player.activeHand;
+
+    if (displayHandIndex >= game->player.handCount) {
+        displayHandIndex = game->player.handCount - 1;
+    }
+
+    if (displayHandIndex < 0) {
+        displayHandIndex = 0;
+    }
+
+    if (game->player.activeHand < game->player.handCount) {
+        playerValue = calculatePlayerHandValue(game);
+    } else {
+        playerValue = game->player.hands[displayHandIndex].value;
+    }
 
     printf("Round: %d\n", game->roundNumber);
     printf("Dealer (%s): ", dealerInfo->name);
@@ -1117,21 +1398,28 @@ void printGameState(const Game *game, int hideDealerCard) {
                twistInfo->description);
     }
 
-    printf("Player: ");
+    if (game->player.handCount > 1) {
+        printf("Player (hand %d/%d): ",
+               displayHandIndex + 1,
+               game->player.handCount);
+    } else {
+        printf("Player: ");
+    }
 
-    for (cardIndex = 0; cardIndex < game->player.hands[game->player.activeHand].count; cardIndex++) {
+    for (cardIndex = 0;
+         cardIndex < game->player.hands[displayHandIndex].count;
+         cardIndex++) {
         if (cardIndex > 0) {
             printf(" ");
         }
 
-        printCard(&game->player.hands[game->player.activeHand].cards[cardIndex]);
+        printCard(&game->player.hands[displayHandIndex].cards[cardIndex]);
     }
 
-    printf(" | Total value: %d\n",
-           calculatePlayerHandValue(game));
+    printf(" | Total value: %d\n", playerValue);
     printf("Chips: %d | Bet: %d\n",
            game->player.chips,
-           game->player.bets[game->player.activeHand]);
+           game->player.bets[displayHandIndex]);
 }
 
 void runShop(Game *game) {
