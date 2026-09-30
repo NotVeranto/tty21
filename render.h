@@ -46,6 +46,7 @@ typedef enum {
     ACTION_HIT = 0,
     ACTION_STAND,
     ACTION_DOUBLE,
+    ACTION_SPLIT,
     ACTION_PEEK,
     ACTION_QUIT
 } ActionId;

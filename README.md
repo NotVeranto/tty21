@@ -45,8 +45,9 @@ In-game (during the player's turn):
 - `h` — hit
 - `s` — stand
 - `d` — double down (first two cards only)
+- `p` — split (two cards of the same rank)
+- `k` — peek at dealer hole card (requires Peek perk)
 - `q` — quit the current run
-- `p` — Peek at dealer hole card (requires Peek perk)
 - Arrow keys + Enter — navigate and confirm menus and player actions
 - `Ctrl+C` — force quit, terminal state restored
 
@@ -81,6 +82,7 @@ Betting:
 ## Known issues
 
 - Signal handlers call tcsetattr; not strictly async-signal-safe.
+- Second Wind does not rescue a busted doubled hand.
 - game.c still mixes round mechanics and run orchestration; further split planned after Stage 9.
 
 ## License
