@@ -93,24 +93,32 @@ static void getTerminalSize(int *width, int *height) {
 
 // Calculates the table width from the largest hand with a stable minimum.
 static int getDynamicTableWidth(const Game *game) {
-    int maxCards;
+    int cardsTotal;
+    int playerCardsTotal;
     int handIndex;
 
-    maxCards = game->dealer.hand.count;
+    cardsTotal = game->dealer.hand.count;
+    playerCardsTotal = 0;
 
     for (handIndex = 0;
          handIndex < game->player.handCount;
          handIndex++) {
-        if (game->player.hands[handIndex].count > maxCards) {
-            maxCards = game->player.hands[handIndex].count;
-        }
+        playerCardsTotal += game->player.hands[handIndex].count;
     }
 
-    if (maxCards < 5) {
-        maxCards = 5;
+    if (game->player.handCount > 1) {
+        playerCardsTotal += (game->player.handCount - 1) * 2;
     }
 
-    return maxCards * CARD_WIDTH + (maxCards - 1) * CARD_GAP;
+    if (playerCardsTotal > cardsTotal) {
+        cardsTotal = playerCardsTotal;
+    }
+
+    if (cardsTotal < 5) {
+        cardsTotal = 5;
+    }
+
+    return cardsTotal * CARD_WIDTH + (cardsTotal - 1) * CARD_GAP;
 }
 
 // Checks whether the dynamic table grid fits the current terminal.
@@ -239,7 +247,102 @@ static void drawCards(const Hand *hand,
     }
 }
 
-// Clears and redraws the complete table on fixed rows.
+// Prints the status below one player hand.
+static void printPlayerHandStatus(const Game *game,
+                                  int handIndex,
+                                  int padding) {
+    int handWidth;
+    int handValue;
+    int textWidth;
+    int textPadding;
+    const char *style;
+    char statusText[32];
+
+    handWidth = game->player.hands[handIndex].count * CARD_WIDTH +
+                (game->player.hands[handIndex].count - 1) * CARD_GAP;
+
+    if (handIndex == game->player.activeHand &&
+        game->player.activeHand < game->player.handCount) {
+        handValue = calculatePlayerHandValue(game);
+    } else {
+        handValue = game->player.hands[handIndex].value;
+    }
+
+    if (handValue > 21) {
+        snprintf(statusText, sizeof(statusText), "BUST");
+    } else if (game->player.hands[handIndex].count == 2 &&
+               handValue == 21) {
+        snprintf(statusText, sizeof(statusText), "BJ");
+    } else {
+        snprintf(statusText, sizeof(statusText), "%d", handValue);
+    }
+
+    textWidth = (int)strlen(statusText);
+    textPadding = (handWidth - textWidth) / 2;
+
+    if (textPadding < 0) {
+        textPadding = 0;
+    }
+
+    style = handIndex == game->player.activeHand &&
+            game->player.activeHand < game->player.handCount
+                ? scrBold()
+                : scrDim();
+
+    moveToTableRow(PLAYER_CARD_ROW + CARD_HEIGHT, padding);
+    printf("%*s%s%s%s",
+           textPadding,
+           "",
+           style,
+           statusText,
+           scrReset());
+}
+
+// Draws all player hands side by side with two spaces between hands.
+static void drawPlayerHands(const Game *game,
+                            int padding) {
+    int handIndex;
+    int handPadding;
+    int handWidth;
+
+    handPadding = padding;
+
+    for (handIndex = 0;
+         handIndex < game->player.handCount;
+         handIndex++) {
+        drawCards(&game->player.hands[handIndex],
+                  PLAYER_CARD_ROW,
+                  handPadding,
+                  0);
+
+        handWidth = game->player.hands[handIndex].count * CARD_WIDTH +
+                    (game->player.hands[handIndex].count - 1) * CARD_GAP;
+        handPadding += handWidth + 2;
+    }
+
+    handPadding = padding;
+
+    for (handIndex = 0;
+         handIndex < game->player.handCount;
+         handIndex++) {
+        moveToTableRow(PLAYER_CARD_ROW - 1, handPadding);
+
+        if (handIndex == game->player.activeHand &&
+            game->player.activeHand < game->player.handCount) {
+            printf("> ");
+        } else {
+            printf("  ");
+        }
+
+        printPlayerHandStatus(game, handIndex, handPadding);
+
+        handWidth = game->player.hands[handIndex].count * CARD_WIDTH +
+                    (game->player.hands[handIndex].count - 1) * CARD_GAP;
+        handPadding += handWidth + 2;
+    }
+}
+
+// Clears and redraws the complete table on fixed rows.// Clears and redraws the complete table on fixed rows.
 void renderTable(const Game *game, int hideDealerCard) {
     const DealerInfo *dealerInfo;
     const TwistInfo *twistInfo;
@@ -252,6 +355,8 @@ void renderTable(const Game *game, int hideDealerCard) {
     int prefixLength;
     int suffixLength;
     int availableNameWidth;
+    int displayHandIndex;
+    int displayHandValue;
     char dealerName[64];
     char statusText[128];
     char rulesText[256];
@@ -269,6 +374,16 @@ void renderTable(const Game *game, int hideDealerCard) {
     dealerCardHidden = hideDealerCard &&
                        !game->peekActive &&
                        game->run.twistId != TWIST_SNIPER;
+
+    displayHandIndex = game->player.activeHand;
+
+    if (displayHandIndex >= game->player.handCount) {
+        displayHandIndex = game->player.handCount - 1;
+    }
+
+    if (displayHandIndex < 0) {
+        displayHandIndex = 0;
+    }
 
     if (canRenderTable(tableWidth,
                        &terminalWidth,
@@ -290,19 +405,38 @@ void renderTable(const Game *game, int hideDealerCard) {
                                               game->run.dealerId));
         }
 
+        if (game->player.activeHand < game->player.handCount) {
+            displayHandValue = calculatePlayerHandValue(game);
+        } else {
+            displayHandValue = game->player.hands[displayHandIndex].value;
+        }
+
         snprintf(playerTotal,
                  sizeof(playerTotal),
                  "Total: %d",
-                 calculatePlayerHandValue(game));
+                 displayHandValue);
 
-        snprintf(statusText,
-                 sizeof(statusText),
-                 "Floor: %d    Dealer: %s    Souls: %d    Chips: %d    Bet: %d",
-                 game->run.floor,
-                 dealerInfo->name,
-                 game->run.souls,
-                 game->player.chips,
-                 game->player.bets[game->player.activeHand]);
+        if (game->player.handCount == 1) {
+            snprintf(statusText,
+                     sizeof(statusText),
+                     "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d",
+                     game->run.floor,
+                     dealerInfo->name,
+                     game->run.souls,
+                     game->player.chips,
+                     game->player.bets[displayHandIndex]);
+        } else {
+            snprintf(statusText,
+                     sizeof(statusText),
+                     "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
+                     game->run.floor,
+                     dealerInfo->name,
+                     game->run.souls,
+                     game->player.chips,
+                     game->player.bets[displayHandIndex],
+                     displayHandIndex + 1,
+                     game->player.handCount);
+        }
 
         if ((int)strlen(statusText) > tableWidth) {
             snprintf(dealerName,
@@ -314,12 +448,25 @@ void renderTable(const Game *game, int hideDealerCard) {
                      "Floor: %d    Dealer: ",
                      game->run.floor);
             prefixLength = (int)strlen(statusText);
-            snprintf(statusText,
-                     sizeof(statusText),
-                     "    Souls: %d    Chips: %d    Bet: %d",
-                     game->run.souls,
-                     game->player.chips,
-                     game->player.bets[game->player.activeHand]);
+
+            if (game->player.handCount == 1) {
+                snprintf(statusText,
+                         sizeof(statusText),
+                         "    Marks: %d    Chips: %d    Bet: %d",
+                         game->run.souls,
+                         game->player.chips,
+                         game->player.bets[displayHandIndex]);
+            } else {
+                snprintf(statusText,
+                         sizeof(statusText),
+                         "    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
+                         game->run.souls,
+                         game->player.chips,
+                         game->player.bets[displayHandIndex],
+                         displayHandIndex + 1,
+                         game->player.handCount);
+            }
+
             suffixLength = (int)strlen(statusText);
             availableNameWidth = tableWidth - prefixLength - suffixLength;
 
@@ -330,17 +477,30 @@ void renderTable(const Game *game, int hideDealerCard) {
             if ((int)strlen(dealerName) > availableNameWidth) {
                 dealerName[availableNameWidth - 2] = '.';
                 dealerName[availableNameWidth - 1] = '.';
-                dealerName[availableNameWidth] = '\0';
+                dealerName[availableNameWidth] = ' ';
             }
 
-            snprintf(statusText,
-                     sizeof(statusText),
-                     "Floor: %d    Dealer: %s    Souls: %d    Chips: %d    Bet: %d",
-                     game->run.floor,
-                     dealerName,
-                     game->run.souls,
-                     game->player.chips,
-                     game->player.bets[game->player.activeHand]);
+            if (game->player.handCount == 1) {
+                snprintf(statusText,
+                         sizeof(statusText),
+                         "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d",
+                         game->run.floor,
+                         dealerName,
+                         game->run.souls,
+                         game->player.chips,
+                         game->player.bets[displayHandIndex]);
+            } else {
+                snprintf(statusText,
+                         sizeof(statusText),
+                         "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
+                         game->run.floor,
+                         dealerName,
+                         game->run.souls,
+                         game->player.chips,
+                         game->player.bets[displayHandIndex],
+                         displayHandIndex + 1,
+                         game->player.handCount);
+            }
         }
 
         printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
@@ -374,10 +534,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                         PLAYER_LABEL_ROW,
                         tablePadding,
                         tableWidth);
-        drawCards(&game->player.hands[game->player.activeHand],
-                  PLAYER_CARD_ROW,
-                  tablePadding,
-                  0);
+        drawPlayerHands(game, tablePadding);
 
         moveToTableRow(ROW_STATUS, tablePadding);
         printf("%s", statusText);
@@ -395,7 +552,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_HINT, tablePadding);
         printf(SCR_ERASE_EOL);
 
-        if (hintText[0] != '\0') {
+        if (hintText[0] != ' ') {
             printf("%s%s%s", scrDim(), hintText, scrReset());
         }
 
@@ -454,7 +611,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     }
 }
 
-// Prints a fixed menu block with disabled entries dimmed.
+// Prints a fixed menu block with disabled entries dimmed.// Prints a fixed menu block with disabled entries dimmed.
 void renderMenu(const char *title,
                 const char *const *items,
                 int itemCount,
@@ -706,6 +863,7 @@ void renderActionBar(const ActionId *actions,
         "Hit",
         "Stand",
         "Double",
+        "Split",
         "Peek",
         "Quit"
     };
