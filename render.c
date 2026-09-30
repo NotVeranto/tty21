@@ -440,7 +440,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                      game->player.handCount);
         }
 
-        effectiveStatusWidth = terminalWidth - 2;
+        effectiveStatusWidth = terminalWidth - tablePadding;
 
         if ((int)strlen(statusText) > effectiveStatusWidth) {
             snprintf(dealerName,
@@ -555,7 +555,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         drawPlayerHands(game, tablePadding);
 
         // Status and input help use full terminal width; dealer context stays table-aligned.
-        printf(SCR_CURSOR, ROW_STATUS, 1);
+        moveToTableRow(ROW_STATUS, tablePadding);
         printf("%s", statusText);
         printf(SCR_ERASE_EOL);
 
@@ -569,7 +569,7 @@ void renderTable(const Game *game, int hideDealerCard) {
             hintText = "";
         }
 
-        printf(SCR_CURSOR, ROW_HINT, 1);
+        moveToTableRow(ROW_HINT, tablePadding);
         printf(SCR_ERASE_EOL);
 
         if (hintText[0] != '\0') {
@@ -873,7 +873,6 @@ void renderMessage(const char *msg, int row, MessageStyle style) {
     }
 }
 
- 
 // Renders the horizontal player action bar.
 void renderActionBar(const ActionId *actions,
                      int actionCount,
