@@ -12,7 +12,7 @@ marks earned from victories can be spent on perks.
 ## Features
 
 Implemented:
-- Classic blackjack: Hit, Stand.
+- Classic blackjack: Hit, Stand, Double Down, Split.
 - Roguelike progression: floors, marks, advance menu.
 - Full-screen ASCII table with ANSI styling.
 - Raw terminal input via termios.
@@ -21,7 +21,6 @@ Implemented:
 - Perks and between-floor shop (5 perks).
 
 Planned:
-- Double Down and Split.
 - Save and load (XDG).
 
 ## Requirements
@@ -73,7 +72,7 @@ Betting:
 - [x] Named dealers.
 - [x] Twists.
 - [x] Perks and shop.
-- [ ] Split and Double Down.
+- [x] Split and Double Down.
 - [ ] Save and load (XDG).
 - [ ] Polish and animations.
 - [ ] Man page.
@@ -83,7 +82,6 @@ Betting:
 
 - Signal handlers call tcsetattr; not strictly async-signal-safe.
 - Second Wind does not rescue a busted doubled hand.
-- game.c still mixes round mechanics and run orchestration; further split planned after Stage 9.
 
 ## License
 
