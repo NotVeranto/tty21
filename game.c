@@ -534,7 +534,6 @@ int calculatePlayerHandValue(const Game *game) {
 }
 
 void startRound(Game *game) {
-    int rawMode;
     int playerValue;
 
     game->peekActive = 0;
