@@ -3,7 +3,7 @@
 // Initializes the persistent state for a new run.
 void initRun(Run *run) {
     run->floor = 1;
-    run->souls = 0;
+    run->marks = 0;
     run->dealerId = DEALER_CROUPIER;
     run->previousDealerId = DEALER_CROUPIER;
     run->twistId = TWIST_NONE;

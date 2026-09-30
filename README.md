@@ -7,13 +7,13 @@ A terminal-based blackjack roguelike written in C.
 The player descends through floors of an underground casino, facing a
 different dealer on each floor. Winning a match lets you move deeper,
 where the dealers get stronger and the rules twist. Between floors,
-souls earned from victories can be spent on perks.
+marks earned from victories can be spent on perks.
 
 ## Features
 
 Implemented:
 - Classic blackjack: Hit, Stand.
-- Roguelike progression: floors, souls, advance menu.
+- Roguelike progression: floors, marks, advance menu.
 - Full-screen ASCII table with ANSI styling.
 - Raw terminal input via termios.
 - Twists: per-floor rule modifiers.

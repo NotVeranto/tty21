@@ -327,7 +327,8 @@ static void drawPlayerHands(const Game *game,
          handIndex++) {
         moveToTableRow(PLAYER_CARD_ROW - 1, handPadding);
 
-        if (handIndex == game->player.activeHand &&
+        if (game->player.handCount > 1 &&
+            handIndex == game->player.activeHand &&
             game->player.activeHand < game->player.handCount) {
             printf("> ");
         } else {
@@ -355,6 +356,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     int prefixLength;
     int suffixLength;
     int availableNameWidth;
+    int effectiveStatusWidth;
     int displayHandIndex;
     int displayHandValue;
     char dealerName[64];
@@ -422,7 +424,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                      "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d",
                      game->run.floor,
                      dealerInfo->name,
-                     game->run.souls,
+                     game->run.marks,
                      game->player.chips,
                      game->player.bets[displayHandIndex]);
         } else {
@@ -431,14 +433,16 @@ void renderTable(const Game *game, int hideDealerCard) {
                      "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
                      game->run.floor,
                      dealerInfo->name,
-                     game->run.souls,
+                     game->run.marks,
                      game->player.chips,
                      game->player.bets[displayHandIndex],
                      displayHandIndex + 1,
                      game->player.handCount);
         }
 
-        if ((int)strlen(statusText) > tableWidth) {
+        effectiveStatusWidth = terminalWidth - 2;
+
+        if ((int)strlen(statusText) > effectiveStatusWidth) {
             snprintf(dealerName,
                      sizeof(dealerName),
                      "%s",
@@ -453,14 +457,14 @@ void renderTable(const Game *game, int hideDealerCard) {
                 snprintf(statusText,
                          sizeof(statusText),
                          "    Marks: %d    Chips: %d    Bet: %d",
-                         game->run.souls,
+                         game->run.marks,
                          game->player.chips,
                          game->player.bets[displayHandIndex]);
             } else {
                 snprintf(statusText,
                          sizeof(statusText),
                          "    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
-                         game->run.souls,
+                         game->run.marks,
                          game->player.chips,
                          game->player.bets[displayHandIndex],
                          displayHandIndex + 1,
@@ -468,16 +472,19 @@ void renderTable(const Game *game, int hideDealerCard) {
             }
 
             suffixLength = (int)strlen(statusText);
-            availableNameWidth = tableWidth - prefixLength - suffixLength;
+            availableNameWidth = effectiveStatusWidth - prefixLength - suffixLength;
 
-            if (availableNameWidth < 2) {
-                availableNameWidth = 2;
-            }
-
-            if ((int)strlen(dealerName) > availableNameWidth) {
+            if (availableNameWidth >= 2 &&
+                (int)strlen(dealerName) > availableNameWidth) {
                 dealerName[availableNameWidth - 2] = '.';
                 dealerName[availableNameWidth - 1] = '.';
                 dealerName[availableNameWidth] = '\0';
+            }
+
+            if (availableNameWidth < 2) {
+                dealerName[0] = '.';
+                dealerName[1] = '.';
+                dealerName[2] = '\0';
             }
 
             if (game->player.handCount == 1) {
@@ -486,7 +493,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                          "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d",
                          game->run.floor,
                          dealerName,
-                         game->run.souls,
+                         game->run.marks,
                          game->player.chips,
                          game->player.bets[displayHandIndex]);
             } else {
@@ -495,11 +502,22 @@ void renderTable(const Game *game, int hideDealerCard) {
                          "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
                          game->run.floor,
                          dealerName,
-                         game->run.souls,
+                         game->run.marks,
                          game->player.chips,
                          game->player.bets[displayHandIndex],
                          displayHandIndex + 1,
                          game->player.handCount);
+            }
+
+            if ((int)strlen(statusText) > effectiveStatusWidth) {
+                if (effectiveStatusWidth >= 3) {
+                    statusText[effectiveStatusWidth - 3] = '.';
+                    statusText[effectiveStatusWidth - 2] = '.';
+                    statusText[effectiveStatusWidth - 1] = '.';
+                    statusText[effectiveStatusWidth] = '\0';
+                } else {
+                    statusText[0] = '\0';
+                }
             }
         }
 
@@ -536,8 +554,10 @@ void renderTable(const Game *game, int hideDealerCard) {
                         tableWidth);
         drawPlayerHands(game, tablePadding);
 
-        moveToTableRow(ROW_STATUS, tablePadding);
+        // Status and input help use full terminal width; dealer context stays table-aligned.
+        printf(SCR_CURSOR, ROW_STATUS, 1);
         printf("%s", statusText);
+        printf(SCR_ERASE_EOL);
 
         if (game->state == STATE_BET) {
             hintText = "Type a bet and press Enter.";
@@ -549,7 +569,7 @@ void renderTable(const Game *game, int hideDealerCard) {
             hintText = "";
         }
 
-        moveToTableRow(ROW_HINT, tablePadding);
+        printf(SCR_CURSOR, ROW_HINT, 1);
         printf(SCR_ERASE_EOL);
 
         if (hintText[0] != '\0') {
@@ -735,13 +755,13 @@ void renderShop(const Game *game, int selectedIndex) {
         printf("%sSHOP%s", scrBold(), scrReset());
 
         moveToTableRow(ROW_SHOP_SOULS, shopPadding);
-        printf("Souls: %d", game->run.souls);
+        printf("Marks: %d", game->run.marks);
 
         for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
             itemRow = ITEM_ROWS[perkIndex];
             descriptionRow = DESCRIPTION_ROWS[perkIndex];
             isOwned = game->player.perkOwned[perkIndex];
-            canAfford = game->run.souls >= perkCost((PerkId)perkIndex);
+            canAfford = game->run.marks >= perkCost((PerkId)perkIndex);
             statusText = isOwned ? "OWNED" : "BUY";
 
             moveToTableRow(itemRow, shopPadding);
@@ -754,7 +774,7 @@ void renderShop(const Game *game, int selectedIndex) {
                 printf("  ");
             }
 
-            printf("[%d] %s   %d souls   %s",
+            printf("[%d] %s   %d marks   %s",
                    perkIndex + 1,
                    perkName((PerkId)perkIndex),
                    perkCost((PerkId)perkIndex),
@@ -775,15 +795,15 @@ void renderShop(const Game *game, int selectedIndex) {
         fflush(stdout);
     } else {
         printf("SHOP\n");
-        printf("Souls: %d\n\n", game->run.souls);
+        printf("Marks: %d\n\n", game->run.marks);
 
         for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
             isOwned = game->player.perkOwned[perkIndex];
-            canAfford = game->run.souls >= perkCost((PerkId)perkIndex);
+            canAfford = game->run.marks >= perkCost((PerkId)perkIndex);
             statusText = isOwned ? "OWNED" : "BUY";
 
             if (!isOwned && !canAfford) {
-                printf("%s[%d] %s   %d souls   %s%s",
+                printf("%s[%d] %s   %d marks   %s%s",
                        scrDim(),
                        perkIndex + 1,
                        perkName((PerkId)perkIndex),
@@ -791,7 +811,7 @@ void renderShop(const Game *game, int selectedIndex) {
                        statusText,
                        scrReset());
             } else {
-                printf("[%d] %s   %d souls   %s",
+                printf("[%d] %s   %d marks   %s",
                        perkIndex + 1,
                        perkName((PerkId)perkIndex),
                        perkCost((PerkId)perkIndex),

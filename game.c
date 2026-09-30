@@ -1127,7 +1127,7 @@ void advanceFloor(Game *game) {
     }
 
     earned = 10 + game->run.floor * 3 + bonus;
-    game->run.souls += earned;
+    game->run.marks += earned;
     game->run.previousDealerId = game->run.dealerId;
     game->run.previousTwistId = game->run.twistId;
     game->run.floor++;
@@ -1168,9 +1168,9 @@ void advanceFloor(Game *game) {
 
     snprintf(message,
              sizeof(message),
-             "Floor %d. Souls: %d. Minimum bet: %d.",
+             "Floor %d. Marks: %d. Minimum bet: %d.",
              game->run.floor,
-             game->run.souls,
+             game->run.marks,
              getMinBet(game->run.floor));
     renderMessage(message, ROW_RESULT, MSG_DEFAULT);
 }
@@ -1215,12 +1215,12 @@ void floorMenu(Game *game) {
              game->run.floor);
     snprintf(advanceItem,
              sizeof(advanceItem),
-             "[A]dvance to floor %d (earn souls)",
+             "[A]dvance to floor %d (earn marks)",
              game->run.floor + 1);
     snprintf(shopItem,
              sizeof(shopItem),
-             "[S]hop (%d souls)",
-             game->run.souls);
+             "[S]hop (%d marks)",
+             game->run.marks);
 
     menuItems[0] = continueItem;
     menuItems[1] = advanceItem;
@@ -1471,10 +1471,10 @@ void runShop(Game *game) {
                     pendingMessage = NULL;
                 } else if (game->player.perkOwned[selectedIndex]) {
                     pendingMessage = "Already owned.";
-                } else if (game->run.souls < perkCost((PerkId)selectedIndex)) {
-                    pendingMessage = "Not enough souls.";
+                } else if (game->run.marks < perkCost((PerkId)selectedIndex)) {
+                    pendingMessage = "Not enough marks.";
                 } else {
-                    game->run.souls -= perkCost((PerkId)selectedIndex);
+                    game->run.marks -= perkCost((PerkId)selectedIndex);
                     game->player.perkOwned[selectedIndex] = 1;
 
                     if (selectedIndex == PERK_PEEK ||
@@ -1493,11 +1493,11 @@ void runShop(Game *game) {
 
                     if (game->player.perkOwned[selectedIndex]) {
                         pendingMessage = "Already owned.";
-                    } else if (game->run.souls <
+                    } else if (game->run.marks <
                                perkCost((PerkId)selectedIndex)) {
-                        pendingMessage = "Not enough souls.";
+                        pendingMessage = "Not enough marks.";
                     } else {
-                        game->run.souls -=
+                        game->run.marks -=
                             perkCost((PerkId)selectedIndex);
                         game->player.perkOwned[selectedIndex] = 1;
 
@@ -1556,11 +1556,11 @@ void runShop(Game *game) {
 
                 if (game->player.perkOwned[selectedIndex]) {
                     pendingMessage = "Already owned.";
-                } else if (game->run.souls <
+                } else if (game->run.marks <
                            perkCost((PerkId)selectedIndex)) {
-                    pendingMessage = "Not enough souls.";
+                    pendingMessage = "Not enough marks.";
                 } else {
-                    game->run.souls -= perkCost((PerkId)selectedIndex);
+                    game->run.marks -= perkCost((PerkId)selectedIndex);
                     game->player.perkOwned[selectedIndex] = 1;
 
                     if (selectedIndex == PERK_PEEK ||

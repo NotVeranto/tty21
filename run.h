@@ -6,7 +6,7 @@
 
 typedef struct {
     int floor;
-    int souls;
+    int marks;
     DealerId dealerId;
     DealerId previousDealerId;
     TwistId twistId;
