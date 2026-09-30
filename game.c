@@ -44,14 +44,14 @@ static void redrawFirstPlayerCard(Game *game, int requireHighCard) {
 
         if ((requireHighCard && replacementCard.rank >= EIGHT) ||
             (!requireHighCard && replacementCard.rank <= FIVE)) {
-            game->player.hand.cards[0] = replacementCard;
+            game->player.hands[game->player.activeHand].cards[0] = replacementCard;
             accepted = 1;
         }
 
         attemptCount++;
     }
 
-    game->player.hand.value = calculateHandValue(&game->player.hand);
+    game->player.hands[game->player.activeHand].value = calculateHandValue(&game->player.hands[game->player.activeHand]);
 }
 
 // Applies a loss and activates Survival when the loss would end the run.
@@ -91,11 +91,11 @@ static int applyLoss(Game *game, long long lossValue) {
 static void resetPlayerHandToEleven(Game *game) {
     Card recoveryCard;
 
-    resetHand(&game->player.hand);
+    resetHand(&game->player.hands[game->player.activeHand]);
     recoveryCard.suit = HEARTS;
     recoveryCard.rank = ACE;
-    addCardToHand(&game->player.hand, &recoveryCard);
-    game->player.hand.value = 11;
+    addCardToHand(&game->player.hands[game->player.activeHand], &recoveryCard);
+    game->player.hands[game->player.activeHand].value = 11;
 }
 
 static KeyEvent makeKeyEvent(int character) {
@@ -160,9 +160,9 @@ static int allPerksOwned(const Game *game) {
 }
 
 static int canDouble(const Game *game) {
-    return game->player.hand.count == 2 &&
+    return game->player.hands[game->player.activeHand].count == 2 &&
            (long long)game->player.chips >=
-               (long long)game->player.bet * 2;
+               (long long)game->player.bets[game->player.activeHand] * 2;
 }
 
 static int findPlayerActionIndex(const ActionId *actions,
@@ -217,7 +217,7 @@ static int buildPlayerActions(const Game *game, ActionId *actions) {
 
 static void dispatchPlayerAction(Game *game, ActionId action) {
     if (action == ACTION_HIT) {
-        drawCard(&game->deck, &game->player.hand);
+        drawCard(&game->deck, &game->player.hands[game->player.activeHand]);
 
         if (game->run.dealerId == DEALER_MIRROR) {
             drawCard(&game->deck, &game->dealer.hand);
@@ -241,8 +241,8 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                           ROW_RESULT,
                           MSG_DEFAULT);
         } else {
-            game->player.bet *= 2;
-            drawCard(&game->deck, &game->player.hand);
+            game->player.bets[game->player.activeHand] *= 2;
+            drawCard(&game->deck, &game->player.hands[game->player.activeHand]);
 
             if (game->run.dealerId == DEALER_MIRROR) {
                 drawCard(&game->deck, &game->dealer.hand);
@@ -407,16 +407,23 @@ static int readBet(Game *game) {
         }
     }
 
+    game->player.bets[0] = (int)betValue;
+    game->player.handCount = 1;
+    game->player.activeHand = 0;
+
     return (int)betValue;
 }
 
 void initGame(Game *game) {
     initDeck(&game->deck);
     shuffleDeck(&game->deck);
-    resetHand(&game->player.hand);
+    memset(game->player.hands, 0, sizeof(game->player.hands));
+    memset(game->player.bets, 0, sizeof(game->player.bets));
+    memset(game->player.isSplitAce, 0, sizeof(game->player.isSplitAce));
+    game->player.handCount = 1;
+    game->player.activeHand = 0;
     resetHand(&game->dealer.hand);
     game->player.chips = 100;
-    game->player.bet = 0;
     game->state = STATE_BET;
     game->roundNumber = 0;
     initRun(&game->run);
@@ -452,13 +459,13 @@ int calculatePlayerHandValue(const Game *game) {
     int cardIndex;
 
     if (!game->player.perkOwned[PERK_ACE_HIGH]) {
-        return game->player.hand.value;
+        return game->player.hands[game->player.activeHand].value;
     }
 
     totalValue = 0;
 
-    for (cardIndex = 0; cardIndex < game->player.hand.count; cardIndex++) {
-        totalValue += getCardValue(&game->player.hand.cards[cardIndex]);
+    for (cardIndex = 0; cardIndex < game->player.hands[game->player.activeHand].count; cardIndex++) {
+        totalValue += getCardValue(&game->player.hands[game->player.activeHand].cards[cardIndex]);
     }
 
     return totalValue;
@@ -479,7 +486,17 @@ void startRound(Game *game) {
         shuffleDeck(&game->deck);
     }
 
-    resetHand(&game->player.hand);
+    {
+        int handIndex;
+
+        for (handIndex = 0; handIndex < MAX_PLAYER_HANDS; handIndex++) {
+            resetHand(&game->player.hands[handIndex]);
+        }
+    }
+
+    memset(game->player.isSplitAce, 0, sizeof(game->player.isSplitAce));
+    game->player.handCount = 1;
+    game->player.activeHand = 0;
     resetHand(&game->dealer.hand);
     renderTable(game, 0);
 
@@ -489,20 +506,20 @@ void startRound(Game *game) {
         disableRawMode();
     }
 
-    game->player.bet = readBet(game);
+    game->player.bets[game->player.activeHand] = readBet(game);
 
     if (rawMode && game->state != STATE_QUIT) {
         inputInit();
     }
 
-    if (game->player.bet < 0 || game->state == STATE_QUIT) {
+    if (game->player.bets[game->player.activeHand] < 0 || game->state == STATE_QUIT) {
         game->state = STATE_QUIT;
     } else {
         game->roundNumber++;
 
-        drawCard(&game->deck, &game->player.hand);
+        drawCard(&game->deck, &game->player.hands[0]);
         drawCard(&game->deck, &game->dealer.hand);
-        drawCard(&game->deck, &game->player.hand);
+        drawCard(&game->deck, &game->player.hands[0]);
         drawCard(&game->deck, &game->dealer.hand);
 
         if (game->run.twistId == TWIST_LUCKY_DRAW) {
@@ -675,15 +692,15 @@ void resolveRound(Game *game) {
     playerValue = calculatePlayerHandValue(game);
     dealerValue = calculateDealerHandValue(&game->dealer.hand,
                                            game->run.dealerId);
-    playerBlackjack = game->player.hand.count == 2 && playerValue == 21;
+    playerBlackjack = game->player.hands[game->player.activeHand].count == 2 && playerValue == 21;
     dealerBlackjack = game->dealer.hand.count == 2 && dealerValue == 21;
     payout = 0;
-    lossAmount = game->player.bet;
+    lossAmount = game->player.bets[game->player.activeHand];
     payoutValue = 0;
-    baseLoss = game->player.bet;
+    baseLoss = game->player.bets[game->player.activeHand];
 
     if (game->run.dealerId == DEALER_BUTCHER) {
-        baseLoss = ((long long)game->player.bet * 150) / 100;
+        baseLoss = ((long long)game->player.bets[game->player.activeHand] * 150) / 100;
     }
 
     if (game->run.twistId == TWIST_CHARITY) {
@@ -712,9 +729,9 @@ void resolveRound(Game *game) {
                  lossAmount);
     } else if (playerBlackjack && !dealerBlackjack) {
         if (game->run.dealerId == DEALER_VOID) {
-            payoutValue = game->player.bet;
+            payoutValue = game->player.bets[game->player.activeHand];
         } else {
-            payoutValue = ((long long)game->player.bet * 3) / 2;
+            payoutValue = ((long long)game->player.bets[game->player.activeHand] * 3) / 2;
         }
 
         if (payoutValue > INT_MAX - game->player.chips) {
@@ -743,9 +760,9 @@ void resolveRound(Game *game) {
                  "Push. Your bet is returned.");
     } else if (dealerValue > 21 || playerValue > dealerValue) {
         if (game->run.twistId == TWIST_HALF_PAYOUT) {
-            payoutValue = game->player.bet / 2;
+            payoutValue = game->player.bets[game->player.activeHand] / 2;
         } else {
-            payoutValue = game->player.bet;
+            payoutValue = game->player.bets[game->player.activeHand];
         }
 
         if (payoutValue > INT_MAX - game->player.chips) {
@@ -826,7 +843,17 @@ void advanceFloor(Game *game) {
                  attempts < 10);
     }
 
-    resetHand(&game->player.hand);
+    {
+        int handIndex;
+
+        for (handIndex = 0; handIndex < MAX_PLAYER_HANDS; handIndex++) {
+            resetHand(&game->player.hands[handIndex]);
+        }
+    }
+
+    memset(game->player.isSplitAce, 0, sizeof(game->player.isSplitAce));
+    game->player.handCount = 1;
+    game->player.activeHand = 0;
     resetHand(&game->dealer.hand);
 
     snprintf(message,
@@ -1040,19 +1067,19 @@ void printGameState(const Game *game, int hideDealerCard) {
 
     printf("Player: ");
 
-    for (cardIndex = 0; cardIndex < game->player.hand.count; cardIndex++) {
+    for (cardIndex = 0; cardIndex < game->player.hands[game->player.activeHand].count; cardIndex++) {
         if (cardIndex > 0) {
             printf(" ");
         }
 
-        printCard(&game->player.hand.cards[cardIndex]);
+        printCard(&game->player.hands[game->player.activeHand].cards[cardIndex]);
     }
 
     printf(" | Total value: %d\n",
            calculatePlayerHandValue(game));
     printf("Chips: %d | Bet: %d\n",
            game->player.chips,
-           game->player.bet);
+           game->player.bets[game->player.activeHand]);
 }
 
 void runShop(Game *game) {

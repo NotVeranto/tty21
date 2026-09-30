@@ -18,10 +18,15 @@ typedef enum {
     STATE_QUIT
 } GameState;
 
+#define MAX_PLAYER_HANDS 4
+
 typedef struct {
-    Hand hand;
+    Hand hands[MAX_PLAYER_HANDS];
+    int bets[MAX_PLAYER_HANDS];
+    int handCount;
+    int activeHand;
+    int isSplitAce[MAX_PLAYER_HANDS];
     int chips;
-    int bet;
     int perkOwned[PERK_COUNT];
     int perkCharges[PERK_COUNT];
 } Player;

@@ -94,11 +94,16 @@ static void getTerminalSize(int *width, int *height) {
 // Calculates the table width from the largest hand with a stable minimum.
 static int getDynamicTableWidth(const Game *game) {
     int maxCards;
+    int handIndex;
 
     maxCards = game->dealer.hand.count;
 
-    if (game->player.hand.count > maxCards) {
-        maxCards = game->player.hand.count;
+    for (handIndex = 0;
+         handIndex < game->player.handCount;
+         handIndex++) {
+        if (game->player.hands[handIndex].count > maxCards) {
+            maxCards = game->player.hands[handIndex].count;
+        }
     }
 
     if (maxCards < 5) {
@@ -297,7 +302,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                  dealerInfo->name,
                  game->run.souls,
                  game->player.chips,
-                 game->player.bet);
+                 game->player.bets[game->player.activeHand]);
 
         if ((int)strlen(statusText) > tableWidth) {
             snprintf(dealerName,
@@ -314,7 +319,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                      "    Souls: %d    Chips: %d    Bet: %d",
                      game->run.souls,
                      game->player.chips,
-                     game->player.bet);
+                     game->player.bets[game->player.activeHand]);
             suffixLength = (int)strlen(statusText);
             availableNameWidth = tableWidth - prefixLength - suffixLength;
 
@@ -335,7 +340,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                      dealerName,
                      game->run.souls,
                      game->player.chips,
-                     game->player.bet);
+                     game->player.bets[game->player.activeHand]);
         }
 
         printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
@@ -369,7 +374,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                         PLAYER_LABEL_ROW,
                         tablePadding,
                         tableWidth);
-        drawCards(&game->player.hand,
+        drawCards(&game->player.hands[game->player.activeHand],
                   PLAYER_CARD_ROW,
                   tablePadding,
                   0);
