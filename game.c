@@ -320,17 +320,19 @@ static void dispatchFloorMenuAction(Game *game,
     }
 }
 
-// Bet input stays line-based so fgets can handle multi-character numeric input and backspace.
-// Returns -1 on EOF so quitting is distinct from a valid bet.
+// Reads and validates the player's bet.
 static int readBet(Game *game) {
     char input[64];
     char prompt[64];
     char message[64];
+    char rawInput[9];
     char *endPointer;
     long betValue;
     size_t delimiterPosition;
+    size_t rawLength;
     int minBet;
     int validBet;
+    KeyEvent event;
 
     minBet = getMinBet(game->run.floor);
 
@@ -345,73 +347,133 @@ static int readBet(Game *game) {
         return -1;
     }
 
-    snprintf(prompt,
-             sizeof(prompt),
-             "Enter bet (%d-%d): ",
-             minBet,
-             game->player.chips);
+    if (inputIsRaw()) {
+        rawLength = 0;
+        rawInput[0] = '\0';
 
-    validBet = 0;
+        while (1) {
+            snprintf(prompt,
+                     sizeof(prompt),
+                     "Enter bet (%d-%d): %s",
+                     minBet,
+                     game->player.chips,
+                     rawInput);
+            renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
 
-    while (!validBet) {
-        renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
+            event = readKey();
 
-        if (fgets(input, sizeof(input), stdin) == NULL) {
-            if (ferror(stdin) && errno == EINTR) {
-                clearerr(stdin);
+            if (event.type == KEY_CHAR) {
+                if (event.ch >= '0' &&
+                    event.ch <= '9') {
+                    if (rawLength < 8) {
+                        rawInput[rawLength] = event.ch;
+                        rawLength++;
+                        rawInput[rawLength] = '\0';
+                    }
+                } else if (event.ch == 0x7F || event.ch == 0x08) {
+                    if (rawLength > 0) {
+                        rawLength--;
+                        rawInput[rawLength] = '\0';
+                    }
+                }
+            } else if (event.type == KEY_ENTER) {
+                if (rawLength == 0) {
+                    renderMessage("Enter a bet.",
+                                  ROW_RESULT,
+                                  MSG_DEFAULT);
+                } else {
+                    betValue = strtol(rawInput, &endPointer, 10);
+
+                    if (*endPointer == '\0' &&
+                        betValue >= minBet &&
+                        betValue <= game->player.chips) {
+                        validBet = 1;
+                    } else {
+                        snprintf(message,
+                                 sizeof(message),
+                                 "Invalid bet. Enter an integer between %d and %d.",
+                                 minBet,
+                                 game->player.chips);
+                        renderMessage(message,
+                                      ROW_RESULT,
+                                      MSG_DEFAULT);
+                        validBet = 0;
+                    }
+
+                    if (validBet) {
+                        return (int)betValue;
+                    }
+                }
+            } else if (event.type == KEY_ESC ||
+                       event.type == KEY_EOF) {
+                return -1;
+            }
+        }
+    } else {
+        snprintf(prompt,
+                 sizeof(prompt),
+                 "Enter bet (%d-%d): ",
+                 minBet,
+                 game->player.chips);
+
+        validBet = 0;
+
+        while (!validBet) {
+            renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
+
+            if (fgets(input, sizeof(input), stdin) == NULL) {
+                if (ferror(stdin) && errno == EINTR) {
+                    clearerr(stdin);
+                    continue;
+                }
+
+                return -1;
+            }
+
+            delimiterPosition = strcspn(input, "\r\n");
+
+            if (delimiterPosition == sizeof(input) - 1) {
+                int ch;
+
+                while ((ch = getchar()) != '\n' && ch != EOF) {
+                }
+
+                snprintf(message,
+                         sizeof(message),
+                         "Invalid bet. Enter an integer between %d and %d.",
+                         minBet,
+                         game->player.chips);
+                renderMessage(message, ROW_RESULT, MSG_DEFAULT);
                 continue;
             }
 
-            return -1;
-        }
-
-        delimiterPosition = strcspn(input, "\r\n");
-
-        if (delimiterPosition == sizeof(input) - 1) {
-            int ch;
-
-            while ((ch = getchar()) != '\n' && ch != EOF) {
+            if (input[delimiterPosition] != '\0') {
+                input[delimiterPosition] = '\0';
             }
 
-            snprintf(message,
-                     sizeof(message),
-                     "Invalid bet. Enter an integer between %d and %d.",
-                     minBet,
-                     game->player.chips);
-            renderMessage(message, ROW_RESULT, MSG_DEFAULT);
-            continue;
+            betValue = strtol(input, &endPointer, 10);
+
+            while (isspace((unsigned char)*endPointer)) {
+                endPointer++;
+            }
+
+            if (input[0] != '\0' &&
+                *endPointer == '\0' &&
+                betValue >= minBet &&
+                betValue <= game->player.chips) {
+                validBet = 1;
+            } else {
+                snprintf(message,
+                         sizeof(message),
+                         "Invalid bet. Enter an integer between %d and %d.",
+                         minBet,
+                         game->player.chips);
+                renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+            }
         }
 
-        if (input[delimiterPosition] != '\0') {
-            input[delimiterPosition] = '\0';
-        }
-
-        betValue = strtol(input, &endPointer, 10);
-
-        while (isspace((unsigned char)*endPointer)) {
-            endPointer++;
-        }
-
-        if (input[0] != '\0' &&
-            *endPointer == '\0' &&
-            betValue >= minBet &&
-            betValue <= game->player.chips) {
-            validBet = 1;
-        } else {
-            snprintf(message,
-                     sizeof(message),
-                     "Invalid bet. Enter an integer between %d and %d.",
-                     minBet,
-                     game->player.chips);
-            renderMessage(message, ROW_RESULT, MSG_DEFAULT);
-        }
+        return (int)betValue;
     }
-
-    game->player.bets[0] = (int)betValue;
-    game->player.handCount = 1;
-    game->player.activeHand = 0;
-
-    return (int)betValue;
 }
 
 void initGame(Game *game) {
@@ -498,19 +560,10 @@ void startRound(Game *game) {
     game->player.handCount = 1;
     game->player.activeHand = 0;
     resetHand(&game->dealer.hand);
+    game->player.bets[game->player.activeHand] = 0;
     renderTable(game, 0);
 
-    rawMode = inputIsRaw();
-
-    if (rawMode) {
-        disableRawMode();
-    }
-
     game->player.bets[game->player.activeHand] = readBet(game);
-
-    if (rawMode && game->state != STATE_QUIT) {
-        inputInit();
-    }
 
     if (game->player.bets[game->player.activeHand] < 0 || game->state == STATE_QUIT) {
         game->state = STATE_QUIT;
