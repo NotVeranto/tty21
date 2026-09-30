@@ -6,7 +6,6 @@
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 // Keeps a safety margin before reshuffling at the start of a round.
