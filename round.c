@@ -3,6 +3,8 @@
 #include "input.h"
 #include "input_map.h"
 
+#include <ctype.h>
+#include <errno.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -109,6 +111,162 @@ static KeyEvent makeKeyEvent(int character) {
     }
 
     return event;
+}
+
+// Reads and validates the player's bet.
+static int readBet(Game *game) {
+    char input[64];
+    char prompt[64];
+    char message[64];
+    char rawInput[9];
+    char *endPointer;
+    long betValue;
+    size_t delimiterPosition;
+    size_t rawLength;
+    int minBet;
+    int validBet;
+    KeyEvent event;
+
+    minBet = getMinBet(game->run.floor);
+
+    if (game->player.chips < minBet) {
+        snprintf(prompt,
+                 sizeof(prompt),
+                 "Minimum bet is %d. You have %d chips. Run over.",
+                 minBet,
+                 game->player.chips);
+        renderMessage(prompt, ROW_RESULT, MSG_DEFAULT);
+        game->state = STATE_QUIT;
+        return -1;
+    }
+
+    if (inputIsRaw()) {
+        rawLength = 0;
+        rawInput[0] = '\0';
+
+        while (1) {
+            snprintf(prompt,
+                     sizeof(prompt),
+                     "Enter bet (%d-%d): %s",
+                     minBet,
+                     game->player.chips,
+                     rawInput);
+            renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
+
+            event = readKey();
+
+            if (event.type == KEY_CHAR) {
+                if (event.ch >= '0' &&
+                    event.ch <= '9') {
+                    if (rawLength < 8) {
+                        rawInput[rawLength] = event.ch;
+                        rawLength++;
+                        rawInput[rawLength] = '\0';
+                    }
+                } else if (event.ch == 0x7F || event.ch == 0x08) {
+                    if (rawLength > 0) {
+                        rawLength--;
+                        rawInput[rawLength] = '\0';
+                    }
+                }
+            } else if (event.type == KEY_ENTER) {
+                if (rawLength == 0) {
+                    renderMessage("Enter a bet.",
+                                  ROW_RESULT,
+                                  MSG_DEFAULT);
+                } else {
+                    betValue = strtol(rawInput, &endPointer, 10);
+
+                    if (*endPointer == '\0' &&
+                        betValue >= minBet &&
+                        betValue <= game->player.chips) {
+                        validBet = 1;
+                    } else {
+                        snprintf(message,
+                                 sizeof(message),
+                                 "Invalid bet. Enter an integer between %d and %d.",
+                                 minBet,
+                                 game->player.chips);
+                        renderMessage(message,
+                                      ROW_RESULT,
+                                      MSG_DEFAULT);
+                        validBet = 0;
+                    }
+
+                    if (validBet) {
+                        return (int)betValue;
+                    }
+                }
+            } else if (event.type == KEY_ESC ||
+                       event.type == KEY_EOF) {
+                return -1;
+            }
+        }
+    } else {
+        snprintf(prompt,
+                 sizeof(prompt),
+                 "Enter bet (%d-%d): ",
+                 minBet,
+                 game->player.chips);
+
+        validBet = 0;
+
+        while (!validBet) {
+            renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
+
+            if (fgets(input, sizeof(input), stdin) == NULL) {
+                if (ferror(stdin) && errno == EINTR) {
+                    clearerr(stdin);
+                    continue;
+                }
+
+                return -1;
+            }
+
+            delimiterPosition = strcspn(input, "\r\n");
+
+            if (delimiterPosition == sizeof(input) - 1) {
+                int ch;
+
+                while ((ch = getchar()) != '\n' && ch != EOF) {
+                }
+
+                snprintf(message,
+                         sizeof(message),
+                         "Invalid bet. Enter an integer between %d and %d.",
+                         minBet,
+                         game->player.chips);
+                renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+                continue;
+            }
+
+            if (input[delimiterPosition] != '\0') {
+                input[delimiterPosition] = '\0';
+            }
+
+            betValue = strtol(input, &endPointer, 10);
+
+            while (isspace((unsigned char)*endPointer)) {
+                endPointer++;
+            }
+
+            if (input[0] != '\0' &&
+                *endPointer == '\0' &&
+                betValue >= minBet &&
+                betValue <= game->player.chips) {
+                validBet = 1;
+            } else {
+                snprintf(message,
+                         sizeof(message),
+                         "Invalid bet. Enter an integer between %d and %d.",
+                         minBet,
+                         game->player.chips);
+                renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+            }
+        }
+
+        return (int)betValue;
+    }
 }
 
 static int canDouble(const Game *game) {
@@ -313,22 +471,6 @@ int calculateDealerHandValue(const Hand *hand, DealerId id) {
 
     return totalValue;
 }
-
-value = calculatePlayerHandValue(game);
-
-        if (value > 21) {
-            if (game->player.perkOwned[PERK_SECOND_WIND] &&
-                game->player.perkCharges[PERK_SECOND_WIND] > 0) {
-                game->player.perkCharges[PERK_SECOND_WIND]--;
-                resetPlayerHandToEleven(game);
-                renderTable(game, 1);
-                renderMessage("Second Wind! Hand reset to 11.",
-                              ROW_RESULT,
-                              MSG_INFO);
-            } else {
-                advanceActiveHand(game);
-            }
-        }
 
 static int calculatePlayerHandValueForIndex(const Game *game,
                                                     int handIndex) {
