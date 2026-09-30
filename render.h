@@ -33,6 +33,7 @@
 #define ROW_SHOP_HINT 24
 
 #include "game.h"
+#include "round.h"
 #include "input_map.h"
 
 typedef enum {
