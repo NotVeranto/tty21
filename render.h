@@ -33,6 +33,7 @@
 #define ROW_SHOP_HINT 24
 
 #include "game.h"
+#include "input_map.h"
 
 typedef enum {
     MSG_DEFAULT,
@@ -42,14 +43,6 @@ typedef enum {
     MSG_INFO
 } MessageStyle;
 
-typedef enum {
-    ACTION_HIT = 0,
-    ACTION_STAND,
-    ACTION_DOUBLE,
-    ACTION_SPLIT,
-    ACTION_PEEK,
-    ACTION_QUIT
-} ActionId;
 
 void renderTable(const Game *game, int hideDealerCard);
 void renderShop(const Game *game, int selectedIndex);
