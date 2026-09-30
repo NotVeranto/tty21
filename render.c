@@ -477,7 +477,7 @@ void renderTable(const Game *game, int hideDealerCard) {
             if ((int)strlen(dealerName) > availableNameWidth) {
                 dealerName[availableNameWidth - 2] = '.';
                 dealerName[availableNameWidth - 1] = '.';
-                dealerName[availableNameWidth] = '\\0';
+                dealerName[availableNameWidth] = '\0';
             }
 
             if (game->player.handCount == 1) {
@@ -552,7 +552,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_HINT, tablePadding);
         printf(SCR_ERASE_EOL);
 
-        if (hintText[0] != '\\0') {
+        if (hintText[0] != '\0') {
             printf("%s%s%s", scrDim(), hintText, scrReset());
         }
 
