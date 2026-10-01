@@ -18,7 +18,9 @@ void initGame(Game *game) {
     memset(game->player.isSplitAce, 0, sizeof(game->player.isSplitAce));
     game->player.handCount = 1;
     game->player.activeHand = 0;
-    resetHand(&game->dealer.hand);
+    resetHand(&game->dealer.hands[0]);
+    resetHand(&game->dealer.hands[1]);
+    game->dealer.handCount = 1;
     game->player.chips = 100;
     game->state = STATE_BET;
     game->roundNumber = 0;
@@ -100,7 +102,9 @@ void advanceFloor(Game *game) {
     memset(game->player.isSplitAce, 0, sizeof(game->player.isSplitAce));
     game->player.handCount = 1;
     game->player.activeHand = 0;
-    resetHand(&game->dealer.hand);
+    resetHand(&game->dealer.hands[0]);
+    resetHand(&game->dealer.hands[1]);
+    game->dealer.handCount = 1;
 
     snprintf(message,
              sizeof(message),

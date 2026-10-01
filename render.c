@@ -97,7 +97,7 @@ static int getDynamicTableWidth(const Game *game) {
     int playerCardsTotal;
     int handIndex;
 
-    cardsTotal = game->dealer.hand.count;
+    cardsTotal = game->dealer.hands[0].count;
     playerCardsTotal = 0;
 
     for (handIndex = 0;
@@ -407,7 +407,7 @@ void renderTable(const Game *game, int hideDealerCard) {
             snprintf(dealerTotal,
                      sizeof(dealerTotal),
                      "Total: %d",
-                     calculateDealerHandValue(&game->dealer.hand,
+                     calculateDealerHandValue(&game->dealer.hands[0],
                                               game->run.dealerId));
         }
 
@@ -546,7 +546,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                         DEALER_LABEL_ROW,
                         tablePadding,
                         tableWidth);
-        drawCards(&game->dealer.hand,
+        drawCards(&game->dealer.hands[0],
                   DEALER_CARD_ROW,
                   tablePadding,
                   dealerCardHidden);
@@ -648,7 +648,7 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
 
     dealerInfo = getDealerInfo(game->run.dealerId);
     twistInfo = getTwistInfo(game->run.twistId);
-    dealerValue = calculateDealerHandValue(&game->dealer.hand,
+    dealerValue = calculateDealerHandValue(&game->dealer.hands[0],
                                            game->run.dealerId);
     dealerCardHidden = hideDealerCard &&
                        !game->peekActive &&
@@ -673,14 +673,14 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
     printf("Round: %d\n", game->roundNumber);
     printf("Dealer (%s): ", dealerInfo->name);
 
-    for (cardIndex = 0; cardIndex < game->dealer.hand.count; cardIndex++) {
+    for (cardIndex = 0; cardIndex < game->dealer.hands[0].count; cardIndex++) {
         if (dealerCardHidden && cardIndex == 0) {
             printf("??");
         } else {
-            printCard(&game->dealer.hand.cards[cardIndex]);
+            printCard(&game->dealer.hands[0].cards[cardIndex]);
         }
 
-        if (cardIndex < game->dealer.hand.count - 1) {
+        if (cardIndex < game->dealer.hands[0].count - 1) {
             printf(" ");
         }
     }

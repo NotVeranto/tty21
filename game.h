@@ -33,8 +33,10 @@ typedef struct {
     int usedDouble;  /* set if the player used double this round */
 } Player;
 
+/* handCount is 1 for every dealer except Twin (Stage 9.5c-2). */
 typedef struct {
-    Hand hand;
+    Hand hands[2];
+    int handCount;
 } Dealer;
 
 typedef struct {
