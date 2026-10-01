@@ -709,10 +709,18 @@ void renderTable(const Game *game, int hideDealerCard) {
 
         printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
 
-        printf(SCR_CURSOR,
-               TITLE_ROW,
-               (terminalWidth - (int)strlen("TTY21")) / 2 + 1);
-        printf("%sTTY21%s", scrBold(), scrReset());
+        const char *modeText =
+            game->mode == MODE_CLASSIC ? "[CLASSIC]" : "[ROGUELIKE]";
+
+        char headerText[32];
+
+        snprintf(headerText, sizeof(headerText), "TTY21  %s", modeText);
+
+        printf(SCR_CURSOR, TITLE_ROW,
+               (terminalWidth - (int)strlen(headerText)) / 2 + 1);
+        printf("%sTTY21%s  %s%s%s",
+               scrBold(), scrReset(),
+               scrDim(), modeText, scrReset());
 
         moveToTableRow(SEPARATOR_ROW, tablePadding);
 

@@ -29,7 +29,16 @@ static GameMode runStartupMenu(void) {
     int characterIndex;
 
     while (1) {
-        printf("tty21 — select mode\n"
+        printf("\n"
+               " TTTTT TTTTT Y   Y 22222  11\n"
+               "   T     T    Y Y     2   11\n"
+               "   T     T     Y     2    11\n"
+               "   T     T     Y    2     11\n"
+               "   T     T     Y   22222  11\n"
+               "\n"
+               "\033[2mTerminal blackjack roguelike\033[0m\n"
+               "\n"
+               "tty21 — select mode\n"
                "  [1] Roguelike\n"
                "  [2] Classic blackjack\n"
                "  [q] Quit\n"
