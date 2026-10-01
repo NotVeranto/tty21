@@ -29,6 +29,8 @@ typedef struct {
     int chips;
     int perkOwned[PERK_COUNT];
     int perkCharges[PERK_COUNT];
+    int usedSplit;   /* set if the player used split this round */
+    int usedDouble;  /* set if the player used double this round */
 } Player;
 
 typedef struct {

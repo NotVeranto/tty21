@@ -301,6 +301,7 @@ static void splitHand(Game *game) {
 
     src = game->player.activeHand;
     dst = game->player.handCount;
+    game->player.usedSplit = 1;
 
     game->player.hands[dst].cards[0] =
         game->player.hands[src].cards[1];
@@ -409,6 +410,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                           MSG_DEFAULT);
         } else {
             game->player.bets[game->player.activeHand] *= 2;
+            game->player.usedDouble = 1;
             drawCard(&game->deck, &game->player.hands[game->player.activeHand]);
 
             if (dealerMirrorsOnHit(game->run.dealerId)) {
@@ -518,6 +520,8 @@ void startRound(Game *game) {
     game->player.activeHand = 0;
     resetHand(&game->dealer.hand);
     game->player.bets[game->player.activeHand] = 0;
+    game->player.usedSplit = 0;
+    game->player.usedDouble = 0;
     renderTable(game, 0);
 
     game->player.bets[game->player.activeHand] = readBet(game);
@@ -753,6 +757,7 @@ void resolveRound(Game *game) {
     int messageLength;
     int messageTruncated;
     long long payoutValue;
+    long long basePayout;
     long long baseLoss;
     long long payoutTotal;
     long long lossTotal;
@@ -905,10 +910,18 @@ void resolveRound(Game *game) {
                                     &messageTruncated);
             }
         } else if (dealerValue > 21 || handValue > dealerValue) {
+            basePayout = handBet;
+
+            if (dealerPaysPureHandBonus(game->run.dealerId) &&
+                !game->player.usedSplit &&
+                !game->player.usedDouble) {
+                basePayout = (long long)handBet * 2;
+            }
+
             if (game->run.twistId == TWIST_HALF_PAYOUT) {
-                payoutValue = handBet / 2;
+                payoutValue = basePayout / 2;
             } else {
-                payoutValue = handBet;
+                payoutValue = basePayout;
             }
 
             if (payoutValue > INT_MAX - game->player.chips) {

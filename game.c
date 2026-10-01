@@ -26,6 +26,8 @@ void initGame(Game *game) {
     game->peekActive = 0;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
+    game->player.usedSplit = 0;
+    game->player.usedDouble = 0;
 }
 
 int calculatePlayerHandValue(const Game *game) {
