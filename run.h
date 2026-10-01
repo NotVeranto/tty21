@@ -4,6 +4,11 @@
 #include "dealers.h"
 #include "twists.h"
 
+typedef enum {
+    MODE_ROGUELIKE = 0,
+    MODE_CLASSIC
+} GameMode;
+
 typedef struct {
     int floor;
     int marks;
@@ -14,6 +19,6 @@ typedef struct {
 } Run;
 
 void initRun(Run *run);
-int getMinBet(int floor);
+int getMinBet(int floor, GameMode mode);
 
 #endif

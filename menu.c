@@ -77,7 +77,7 @@ void floorMenu(Game *game) {
     int inputCharacter;
     int rawMode;
 
-    currentMinBet = getMinBet(game->run.floor);
+    currentMinBet = getMinBet(game->run.floor, game->mode);
 
     if (game->player.chips < currentMinBet) {
         renderMessage("You cannot afford the minimum bet. Run over.",
@@ -87,7 +87,7 @@ void floorMenu(Game *game) {
         return;
     }
 
-    nextMinBet = getMinBet(game->run.floor + 1);
+    nextMinBet = getMinBet(game->run.floor + 1, game->mode);
     disabledMask = 0;
 
     if (game->player.chips < nextMinBet) {

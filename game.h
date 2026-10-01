@@ -46,10 +46,11 @@ typedef struct {
     GameState state;
     int roundNumber;
     Run run;
+    GameMode mode;
     int peekActive;
 } Game;
 
-void initGame(Game *game);
+void initGame(Game *game, GameMode mode);
 void advanceFloor(Game *game);
 int runGame(Game *game);
 

@@ -11,7 +11,11 @@ void initRun(Run *run) {
 }
 
 // Returns the minimum bet for a floor.
-int getMinBet(int floor) {
+int getMinBet(int floor, GameMode mode) {
+    if (mode == MODE_CLASSIC) {
+        return 1;
+    }
+
     if (floor <= 1) {
         return 1;
     }

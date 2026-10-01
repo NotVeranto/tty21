@@ -128,7 +128,7 @@ static int readBet(Game *game) {
     int validBet;
     KeyEvent event;
 
-    minBet = getMinBet(game->run.floor);
+    minBet = getMinBet(game->run.floor, game->mode);
 
     if (game->player.chips < minBet) {
         snprintf(prompt,
@@ -1074,6 +1074,8 @@ void resolveRound(Game *game) {
 
     if (game->player.chips == 0) {
         game->state = STATE_QUIT;
+    } else if (game->mode == MODE_CLASSIC) {
+        game->state = STATE_BET;
     } else {
         game->state = STATE_MENU;
     }

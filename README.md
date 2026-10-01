@@ -13,6 +13,7 @@ marks earned from victories can be spent on perks.
 
 Implemented:
 - Classic blackjack: Hit, Stand, Double Down, Split.
+- Classic blackjack mode (no roguelike layer).
 - Roguelike progression: floors, marks, advance menu.
 - Full-screen ASCII table with ANSI styling.
 - Raw terminal input via termios.
@@ -36,6 +37,8 @@ Planned:
 ## Run
 
     ./tty21
+    ./tty21 --roguelike
+    ./tty21 --classic
     ./tty21 --seed 12345
 
 ## Controls
@@ -73,6 +76,7 @@ Betting:
 - [x] Twists.
 - [x] Perks and shop.
 - [x] Split and Double Down.
+- [x] Classic blackjack mode.
 - [ ] Save and load (XDG).
 - [ ] Polish and animations.
 - [ ] Man page.

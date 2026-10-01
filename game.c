@@ -10,7 +10,7 @@
 
 
 
-void initGame(Game *game) {
+void initGame(Game *game, GameMode mode) {
     initDeck(&game->deck);
     shuffleDeck(&game->deck);
     memset(game->player.hands, 0, sizeof(game->player.hands));
@@ -24,7 +24,16 @@ void initGame(Game *game) {
     game->player.chips = 100;
     game->state = STATE_BET;
     game->roundNumber = 0;
+    game->mode = mode;
     initRun(&game->run);
+
+    if (mode == MODE_CLASSIC) {
+        game->run.dealerId = DEALER_CROUPIER;
+        game->run.previousDealerId = DEALER_CROUPIER;
+        game->run.twistId = TWIST_NONE;
+        game->run.previousTwistId = TWIST_NONE;
+    }
+
     game->peekActive = 0;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
@@ -53,6 +62,10 @@ void advanceFloor(Game *game) {
     int bonus;
     int earned;
     char message[128];
+
+    if (game->mode == MODE_CLASSIC) {
+        return;
+    }
 
     bonus = 0;
 
@@ -111,7 +124,7 @@ void advanceFloor(Game *game) {
              "Floor %d. Marks: %d. Minimum bet: %d.",
              game->run.floor,
              game->run.marks,
-             getMinBet(game->run.floor));
+             getMinBet(game->run.floor, game->mode));
     renderMessage(message, ROW_RESULT, MSG_DEFAULT);
 }
 
@@ -136,7 +149,11 @@ int runGame(Game *game) {
         } else if (game->state == STATE_SHOP) {
             runShop(game);
         } else if (game->state == STATE_MENU) {
-            floorMenu(game);
+            if (game->mode == MODE_CLASSIC) {
+                game->state = STATE_BET;
+            } else {
+                floorMenu(game);
+            }
         }
     }
 

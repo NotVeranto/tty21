@@ -3,6 +3,7 @@
 #include "rng.h"
 #include "version.h"
 
+#include <ctype.h>
 #include <errno.h>
 #include <limits.h>
 #include <locale.h>
@@ -18,7 +19,45 @@ static void printUsage(FILE *stream) {
             "Options:\n"
             "  -h, --help      Show this help and exit.\n"
             "  -v, --version   Show version and exit.\n"
-            "  -s, --seed N    Use N as the RNG seed (default: time-based).\n");
+            "  -s, --seed N    Use N as the RNG seed (default: time-based).\n"
+            "  -r, --roguelike Start in roguelike mode (default).\n"
+            "  -c, --classic   Start in classic blackjack mode.\n");
+}
+
+static GameMode runStartupMenu(void) {
+    char input[64];
+    int characterIndex;
+
+    while (1) {
+        printf("tty21 — select mode\n"
+               "  [1] Roguelike\n"
+               "  [2] Classic blackjack\n"
+               "  [q] Quit\n"
+               "Choice: ");
+
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            exit(0);
+        }
+
+        characterIndex = 0;
+
+        while (input[characterIndex] != '\0' &&
+               isspace((unsigned char)input[characterIndex])) {
+            characterIndex++;
+        }
+
+        if (input[characterIndex] == '1') {
+            return MODE_ROGUELIKE;
+        }
+
+        if (input[characterIndex] == '2') {
+            return MODE_CLASSIC;
+        }
+
+        if (input[characterIndex] == 'q') {
+            exit(0);
+        }
+    }
 }
 
 static int parseSeed(const char *text, unsigned int *seed) {
@@ -49,10 +88,29 @@ int main(int argc, char **argv) {
     int argumentIndex;
     int seedResult;
     const char *seedText;
+    int forced;
+    GameMode forcedMode;
+    GameMode mode;
 
     seed = 0;
+    forced = 0;
+    forcedMode = MODE_ROGUELIKE;
 
     for (argumentIndex = 1; argumentIndex < argc; argumentIndex++) {
+        if (strcmp(argv[argumentIndex], "--roguelike") == 0 ||
+            strcmp(argv[argumentIndex], "-r") == 0) {
+            forced = 1;
+            forcedMode = MODE_ROGUELIKE;
+            continue;
+        }
+
+        if (strcmp(argv[argumentIndex], "--classic") == 0 ||
+            strcmp(argv[argumentIndex], "-c") == 0) {
+            forced = 1;
+            forcedMode = MODE_CLASSIC;
+            continue;
+        }
+
         if (strncmp(argv[argumentIndex], "--seed=", 7) == 0) {
             seedText = argv[argumentIndex] + 7;
             seedResult = parseSeed(seedText, &seed);
@@ -119,10 +177,17 @@ int main(int argc, char **argv) {
     }
 
     setlocale(LC_ALL, "");
+
+    if (forced) {
+        mode = forcedMode;
+    } else {
+        mode = runStartupMenu();
+    }
+
     rngInit(seed);
 
     inputInit();
-    initGame(&game);
+    initGame(&game, mode);
     runGame(&game);
 
     return 0;
