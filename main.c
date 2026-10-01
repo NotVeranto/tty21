@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 
 static void printUsage(FILE *stream) {
     fprintf(stream,
@@ -24,25 +26,147 @@ static void printUsage(FILE *stream) {
             "  -c, --classic   Start in classic blackjack mode.\n");
 }
 
+static int getStartupWidth(void) {
+    struct winsize windowSize;
+
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &windowSize) == 0 &&
+        windowSize.ws_col > 0) {
+        return windowSize.ws_col;
+    }
+
+    return 80;
+}
+
+static void printCentered(const char *text, int width) {
+    int padding;
+    int textWidth;
+
+    textWidth = (int)strlen(text);
+    padding = (width - textWidth) / 2;
+
+    if (padding < 0) {
+        padding = 0;
+    }
+
+    printf("%*s%s\n", padding, "", text);
+}
+
 static GameMode runStartupMenu(void) {
     char input[64];
+    const char *tagline;
+    const char *menuItem;
     int characterIndex;
+    int width;
+    int colors;
+    int ruleLength;
+    int menuPadding;
 
     while (1) {
-        printf("\n"
-               " TTTTT TTTTT Y   Y 22222  11\n"
-               "   T     T    Y Y     2   11\n"
-               "   T     T     Y     2    11\n"
-               "   T     T     Y    2     11\n"
-               "   T     T     Y   22222  11\n"
-               "\n"
-               "\033[2mTerminal blackjack roguelike\033[0m\n"
-               "\n"
-               "tty21 — select mode\n"
-               "  [1] Roguelike\n"
-               "  [2] Classic blackjack\n"
-               "  [q] Quit\n"
-               "Choice: ");
+        width = getStartupWidth();
+        colors = getenv("NO_COLOR") == NULL &&
+                 isatty(STDOUT_FILENO);
+
+        printf("\n");
+
+        printCentered(" TTTTT TTTTT Y   Y 22222  11", width);
+        printCentered("   T     T    Y Y     2   11", width);
+        printCentered("   T     T     Y     2    11", width);
+        printCentered("   T     T     Y    2     11", width);
+        printCentered("   T     T     Y   22222  11", width);
+
+        printf("\n");
+
+        tagline = "Terminal blackjack roguelike";
+        menuPadding = (width - (int)strlen(tagline)) / 2;
+
+        if (menuPadding < 0) {
+            menuPadding = 0;
+        }
+
+        printf("%*s", menuPadding, "");
+        if (colors) {
+            printf("\033[2m");
+        }
+        printf("%s", tagline);
+        if (colors) {
+            printf("\033[0m");
+        }
+        printf("\n\n");
+
+        ruleLength = width - 4;
+
+        if (ruleLength > 60) {
+            ruleLength = 60;
+        }
+
+        if (ruleLength < 1) {
+            ruleLength = 1;
+        }
+
+        printf("%*s", (width - ruleLength) / 2, "");
+
+        for (characterIndex = 0;
+             characterIndex < ruleLength;
+             characterIndex++) {
+            printf("-");
+        }
+
+        printf("\n\n");
+
+        menuItem = "[1]  Roguelike";
+        menuPadding = (width - (int)strlen(menuItem)) / 2;
+
+        if (menuPadding < 0) {
+            menuPadding = 0;
+        }
+
+        printf("%*s", menuPadding, "");
+        if (colors) {
+            printf("\033[2m[1]\033[0m");
+        } else {
+            printf("[1]");
+        }
+        printf("  Roguelike\n");
+
+        menuItem = "[2]  Classic blackjack";
+        menuPadding = (width - (int)strlen(menuItem)) / 2;
+
+        if (menuPadding < 0) {
+            menuPadding = 0;
+        }
+
+        printf("%*s", menuPadding, "");
+        if (colors) {
+            printf("\033[2m[2]\033[0m");
+        } else {
+            printf("[2]");
+        }
+        printf("  Classic blackjack\n");
+
+        menuItem = "[q]  Quit";
+        menuPadding = (width - (int)strlen(menuItem)) / 2;
+
+        if (menuPadding < 0) {
+            menuPadding = 0;
+        }
+
+        printf("%*s", menuPadding, "");
+        if (colors) {
+            printf("\033[2m[q]\033[0m");
+        } else {
+            printf("[q]");
+        }
+        printf("  Quit\n\n");
+
+        menuItem = "Choice: ";
+        menuPadding = (width - (int)strlen(menuItem)) / 2;
+
+        if (menuPadding < 0) {
+            menuPadding = 0;
+        }
+
+        printf("%*s%s", menuPadding, "", menuItem);
+        fflush(stdout);
 
         if (fgets(input, sizeof(input), stdin) == NULL) {
             exit(0);
@@ -66,6 +190,8 @@ static GameMode runStartupMenu(void) {
         if (input[characterIndex] == 'q') {
             exit(0);
         }
+
+        printf("\n");
     }
 }
 
