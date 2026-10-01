@@ -24,7 +24,6 @@ static void dispatchFloorMenuAction(Game *game,
                                     char actionCharacter,
                                     int currentMinBet,
                                     int nextMinBet) {
-    int inputCharacter;
 
     if ((actionCharacter == 'c' || actionCharacter == 'C') &&
         game->player.chips >= currentMinBet) {
