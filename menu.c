@@ -40,10 +40,10 @@ static void dispatchFloorMenuAction(Game *game,
 }
 
 void floorMenu(Game *game) {
-    const char *menuItems[4];
-    char continueItem[128];
-    char advanceItem[128];
-    char shopItem[128];
+    MenuItem menuItems[4];
+    char continueLabel[128];
+    char advanceLabel[128];
+    char shopLabel[128];
     char input[64];
     KeyEvent event;
     int nextMinBet;
@@ -51,9 +51,9 @@ void floorMenu(Game *game) {
     int selectedIndex;
     int actionCharacter;
     int characterIndex;
-    int hasCharacter;
     int currentMinBet;
     int inputCharacter;
+    int menuIndex;
     int rawMode;
 
     currentMinBet = getMinBet(game->run.floor, game->mode);
@@ -73,45 +73,41 @@ void floorMenu(Game *game) {
         disabledMask |= 1 << 1;
     }
 
-    snprintf(continueItem,
-             sizeof(continueItem),
-             "[C]ontinue playing on floor %d",
+    snprintf(continueLabel,
+             sizeof(continueLabel),
+             "Continue playing on floor %d",
              game->run.floor);
-    snprintf(advanceItem,
-             sizeof(advanceItem),
-             "[A]dvance to floor %d (earn marks)",
+    snprintf(advanceLabel,
+             sizeof(advanceLabel),
+             "Advance to floor %d (earn marks)",
              game->run.floor + 1);
-    snprintf(shopItem,
-             sizeof(shopItem),
-             "[S]hop (%d marks)",
+    snprintf(shopLabel,
+             sizeof(shopLabel),
+             "Shop (%d marks)",
              game->run.marks);
 
-    menuItems[0] = continueItem;
-    menuItems[1] = advanceItem;
-    menuItems[2] = shopItem;
-    menuItems[3] = "[Q]uit run";
+    menuItems[0].hotkey = 'c';
+    menuItems[0].label = continueLabel;
+    menuItems[1].hotkey = 'a';
+    menuItems[1].label = advanceLabel;
+    menuItems[2].hotkey = 's';
+    menuItems[2].label = shopLabel;
+    menuItems[3].hotkey = 'q';
+    menuItems[3].label = "Quit run";
 
     selectedIndex = 0;
-    rawMode = inputIsRaw();
 
-    if (!rawMode) {
+    while (game->state == STATE_MENU) {
+        rawMode = inputIsRaw();
+
         renderMenu("What's next?",
                    menuItems,
                    4,
                    disabledMask,
                    selectedIndex,
                    ROW_MENU_START);
-    }
 
-    while (game->state == STATE_MENU) {
         if (rawMode) {
-            renderMenu("What's next?",
-                       menuItems,
-                       4,
-                       disabledMask,
-                       selectedIndex,
-                       ROW_MENU_START);
-
             event = readKey();
 
             if (event.type == KEY_UP) {
@@ -127,28 +123,25 @@ void floorMenu(Game *game) {
             } else if (event.type == KEY_LEFT ||
                        event.type == KEY_RIGHT) {
             } else if (event.type == KEY_ENTER) {
-                actionCharacter = "casq"[selectedIndex];
+                actionCharacter = menuItems[selectedIndex].hotkey;
                 dispatchFloorMenuAction(game,
-                                        (char)actionCharacter,
+                                        actionCharacter,
                                         currentMinBet,
                                         nextMinBet);
             } else if (event.type == KEY_CHAR) {
-                actionCharacter = event.ch;
-
-                if (actionCharacter == 'c' || actionCharacter == 'C') {
-                    selectedIndex = 0;
-                } else if (actionCharacter == 'a' || actionCharacter == 'A') {
-                    selectedIndex = 1;
-                } else if (actionCharacter == 's' || actionCharacter == 'S') {
-                    selectedIndex = 2;
-                } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
-                    selectedIndex = 3;
+                for (menuIndex = 0; menuIndex < 4; menuIndex++) {
+                    if (event.ch == menuItems[menuIndex].hotkey ||
+                        tolower((unsigned char)event.ch) ==
+                        menuItems[menuIndex].hotkey) {
+                        selectedIndex = menuIndex;
+                        dispatchFloorMenuAction(
+                            game,
+                            menuItems[menuIndex].hotkey,
+                            currentMinBet,
+                            nextMinBet);
+                        break;
+                    }
                 }
-
-                dispatchFloorMenuAction(game,
-                                        (char)actionCharacter,
-                                        currentMinBet,
-                                        nextMinBet);
             } else if (event.type == KEY_ESC ||
                        event.type == KEY_EOF) {
                 game->state = STATE_QUIT;
@@ -156,7 +149,9 @@ void floorMenu(Game *game) {
         } else {
             actionCharacter = -1;
 
-            if (fgets(input, sizeof(input), stdin) != NULL) {
+            if (fgets(input, sizeof(input), stdin) == NULL) {
+                game->state = STATE_QUIT;
+            } else {
                 if (strchr(input, '\n') == NULL) {
                     while ((inputCharacter = getchar()) != '\n' &&
                            inputCharacter != EOF) {
@@ -164,30 +159,30 @@ void floorMenu(Game *game) {
                 }
 
                 characterIndex = 0;
-                hasCharacter = 0;
 
                 while (input[characterIndex] != '\0') {
                     if (!isspace((unsigned char)input[characterIndex])) {
                         actionCharacter = input[characterIndex];
-                        hasCharacter = 1;
                         break;
                     }
 
                     characterIndex++;
                 }
 
-                if (!hasCharacter) {
-                    actionCharacter = -1;
+                if (actionCharacter != -1) {
+                    for (menuIndex = 0; menuIndex < 4; menuIndex++) {
+                        if (actionCharacter == menuItems[menuIndex].hotkey ||
+                            tolower((unsigned char)actionCharacter) ==
+                            menuItems[menuIndex].hotkey) {
+                            dispatchFloorMenuAction(
+                                game,
+                                menuItems[menuIndex].hotkey,
+                                currentMinBet,
+                                nextMinBet);
+                            break;
+                        }
+                    }
                 }
-            }
-
-            if (actionCharacter == -1) {
-                game->state = STATE_QUIT;
-            } else {
-                dispatchFloorMenuAction(game,
-                                        (char)actionCharacter,
-                                        currentMinBet,
-                                        nextMinBet);
             }
         }
     }
@@ -195,6 +190,8 @@ void floorMenu(Game *game) {
 
 void runShop(Game *game) {
     char input[64];
+    char labels[PERK_COUNT][128];
+    MenuItem items[PERK_COUNT];
     KeyEvent event;
     int actionCharacter;
     int inputCharacter;
@@ -203,13 +200,27 @@ void runShop(Game *game) {
     int ownedMask;
     int rawMode;
     int characterIndex;
-
+    int menuIndex;
     const char *pendingMessage = NULL;
 
     selectedIndex = 0;
-    rawMode = inputIsRaw();
 
     while (game->state == STATE_SHOP) {
+        for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+            const char *status;
+
+            status = game->player.perkOwned[perkIndex] ? "OWNED" : "BUY";
+            snprintf(labels[perkIndex],
+                     sizeof(labels[perkIndex]),
+                     "%-15s  %3d souls   %s",
+                     perkName((PerkId)perkIndex),
+                     perkCost((PerkId)perkIndex),
+                     status);
+
+            items[perkIndex].hotkey = (char)('1' + perkIndex);
+            items[perkIndex].label = labels[perkIndex];
+        }
+
         ownedMask = 0;
 
         for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
@@ -218,11 +229,13 @@ void runShop(Game *game) {
             }
         }
 
-        renderShop(game, selectedIndex);
+        renderShop(game, items, selectedIndex);
 
         if (pendingMessage != NULL) {
             renderMessage(pendingMessage, ROW_RESULT, MSG_DEFAULT);
         }
+
+        rawMode = inputIsRaw();
 
         if (rawMode) {
             event = readKey();
@@ -263,33 +276,43 @@ void runShop(Game *game) {
             } else if (event.type == KEY_CHAR) {
                 actionCharacter = event.ch;
 
-                if (actionCharacter >= '1' &&
-                    actionCharacter <= '5') {
-                    selectedIndex = actionCharacter - '1';
-
-                    if (game->player.perkOwned[selectedIndex]) {
-                        pendingMessage = "Already owned.";
-                    } else if (game->run.marks <
-                               perkCost((PerkId)selectedIndex)) {
-                        pendingMessage = "Not enough marks.";
-                    } else {
-                        game->run.marks -=
-                            perkCost((PerkId)selectedIndex);
-                        game->player.perkOwned[selectedIndex] = 1;
-
-                        if (selectedIndex == PERK_PEEK ||
-                            selectedIndex == PERK_SECOND_WIND) {
-                            game->player.perkCharges[selectedIndex] = 1;
-                        }
-
-                        pendingMessage = NULL;
-                    }
-                } else if (actionCharacter == 'q' ||
-                           actionCharacter == 'Q') {
+                if (actionCharacter == 'q' ||
+                    actionCharacter == 'Q') {
                     pendingMessage = NULL;
                     game->state = STATE_MENU;
                 } else {
-                    pendingMessage = NULL;
+                    menuIndex = -1;
+
+                    for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+                        if (actionCharacter == items[perkIndex].hotkey) {
+                            menuIndex = perkIndex;
+                            break;
+                        }
+                    }
+
+                    if (menuIndex >= 0) {
+                        selectedIndex = menuIndex;
+
+                        if (game->player.perkOwned[selectedIndex]) {
+                            pendingMessage = "Already owned.";
+                        } else if (game->run.marks <
+                                   perkCost((PerkId)selectedIndex)) {
+                            pendingMessage = "Not enough marks.";
+                        } else {
+                            game->run.marks -=
+                                perkCost((PerkId)selectedIndex);
+                            game->player.perkOwned[selectedIndex] = 1;
+
+                            if (selectedIndex == PERK_PEEK ||
+                                selectedIndex == PERK_SECOND_WIND) {
+                                game->player.perkCharges[selectedIndex] = 1;
+                            }
+
+                            pendingMessage = NULL;
+                        }
+                    } else {
+                        pendingMessage = NULL;
+                    }
                 }
             } else if (event.type == KEY_ESC ||
                        event.type == KEY_EOF) {
@@ -299,7 +322,10 @@ void runShop(Game *game) {
         } else {
             actionCharacter = -1;
 
-            if (fgets(input, sizeof(input), stdin) != NULL) {
+            if (fgets(input, sizeof(input), stdin) == NULL) {
+                pendingMessage = NULL;
+                game->state = STATE_MENU;
+            } else {
                 if (strchr(input, '\n') == NULL) {
                     while ((inputCharacter = getchar()) != '\n' &&
                            inputCharacter != EOF) {
@@ -316,38 +342,51 @@ void runShop(Game *game) {
 
                     characterIndex++;
                 }
-            }
 
-            if (actionCharacter == -1) {
-                pendingMessage = NULL;
-                game->state = STATE_MENU;
-            } else if (actionCharacter == 'q' ||
-                       actionCharacter == 'Q' ||
-                       actionCharacter == 27) {
-                pendingMessage = NULL;
-                game->state = STATE_MENU;
-            } else if (actionCharacter >= '1' &&
-                       actionCharacter <= '5') {
-                selectedIndex = actionCharacter - '1';
-
-                if (game->player.perkOwned[selectedIndex]) {
-                    pendingMessage = "Already owned.";
-                } else if (game->run.marks <
-                           perkCost((PerkId)selectedIndex)) {
-                    pendingMessage = "Not enough marks.";
+                if (actionCharacter == -1 ||
+                    actionCharacter == 27) {
+                    pendingMessage = NULL;
+                    game->state = STATE_MENU;
+                } else if (actionCharacter == 'q' ||
+                           actionCharacter == 'Q') {
+                    pendingMessage = NULL;
+                    game->state = STATE_MENU;
                 } else {
-                    game->run.marks -= perkCost((PerkId)selectedIndex);
-                    game->player.perkOwned[selectedIndex] = 1;
+                    menuIndex = -1;
 
-                    if (selectedIndex == PERK_PEEK ||
-                        selectedIndex == PERK_SECOND_WIND) {
-                        game->player.perkCharges[selectedIndex] = 1;
+                    for (perkIndex = 0;
+                         perkIndex < PERK_COUNT;
+                         perkIndex++) {
+                        if (actionCharacter == items[perkIndex].hotkey) {
+                            menuIndex = perkIndex;
+                            break;
+                        }
                     }
 
-                    pendingMessage = NULL;
+                    if (menuIndex >= 0) {
+                        selectedIndex = menuIndex;
+
+                        if (game->player.perkOwned[selectedIndex]) {
+                            pendingMessage = "Already owned.";
+                        } else if (game->run.marks <
+                                   perkCost((PerkId)selectedIndex)) {
+                            pendingMessage = "Not enough marks.";
+                        } else {
+                            game->run.marks -=
+                                perkCost((PerkId)selectedIndex);
+                            game->player.perkOwned[selectedIndex] = 1;
+
+                            if (selectedIndex == PERK_PEEK ||
+                                selectedIndex == PERK_SECOND_WIND) {
+                                game->player.perkCharges[selectedIndex] = 1;
+                            }
+
+                            pendingMessage = NULL;
+                        }
+                    } else {
+                        pendingMessage = NULL;
+                    }
                 }
-            } else {
-                pendingMessage = NULL;
             }
         }
     }

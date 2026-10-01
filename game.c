@@ -6,10 +6,6 @@
 #include <stdio.h>
 #include <string.h>
 
-
-
-
-
 void initGame(Game *game, GameMode mode) {
     initDeck(&game->deck);
     shuffleDeck(&game->deck);
@@ -41,23 +37,6 @@ void initGame(Game *game, GameMode mode) {
     game->player.usedDouble = 0;
     game->lastEvent[0] = '\0';
     game->lastEventStyle = MSG_DEFAULT;
-}
-
-int calculatePlayerHandValue(const Game *game) {
-    int totalValue;
-    int cardIndex;
-
-    if (!game->player.perkOwned[PERK_ACE_HIGH]) {
-        return game->player.hands[game->player.activeHand].value;
-    }
-
-    totalValue = 0;
-
-    for (cardIndex = 0; cardIndex < game->player.hands[game->player.activeHand].count; cardIndex++) {
-        totalValue += getCardValue(&game->player.hands[game->player.activeHand].cards[cardIndex]);
-    }
-
-    return totalValue;
 }
 
 void advanceFloor(Game *game) {
@@ -133,12 +112,6 @@ void advanceFloor(Game *game) {
              message);
     game->lastEventStyle = MSG_DEFAULT;
 }
-
-
-
-
-
-
 
 int runGame(Game *game) {
     char finalChipsMessage[64];

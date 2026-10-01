@@ -475,6 +475,26 @@ int calculateDealerHandValue(const Hand *hand, DealerId id) {
     return totalValue;
 }
 
+int calculatePlayerHandValue(const Game *game) {
+    int totalValue;
+    int cardIndex;
+
+    if (!game->player.perkOwned[PERK_ACE_HIGH]) {
+        return game->player.hands[game->player.activeHand].value;
+    }
+
+    totalValue = 0;
+
+    for (cardIndex = 0;
+         cardIndex < game->player.hands[game->player.activeHand].count;
+         cardIndex++) {
+        totalValue +=
+            getCardValue(&game->player.hands[game->player.activeHand].cards[cardIndex]);
+    }
+
+    return totalValue;
+}
+
 static int calculatePlayerHandValueForIndex(const Game *game,
                                                     int handIndex) {
     int totalValue;
@@ -1071,11 +1091,6 @@ void resolveRound(Game *game) {
     game->lastEventStyle = resultStyle;
 
     renderTable(game, 0);
-    snprintf(resultMessage,
-             sizeof(resultMessage),
-             "Chips: %d",
-             game->player.chips);
-    renderMessage(resultMessage, ROW_CHIPS, MSG_DEFAULT);
 
     if (game->player.chips == 0) {
         game->state = STATE_QUIT;

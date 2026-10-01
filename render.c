@@ -381,17 +381,17 @@ static void drawPlayerHands(const Game *game,
         handPadding += handWidth + 2;
     }
 
-    if (game->player.handCount > 1) {
-        handPadding = padding;
+    handPadding = padding;
 
-        for (handIndex = 0;
-             handIndex < game->player.handCount;
-             handIndex++) {
-            isActive = handIndex == game->player.activeHand &&
-                       game->player.activeHand < game->player.handCount;
+    for (handIndex = 0;
+         handIndex < game->player.handCount;
+         handIndex++) {
+        isActive = handIndex == game->player.activeHand &&
+                   game->player.activeHand < game->player.handCount;
 
-            moveToTableRow(PLAYER_CARD_ROW - 1, handPadding);
+        moveToTableRow(PLAYER_CARD_ROW - 1, handPadding);
 
+        if (game->player.handCount > 1) {
             if (isActive) {
                 printf("%s> HAND %d%s",
                        scrBold(),
@@ -403,17 +403,17 @@ static void drawPlayerHands(const Game *game,
                        handIndex + 1,
                        scrReset());
             }
-
-            printPlayerHandStatus(game, handIndex, handPadding);
-
-            handWidth = game->player.hands[handIndex].count * CARD_WIDTH +
-                        (game->player.hands[handIndex].count - 1) * CARD_GAP;
-            handPadding += handWidth + 2;
         }
+
+        printPlayerHandStatus(game, handIndex, handPadding);
+
+        handWidth = game->player.hands[handIndex].count * CARD_WIDTH +
+                    (game->player.hands[handIndex].count - 1) * CARD_GAP;
+        handPadding += handWidth + 2;
     }
 }
 
-// Renders the persistent event banner on the event row.
+/// Renders the persistent event banner on the event row.
 static void renderEventBanner(const Game *game,
                               int padding,
                               int terminalWidth) {
@@ -562,11 +562,18 @@ void renderTable(const Game *game, int hideDealerCard) {
                 break;
         }
 
-        snprintf(roundText,
-                 sizeof(roundText),
-                 "Round: %d    %s",
-                 game->roundNumber,
-                 phaseText);
+        if (phaseText[0] == '\0') {
+            snprintf(roundText,
+                     sizeof(roundText),
+                     "Round: %d",
+                     game->roundNumber);
+        } else {
+            snprintf(roundText,
+                     sizeof(roundText),
+                     "Round: %d    %s",
+                     game->roundNumber,
+                     phaseText);
+        }
 
         if (dealerCardHidden || dealerHidesTotal(game->run.dealerId)) {
             if (game->dealer.handCount == 1) {
@@ -604,7 +611,25 @@ void renderTable(const Game *game, int hideDealerCard) {
                  "Total: %d",
                  displayHandValue);
 
-        if (game->player.handCount == 1) {
+        if (game->mode == MODE_CLASSIC) {
+            if (game->player.handCount == 1) {
+                snprintf(statusText,
+                         sizeof(statusText),
+                         "Dealer: %s    Chips: %d    Bet: %d",
+                         dealerInfo->name,
+                         game->player.chips,
+                         game->player.bets[displayHandIndex]);
+            } else {
+                snprintf(statusText,
+                         sizeof(statusText),
+                         "Dealer: %s    Chips: %d    Bet: %d (hand %d/%d)",
+                         dealerInfo->name,
+                         game->player.chips,
+                         game->player.bets[displayHandIndex],
+                         displayHandIndex + 1,
+                         game->player.handCount);
+            }
+        } else if (game->player.handCount == 1) {
             snprintf(statusText,
                      sizeof(statusText),
                      "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d",
@@ -633,28 +658,51 @@ void renderTable(const Game *game, int hideDealerCard) {
                      sizeof(dealerName),
                      "%s",
                      dealerInfo->name);
-            snprintf(statusText,
-                     sizeof(statusText),
-                     "Floor: %d    Dealer: ",
-                     game->run.floor);
-            prefixLength = (int)strlen(statusText);
-
-            if (game->player.handCount == 1) {
+            if (game->mode == MODE_CLASSIC) {
                 snprintf(statusText,
                          sizeof(statusText),
-                         "    Marks: %d    Chips: %d    Bet: %d",
-                         game->run.marks,
-                         game->player.chips,
-                         game->player.bets[displayHandIndex]);
+                         "Dealer: ");
+                prefixLength = (int)strlen(statusText);
+
+                if (game->player.handCount == 1) {
+                    snprintf(statusText,
+                             sizeof(statusText),
+                             "    Chips: %d    Bet: %d",
+                             game->player.chips,
+                             game->player.bets[displayHandIndex]);
+                } else {
+                    snprintf(statusText,
+                             sizeof(statusText),
+                             "    Chips: %d    Bet: %d (hand %d/%d)",
+                             game->player.chips,
+                             game->player.bets[displayHandIndex],
+                             displayHandIndex + 1,
+                             game->player.handCount);
+                }
             } else {
                 snprintf(statusText,
                          sizeof(statusText),
-                         "    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
-                         game->run.marks,
-                         game->player.chips,
-                         game->player.bets[displayHandIndex],
-                         displayHandIndex + 1,
-                         game->player.handCount);
+                         "Floor: %d    Dealer: ",
+                         game->run.floor);
+                prefixLength = (int)strlen(statusText);
+
+                if (game->player.handCount == 1) {
+                    snprintf(statusText,
+                             sizeof(statusText),
+                             "    Marks: %d    Chips: %d    Bet: %d",
+                             game->run.marks,
+                             game->player.chips,
+                             game->player.bets[displayHandIndex]);
+                } else {
+                    snprintf(statusText,
+                             sizeof(statusText),
+                             "    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
+                             game->run.marks,
+                             game->player.chips,
+                             game->player.bets[displayHandIndex],
+                             displayHandIndex + 1,
+                             game->player.handCount);
+                }
             }
 
             suffixLength = (int)strlen(statusText);
@@ -673,7 +721,25 @@ void renderTable(const Game *game, int hideDealerCard) {
                 dealerName[2] = '\0';
             }
 
-            if (game->player.handCount == 1) {
+            if (game->mode == MODE_CLASSIC) {
+                if (game->player.handCount == 1) {
+                    snprintf(statusText,
+                             sizeof(statusText),
+                             "Dealer: %s    Chips: %d    Bet: %d",
+                             dealerName,
+                             game->player.chips,
+                             game->player.bets[displayHandIndex]);
+                } else {
+                    snprintf(statusText,
+                             sizeof(statusText),
+                             "Dealer: %s    Chips: %d    Bet: %d (hand %d/%d)",
+                             dealerName,
+                             game->player.chips,
+                             game->player.bets[displayHandIndex],
+                             displayHandIndex + 1,
+                             game->player.handCount);
+                }
+            } else if (game->player.handCount == 1) {
                 snprintf(statusText,
                          sizeof(statusText),
                          "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d",
@@ -943,17 +1009,20 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
 
 // Prints a fixed menu block with disabled entries dimmed.
 void renderMenu(const char *title,
-                const char *const *items,
+                const MenuItem *items,
                 int itemCount,
                 int disabledMask,
                 int selectedIndex,
                 int startRow) {
     int terminalWidth;
     int terminalHeight;
+    int menuAreaWidth;
+    int menuAreaPadding;
+    int titlePadding;
     int itemIndex;
-    int menuPadding;
     int isDisabled;
-    const char *prefix;
+    int rowWidth;
+    int rowPadding;
 
     initColors();
     getTerminalSize(&terminalWidth, &terminalHeight);
@@ -961,53 +1030,92 @@ void renderMenu(const char *title,
     if (isatty(STDOUT_FILENO) &&
         terminalWidth >= 72 &&
         terminalHeight >= TABLE_MIN_HEIGHT) {
-        menuPadding = tablePadding;
+        menuAreaWidth = terminalWidth - tablePadding * 2;
+        menuAreaPadding = tablePadding;
 
-        printf(SCR_CURSOR, startRow - 1, menuPadding + 1);
+        if (menuAreaWidth < 1 ||
+            menuAreaWidth < (int)strlen(title)) {
+            menuAreaWidth = terminalWidth;
+            menuAreaPadding = 0;
+        }
+
+        titlePadding = menuAreaPadding +
+                       (menuAreaWidth - (int)strlen(title)) / 2;
+
+        if (titlePadding < 0) {
+            titlePadding = 0;
+        }
+
+        printf(SCR_CURSOR, startRow - 1, titlePadding + 1);
         printf(SCR_ERASE_EOL);
         printf("%s%s%s", scrBold(), title, scrReset());
 
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
-            prefix = itemIndex == selectedIndex && !isDisabled ? "> " : "  ";
+            rowWidth = 2 + 3 + 2 +
+                       (int)strlen(items[itemIndex].label);
 
-            moveToTableRow(startRow + itemIndex, menuPadding);
+            menuAreaWidth = terminalWidth - tablePadding * 2;
+            menuAreaPadding = tablePadding;
+
+            if (menuAreaWidth < rowWidth) {
+                menuAreaWidth = terminalWidth;
+                menuAreaPadding = 0;
+            }
+
+            rowPadding = menuAreaPadding +
+                         (menuAreaWidth - rowWidth) / 2;
+
+            if (rowPadding < 0) {
+                rowPadding = 0;
+            }
+
+            printf(SCR_CURSOR, startRow + itemIndex, rowPadding + 1);
             printf(SCR_ERASE_EOL);
 
             if (isDisabled) {
-                printf("%s%s%s%s",
+                printf("%s  [%c]  %s%s",
                        scrDim(),
-                       prefix,
-                       items[itemIndex],
-                       scrReset());
-            } else if (itemIndex == selectedIndex) {
-                printf("%s%s%s%s",
-                       scrBold(),
-                       prefix,
-                       items[itemIndex],
+                       items[itemIndex].hotkey,
+                       items[itemIndex].label,
                        scrReset());
             } else {
-                printf("%s%s", prefix, items[itemIndex]);
+                if (itemIndex == selectedIndex) {
+                    printf("%s> ", scrBold());
+                } else {
+                    printf("  ");
+                }
+
+                printf("%s[%c]%s  ",
+                       scrDim(),
+                       items[itemIndex].hotkey,
+                       scrReset());
+
+                if (itemIndex == selectedIndex) {
+                    printf("%s%s%s",
+                           scrBold(),
+                           items[itemIndex].label,
+                           scrReset());
+                } else {
+                    printf("%s", items[itemIndex].label);
+                }
             }
         }
 
         fflush(stdout);
     } else {
-        printf("%s\n", title);
+        titlePadding = (terminalWidth - (int)strlen(title)) / 2;
+
+        if (titlePadding < 0) {
+            titlePadding = 0;
+        }
+
+        printf("%*s%s\n", titlePadding, "", title);
 
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
-            isDisabled = (disabledMask & (1 << itemIndex)) != 0;
-
-            if (isDisabled) {
-                printf("%s%s%s",
-                       scrDim(),
-                       items[itemIndex],
-                       scrReset());
-            } else {
-                printf("%s", items[itemIndex]);
-            }
-
-            printf("\n");
+            printf("  [%c]  %s\n",
+                   items[itemIndex].hotkey,
+                   items[itemIndex].label);
         }
 
         fflush(stdout);
@@ -1015,7 +1123,9 @@ void renderMenu(const char *title,
 }
 
 // Renders the between-floor perk shop.
-void renderShop(const Game *game, int selectedIndex) {
+void renderShop(const Game *game,
+                const MenuItem *items,
+                int selectedIndex) {
     int terminalWidth;
     int terminalHeight;
     int tableWidth;
@@ -1026,7 +1136,10 @@ void renderShop(const Game *game, int selectedIndex) {
     int perkIndex;
     int isOwned;
     int canAfford;
-    const char *statusText;
+    int rowWidth;
+    int menuAreaWidth;
+    int menuAreaPadding;
+    int rowPadding;
 
     static const int ITEM_ROWS[] = {
         ROW_SHOP_ITEM_0,
@@ -1072,24 +1185,57 @@ void renderShop(const Game *game, int selectedIndex) {
             descriptionRow = DESCRIPTION_ROWS[perkIndex];
             isOwned = game->player.perkOwned[perkIndex];
             canAfford = game->run.marks >= perkCost((PerkId)perkIndex);
-            statusText = isOwned ? "OWNED" : "BUY";
 
-            moveToTableRow(itemRow, shopPadding);
+            rowWidth = 2 + 3 + 2 +
+                       (int)strlen(items[perkIndex].label);
+            menuAreaWidth = tableWidth;
+            menuAreaPadding = shopPadding;
+
+            if (menuAreaWidth < rowWidth) {
+                menuAreaWidth = terminalWidth;
+                menuAreaPadding = 0;
+            }
+
+            rowPadding = menuAreaPadding +
+                         (menuAreaWidth - rowWidth) / 2;
+
+            if (rowPadding < 0) {
+                rowPadding = 0;
+            }
+
+            printf(SCR_CURSOR, itemRow, rowPadding + 1);
+            printf(SCR_ERASE_EOL);
+
+            if (isOwned || !canAfford) {
+                printf("%s", scrDim());
+            } else if (perkIndex == selectedIndex) {
+                printf("%s", scrBold());
+            }
 
             if (perkIndex == selectedIndex) {
-                printf("%s> ", scrBold());
-            } else if (!isOwned && !canAfford) {
-                printf("%s  ", scrDim());
+                printf("> ");
             } else {
                 printf("  ");
             }
 
-            printf("[%d] %s   %d marks   %s",
-                   perkIndex + 1,
-                   perkName((PerkId)perkIndex),
-                   perkCost((PerkId)perkIndex),
-                   statusText);
-            printf("%s", scrReset());
+            printf("%s[%c]%s  ",
+                   scrDim(),
+                   items[perkIndex].hotkey,
+                   scrReset());
+
+            if (isOwned || !canAfford) {
+                printf("%s%s%s",
+                       scrDim(),
+                       items[perkIndex].label,
+                       scrReset());
+            } else if (perkIndex == selectedIndex) {
+                printf("%s%s%s",
+                       scrBold(),
+                       items[perkIndex].label,
+                       scrReset());
+            } else {
+                printf("%s", items[perkIndex].label);
+            }
 
             moveToTableRow(descriptionRow, shopPadding);
             printf("%s%s%s",
@@ -1110,25 +1256,26 @@ void renderShop(const Game *game, int selectedIndex) {
         for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
             isOwned = game->player.perkOwned[perkIndex];
             canAfford = game->run.marks >= perkCost((PerkId)perkIndex);
-            statusText = isOwned ? "OWNED" : "BUY";
 
-            if (!isOwned && !canAfford) {
-                printf("%s[%d] %s   %d marks   %s%s",
-                       scrDim(),
-                       perkIndex + 1,
-                       perkName((PerkId)perkIndex),
-                       perkCost((PerkId)perkIndex),
-                       statusText,
-                       scrReset());
+            if (perkIndex == selectedIndex) {
+                printf("> ");
             } else {
-                printf("[%d] %s   %d marks   %s",
-                       perkIndex + 1,
-                       perkName((PerkId)perkIndex),
-                       perkCost((PerkId)perkIndex),
-                       statusText);
+                printf("  ");
             }
 
-            printf("\n%s%s%s\n",
+            if (isOwned || !canAfford) {
+                printf("%s[%c]  %s%s\n",
+                       scrDim(),
+                       items[perkIndex].hotkey,
+                       items[perkIndex].label,
+                       scrReset());
+            } else {
+                printf("[%c]  %s\n",
+                       items[perkIndex].hotkey,
+                       items[perkIndex].label);
+            }
+
+            printf("%s%s%s\n",
                    scrDim(),
                    perkDescription((PerkId)perkIndex),
                    scrReset());

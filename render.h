@@ -37,16 +37,23 @@
 #include "round.h"
 #include "input_map.h"
 
+typedef struct {
+    char hotkey;          /* single character shortcut */
+    const char *label;    /* description shown next to hotkey */
+} MenuItem;
+
 void renderTable(const Game *game, int hideDealerCard);
 void renderGameStateFallback(const Game *game, int hideDealerCard);
-void renderShop(const Game *game, int selectedIndex);
+void renderShop(const Game *game,
+                const MenuItem *items,
+                int selectedIndex);
 void renderActionBar(const ActionId *actions,
                      int actionCount,
                      int selectedIndex,
                      int row);
 void renderMessage(const char *msg, int row, MessageStyle style);
 void renderMenu(const char *title,
-                const char *const *items,
+                const MenuItem *items,
                 int itemCount,
                 int disabledMask,
                 int selectedIndex,

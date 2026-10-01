@@ -1,5 +1,6 @@
 #include "game.h"
 #include "input.h"
+#include "render.h"
 #include "rng.h"
 #include "version.h"
 
@@ -26,6 +27,15 @@ static void printUsage(FILE *stream) {
             "  -c, --classic   Start in classic blackjack mode.\n");
 }
 
+static const char *LOGO[] = {
+    "TTTTT TTTTT Y   Y  22222 11111",
+    "  T     T    Y Y      2     11",
+    "  T     T     Y      2      11",
+    "  T     T     Y     2       11",
+    "  T     T     Y    22222 11111"
+};
+static const int LOGO_ROWS = 5;
+
 static int getStartupWidth(void) {
     struct winsize windowSize;
 
@@ -51,46 +61,109 @@ static void printCentered(const char *text, int width) {
     printf("%*s%s\n", padding, "", text);
 }
 
+static void printLogo(int width) {
+    int logoIndex;
+
+    for (logoIndex = 0; logoIndex < LOGO_ROWS; logoIndex++) {
+        printCentered(LOGO[logoIndex], width);
+    }
+}
+
+static void printStartupItem(const MenuItem *item,
+                             int selected,
+                             int width,
+                             int colors) {
+    int rowWidth;
+    int padding;
+
+    rowWidth = 2 + 3 + 2 + (int)strlen(item->label);
+    padding = (width - rowWidth) / 2;
+
+    if (padding < 0) {
+        padding = 0;
+    }
+
+    printf("%*s", padding, "");
+
+    if (selected) {
+        if (colors) {
+            printf("\033[1m> \033[0m");
+        } else {
+            printf("> ");
+        }
+    } else {
+        printf("  ");
+    }
+
+    if (colors) {
+        printf("\033[2m[%c]\033[0m  ", item->hotkey);
+    } else {
+        printf("[%c]  ", item->hotkey);
+    }
+
+    if (selected) {
+        if (colors) {
+            printf("\033[1m%s\033[0m\n", item->label);
+        } else {
+            printf("%s\n", item->label);
+        }
+    } else {
+        printf("%s\n", item->label);
+    }
+}
+
 static GameMode runStartupMenu(void) {
+    MenuItem items[3];
     char input[64];
-    const char *tagline;
-    const char *menuItem;
+    int selectedIndex;
     int characterIndex;
     int width;
     int colors;
     int ruleLength;
-    int menuPadding;
+    int menuIndex;
+    int padding;
+    KeyEvent event;
+
+    items[0].hotkey = '1';
+    items[0].label = "Roguelike";
+    items[1].hotkey = '2';
+    items[1].label = "Classic blackjack";
+    items[2].hotkey = 'q';
+    items[2].label = "Quit";
+
+    selectedIndex = 0;
 
     while (1) {
         width = getStartupWidth();
         colors = getenv("NO_COLOR") == NULL &&
                  isatty(STDOUT_FILENO);
 
-        printf("\n");
-
-        printCentered(" TTTTT TTTTT Y   Y 22222  11", width);
-        printCentered("   T     T    Y Y     2   11", width);
-        printCentered("   T     T     Y     2    11", width);
-        printCentered("   T     T     Y    2     11", width);
-        printCentered("   T     T     Y   22222  11", width);
-
-        printf("\n");
-
-        tagline = "Terminal blackjack roguelike";
-        menuPadding = (width - (int)strlen(tagline)) / 2;
-
-        if (menuPadding < 0) {
-            menuPadding = 0;
+        if (isatty(STDOUT_FILENO) && colors) {
+            printf("\033[2J\033[H");
         }
 
-        printf("%*s", menuPadding, "");
+        printf("\n");
+        printLogo(width);
+        printf("\n");
+
+        padding = (width - (int)strlen("Terminal blackjack roguelike")) / 2;
+
+        if (padding < 0) {
+            padding = 0;
+        }
+
+        printf("%*s", padding, "");
+
         if (colors) {
             printf("\033[2m");
         }
-        printf("%s", tagline);
+
+        printf("Terminal blackjack roguelike");
+
         if (colors) {
             printf("\033[0m");
         }
+
         printf("\n\n");
 
         ruleLength = width - 4;
@@ -99,8 +172,12 @@ static GameMode runStartupMenu(void) {
             ruleLength = 60;
         }
 
-        if (ruleLength < 1) {
-            ruleLength = 1;
+        if (ruleLength < 20) {
+            ruleLength = 20;
+        }
+
+        if (ruleLength > width) {
+            ruleLength = width;
         }
 
         printf("%*s", (width - ruleLength) / 2, "");
@@ -113,85 +190,100 @@ static GameMode runStartupMenu(void) {
 
         printf("\n\n");
 
-        menuItem = "[1]  Roguelike";
-        menuPadding = (width - (int)strlen(menuItem)) / 2;
-
-        if (menuPadding < 0) {
-            menuPadding = 0;
-        }
-
-        printf("%*s", menuPadding, "");
-        if (colors) {
-            printf("\033[2m[1]\033[0m");
-        } else {
-            printf("[1]");
-        }
-        printf("  Roguelike\n");
-
-        menuItem = "[2]  Classic blackjack";
-        menuPadding = (width - (int)strlen(menuItem)) / 2;
-
-        if (menuPadding < 0) {
-            menuPadding = 0;
-        }
-
-        printf("%*s", menuPadding, "");
-        if (colors) {
-            printf("\033[2m[2]\033[0m");
-        } else {
-            printf("[2]");
-        }
-        printf("  Classic blackjack\n");
-
-        menuItem = "[q]  Quit";
-        menuPadding = (width - (int)strlen(menuItem)) / 2;
-
-        if (menuPadding < 0) {
-            menuPadding = 0;
-        }
-
-        printf("%*s", menuPadding, "");
-        if (colors) {
-            printf("\033[2m[q]\033[0m");
-        } else {
-            printf("[q]");
-        }
-        printf("  Quit\n\n");
-
-        menuItem = "Choice: ";
-        menuPadding = (width - (int)strlen(menuItem)) / 2;
-
-        if (menuPadding < 0) {
-            menuPadding = 0;
-        }
-
-        printf("%*s%s", menuPadding, "", menuItem);
-        fflush(stdout);
-
-        if (fgets(input, sizeof(input), stdin) == NULL) {
-            exit(0);
-        }
-
-        characterIndex = 0;
-
-        while (input[characterIndex] != '\0' &&
-               isspace((unsigned char)input[characterIndex])) {
-            characterIndex++;
-        }
-
-        if (input[characterIndex] == '1') {
-            return MODE_ROGUELIKE;
-        }
-
-        if (input[characterIndex] == '2') {
-            return MODE_CLASSIC;
-        }
-
-        if (input[characterIndex] == 'q') {
-            exit(0);
+        for (menuIndex = 0; menuIndex < 3; menuIndex++) {
+            printStartupItem(&items[menuIndex],
+                             menuIndex == selectedIndex,
+                             width,
+                             colors);
         }
 
         printf("\n");
+
+        padding = (width - (int)strlen("Choice: ")) / 2;
+
+        if (padding < 0) {
+            padding = 0;
+        }
+
+        printf("%*sChoice: ", padding, "");
+        fflush(stdout);
+
+        if (inputIsRaw()) {
+            event = readKey();
+
+            if (event.type == KEY_UP) {
+                selectedIndex--;
+
+                if (selectedIndex < 0) {
+                    selectedIndex = 2;
+                }
+            } else if (event.type == KEY_DOWN) {
+                selectedIndex++;
+
+                if (selectedIndex >= 3) {
+                    selectedIndex = 0;
+                }
+            } else if (event.type == KEY_ENTER) {
+                if (items[selectedIndex].hotkey == '1') {
+                    return MODE_ROGUELIKE;
+                }
+
+                if (items[selectedIndex].hotkey == '2') {
+                    return MODE_CLASSIC;
+                }
+
+                disableRawMode();
+                exit(0);
+            } else if (event.type == KEY_CHAR) {
+                for (menuIndex = 0; menuIndex < 3; menuIndex++) {
+                    if (event.ch == items[menuIndex].hotkey) {
+                        selectedIndex = menuIndex;
+
+                        if (items[menuIndex].hotkey == '1') {
+                            return MODE_ROGUELIKE;
+                        }
+
+                        if (items[menuIndex].hotkey == '2') {
+                            return MODE_CLASSIC;
+                        }
+
+                        disableRawMode();
+                        exit(0);
+                    }
+                }
+            } else if (event.type == KEY_ESC ||
+                       event.type == KEY_EOF) {
+                disableRawMode();
+                exit(0);
+            }
+        } else {
+            if (fgets(input, sizeof(input), stdin) == NULL) {
+                exit(0);
+            }
+
+            characterIndex = 0;
+
+            while (input[characterIndex] != '\0' &&
+                   isspace((unsigned char)input[characterIndex])) {
+                characterIndex++;
+            }
+
+            for (menuIndex = 0; menuIndex < 3; menuIndex++) {
+                if (input[characterIndex] == items[menuIndex].hotkey) {
+                    selectedIndex = menuIndex;
+
+                    if (items[menuIndex].hotkey == '1') {
+                        return MODE_ROGUELIKE;
+                    }
+
+                    if (items[menuIndex].hotkey == '2') {
+                        return MODE_CLASSIC;
+                    }
+
+                    exit(0);
+                }
+            }
+        }
     }
 }
 
@@ -313,6 +405,8 @@ int main(int argc, char **argv) {
 
     setlocale(LC_ALL, "");
 
+    inputInit();
+
     if (forced) {
         mode = forcedMode;
     } else {
@@ -321,7 +415,6 @@ int main(int argc, char **argv) {
 
     rngInit(seed);
 
-    inputInit();
     initGame(&game, mode);
     runGame(&game);
 

@@ -128,8 +128,6 @@ int inputInit(void) {
         return -1;
     }
 
-    signalAction.sa_handler = handleSignal;
-
     return 0;
 }
 
