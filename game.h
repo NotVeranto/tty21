@@ -7,7 +7,6 @@
 #include "twists.h"
 #include "perks.h"
 #include "run.h"
-#include "input_map.h"
 
 typedef enum {
     STATE_BET,
@@ -48,9 +47,6 @@ typedef struct {
 
 void initGame(Game *game);
 void advanceFloor(Game *game);
-void floorMenu(Game *game);
-void runShop(Game *game);
-void printGameState(const Game *game, int hideDealerCard);
 int runGame(Game *game);
 
 #endif

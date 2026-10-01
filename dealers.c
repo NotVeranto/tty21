@@ -67,3 +67,43 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
 /* TODO(Stage 9.5): DEALER_DEVIL  — double down variant */
 /* TODO(Stage 9.5): DEALER_TWIN   — two dealer hands (needs multi-hand) */
 /* TODO(Stage 9.5): DEALER_SAINT  — pure-hand bonus (needs split) */
+
+/* Returns the dealer's standing target value. */
+int dealerTargetValue(DealerId id) {
+    return id == DEALER_CLOCKMAKER ? 18 : 17;
+}
+
+/* Returns the dealer's loss multiplier in percent. */
+int dealerLossMultiplierPercent(DealerId id) {
+    return id == DEALER_BUTCHER ? 150 : 100;
+}
+
+/* Returns the numerator for a natural blackjack payout. */
+int dealerBlackjackNumerator(DealerId id) {
+    return id == DEALER_VOID ? 1 : 3;
+}
+
+/* Returns the denominator for a natural blackjack payout. */
+int dealerBlackjackDenominator(DealerId id) {
+    return id == DEALER_VOID ? 1 : 2;
+}
+
+/* Returns whether the dealer total is always hidden. */
+int dealerHidesTotal(DealerId id) {
+    return id == DEALER_REAPER;
+}
+
+/* Returns whether the dealer draws when the player hits. */
+int dealerMirrorsOnHit(DealerId id) {
+    return id == DEALER_MIRROR;
+}
+
+/* Returns whether the next deck card is shown during the player turn. */
+int dealerShowsNextCard(DealerId id) {
+    return id == DEALER_ORACLE;
+}
+
+/* Returns whether dealer aces always count as one. */
+int dealerAcesCountAsOne(DealerId id) {
+    return id == DEALER_ACCOUNTANT;
+}

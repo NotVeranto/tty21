@@ -23,4 +23,13 @@ typedef struct {
 const DealerInfo *getDealerInfo(DealerId id);
 DealerId selectDealerForFloor(int floor, DealerId previousDealer);
 
+int dealerTargetValue(DealerId id);
+int dealerLossMultiplierPercent(DealerId id);
+int dealerBlackjackNumerator(DealerId id);
+int dealerBlackjackDenominator(DealerId id);
+int dealerHidesTotal(DealerId id);
+int dealerMirrorsOnHit(DealerId id);
+int dealerShowsNextCard(DealerId id);
+int dealerAcesCountAsOne(DealerId id);
+
 #endif

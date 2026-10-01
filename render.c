@@ -401,7 +401,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                  "Round: %d",
                  game->roundNumber);
 
-        if (dealerCardHidden || game->run.dealerId == DEALER_REAPER) {
+        if (dealerCardHidden || dealerHidesTotal(game->run.dealerId)) {
             snprintf(dealerTotal, sizeof(dealerTotal), "Total: ??");
         } else {
             snprintf(dealerTotal,
@@ -618,7 +618,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_ORACLE, tablePadding);
         printf(SCR_ERASE_EOL);
 
-        if (game->run.dealerId == DEALER_ORACLE &&
+        if (dealerShowsNextCard(game->run.dealerId) &&
             game->state == STATE_PLAYER_TURN &&
             game->deck.top < DECK_SIZE) {
             snprintf(oracleText,
@@ -631,8 +631,96 @@ void renderTable(const Game *game, int hideDealerCard) {
 
         fflush(stdout);
     } else {
-        printGameState(game, hideDealerCard);
+        renderGameStateFallback(game, hideDealerCard);
     }
+}
+
+// Prints the fallback game state for non-full-screen output.
+    const DealerInfo *dealerInfo;
+    const TwistInfo *twistInfo;
+    int dealerValue;
+    int dealerCardHidden;
+    int displayHandIndex;
+    int playerValue;
+    int cardIndex;
+
+    dealerInfo = getDealerInfo(game->run.dealerId);
+    twistInfo = getTwistInfo(game->run.twistId);
+    dealerValue = calculateDealerHandValue(&game->dealer.hand,
+                                           game->run.dealerId);
+    dealerCardHidden = hideDealerCard &&
+                       !game->peekActive &&
+                       game->run.twistId != TWIST_SNIPER;
+
+    displayHandIndex = game->player.activeHand;
+
+    if (displayHandIndex >= game->player.handCount) {
+        displayHandIndex = game->player.handCount - 1;
+    }
+
+    if (displayHandIndex < 0) {
+        displayHandIndex = 0;
+    }
+
+    if (game->player.activeHand < game->player.handCount) {
+        playerValue = calculatePlayerHandValue(game);
+    } else {
+        playerValue = game->player.hands[displayHandIndex].value;
+    }
+
+    printf("Round: %d\n", game->roundNumber);
+    printf("Dealer (%s): ", dealerInfo->name);
+
+    for (cardIndex = 0; cardIndex < game->dealer.hand.count; cardIndex++) {
+        if (dealerCardHidden && cardIndex == 0) {
+            printf("??");
+        } else {
+            printCard(&game->dealer.hand.cards[cardIndex]);
+        }
+
+        if (cardIndex < game->dealer.hand.count - 1) {
+            printf(" ");
+        }
+    }
+
+    if (dealerCardHidden || dealerHidesTotal(game->run.dealerId)) {
+        printf(" | Total value: ??\n");
+    } else {
+        printf(" | Total value: %d\n", dealerValue);
+    }
+
+    if (dealerInfo->rule1 != NULL) {
+        printf("Rule: %s\n", dealerInfo->rule1);
+    }
+
+    if (twistInfo->id != TWIST_NONE) {
+        printf("Twist: %s — %s\n",
+               twistInfo->name,
+               twistInfo->description);
+    }
+
+    if (game->player.handCount > 1) {
+        printf("Player (hand %d/%d): ",
+               displayHandIndex + 1,
+               game->player.handCount);
+    } else {
+        printf("Player: ");
+    }
+
+    for (cardIndex = 0;
+         cardIndex < game->player.hands[displayHandIndex].count;
+         cardIndex++) {
+        if (cardIndex > 0) {
+            printf(" ");
+        }
+
+        printCard(&game->player.hands[displayHandIndex].cards[cardIndex]);
+    }
+
+    printf(" | Total value: %d\n", playerValue);
+    printf("Chips: %d | Bet: %d\n",
+           game->player.chips,
+           game->player.bets[displayHandIndex]);
 }
 
 // Prints a fixed menu block with disabled entries dimmed.

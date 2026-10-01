@@ -46,6 +46,7 @@ typedef enum {
 
 
 void renderTable(const Game *game, int hideDealerCard);
+void renderGameStateFallback(const Game *game, int hideDealerCard);
 void renderShop(const Game *game, int selectedIndex);
 void renderActionBar(const ActionId *actions,
                      int actionCount,

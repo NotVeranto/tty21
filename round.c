@@ -369,7 +369,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
     if (action == ACTION_HIT) {
         drawCard(&game->deck, &game->player.hands[game->player.activeHand]);
 
-        if (game->run.dealerId == DEALER_MIRROR) {
+        if (dealerMirrorsOnHit(game->run.dealerId)) {
             drawCard(&game->deck, &game->dealer.hand);
         }
 
@@ -411,7 +411,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             game->player.bets[game->player.activeHand] *= 2;
             drawCard(&game->deck, &game->player.hands[game->player.activeHand]);
 
-            if (game->run.dealerId == DEALER_MIRROR) {
+            if (dealerMirrorsOnHit(game->run.dealerId)) {
                 drawCard(&game->deck, &game->dealer.hand);
             }
 
@@ -456,7 +456,7 @@ int calculateDealerHandValue(const Hand *hand, DealerId id) {
     int totalValue;
     int cardIndex;
 
-    if (id != DEALER_ACCOUNTANT) {
+    if (!dealerAcesCountAsOne(id)) {
         return calculateHandValue(hand);
     }
 
@@ -676,7 +676,7 @@ void dealerTurn(Game *game) {
     int targetValue;
 
     if (game->state == STATE_DEALER_TURN) {
-        targetValue = game->run.dealerId == DEALER_CLOCKMAKER ? 18 : 17;
+        targetValue = dealerTargetValue(game->run.dealerId);
         dealerValue = calculateDealerHandValue(&game->dealer.hand,
                                                game->run.dealerId);
 
@@ -763,9 +763,8 @@ void resolveRound(Game *game) {
         payoutValue = 0;
         baseLoss = handBet;
 
-        if (game->run.dealerId == DEALER_BUTCHER) {
-            baseLoss = ((long long)handBet * 150) / 100;
-        }
+        baseLoss = ((long long)handBet *
+                     dealerLossMultiplierPercent(game->run.dealerId)) / 100;
 
         if (game->run.twistId == TWIST_CHARITY) {
             baseLoss /= 2;
@@ -800,11 +799,9 @@ void resolveRound(Game *game) {
                                     &messageTruncated);
             }
         } else if (playerBlackjack && !dealerBlackjack) {
-            if (game->run.dealerId == DEALER_VOID) {
-                payoutValue = handBet;
-            } else {
-                payoutValue = ((long long)handBet * 3) / 2;
-            }
+            payoutValue = ((long long)handBet *
+                           dealerBlackjackNumerator(game->run.dealerId)) /
+                          dealerBlackjackDenominator(game->run.dealerId);
 
             if (payoutValue > INT_MAX - game->player.chips) {
                 payout = INT_MAX - game->player.chips;
