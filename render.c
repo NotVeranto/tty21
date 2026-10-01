@@ -96,8 +96,22 @@ static int getDynamicTableWidth(const Game *game) {
     int cardsTotal;
     int playerCardsTotal;
     int handIndex;
+    int dealerHandIndex;
+    int totalDealerCards;
 
-    cardsTotal = game->dealer.hands[0].count;
+    totalDealerCards = 0;
+
+    for (dealerHandIndex = 0;
+         dealerHandIndex < game->dealer.handCount;
+         dealerHandIndex++) {
+        totalDealerCards += game->dealer.hands[dealerHandIndex].count;
+    }
+
+    if (game->dealer.handCount > 1) {
+        totalDealerCards += (game->dealer.handCount - 1) * 2;
+    }
+
+    cardsTotal = totalDealerCards;
     playerCardsTotal = 0;
 
     for (handIndex = 0;
@@ -247,6 +261,30 @@ static void drawCards(const Hand *hand,
     }
 }
 
+// Draws all dealer hands side by side with two spaces between hands.
+static void drawDealerHands(const Game *game,
+                            int padding,
+                            int hideFirstCard) {
+    int handIndex;
+    int handPadding;
+    int handWidth;
+
+    handPadding = padding;
+
+    for (handIndex = 0;
+         handIndex < game->dealer.handCount;
+         handIndex++) {
+        drawCards(&game->dealer.hands[handIndex],
+                  DEALER_CARD_ROW,
+                  handPadding,
+                  hideFirstCard);
+
+        handWidth = game->dealer.hands[handIndex].count * CARD_WIDTH +
+                    (game->dealer.hands[handIndex].count - 1) * CARD_GAP;
+        handPadding += handWidth + 2;
+    }
+}
+
 // Prints the status below one player hand.
 static void printPlayerHandStatus(const Game *game,
                                   int handIndex,
@@ -363,6 +401,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     int effectiveStatusWidth;
     int displayHandIndex;
     int displayHandValue;
+    int dealerValue;
     char dealerName[64];
     char statusText[256];
     char rulesText[256];
@@ -402,12 +441,27 @@ void renderTable(const Game *game, int hideDealerCard) {
                  game->roundNumber);
 
         if (dealerCardHidden || dealerHidesTotal(game->run.dealerId)) {
-            snprintf(dealerTotal, sizeof(dealerTotal), "Total: ??");
-        } else {
+            if (game->dealer.handCount == 1) {
+                snprintf(dealerTotal, sizeof(dealerTotal), "Total: ??");
+            } else {
+                snprintf(dealerTotal,
+                         sizeof(dealerTotal),
+                         "Total: ?? / ??");
+            }
+        } else if (game->dealer.handCount == 1) {
+            dealerValue = calculateDealerHandValue(&game->dealer.hands[0],
+                                                   game->run.dealerId);
             snprintf(dealerTotal,
                      sizeof(dealerTotal),
                      "Total: %d",
+                     dealerValue);
+        } else {
+            snprintf(dealerTotal,
+                     sizeof(dealerTotal),
+                     "Total: %d / %d",
                      calculateDealerHandValue(&game->dealer.hands[0],
+                                              game->run.dealerId),
+                     calculateDealerHandValue(&game->dealer.hands[1],
                                               game->run.dealerId));
         }
 
@@ -546,10 +600,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                         DEALER_LABEL_ROW,
                         tablePadding,
                         tableWidth);
-        drawCards(&game->dealer.hands[0],
-                  DEALER_CARD_ROW,
-                  tablePadding,
-                  dealerCardHidden);
+        drawDealerHands(game, tablePadding, dealerCardHidden);
 
         printHandHeader("PLAYER",
                         playerTotal,
@@ -640,16 +691,23 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
 {
     const DealerInfo *dealerInfo;
     const TwistInfo *twistInfo;
-    int dealerValue;
+    int dealerValues[2];
     int dealerCardHidden;
     int displayHandIndex;
     int playerValue;
     int cardIndex;
+    int dealerHandIndex;
 
     dealerInfo = getDealerInfo(game->run.dealerId);
     twistInfo = getTwistInfo(game->run.twistId);
-    dealerValue = calculateDealerHandValue(&game->dealer.hands[0],
-                                           game->run.dealerId);
+
+    for (dealerHandIndex = 0;
+         dealerHandIndex < game->dealer.handCount;
+         dealerHandIndex++) {
+        dealerValues[dealerHandIndex] =
+            calculateDealerHandValue(&game->dealer.hands[dealerHandIndex],
+                                     game->run.dealerId);
+    }
     dealerCardHidden = hideDealerCard &&
                        !game->peekActive &&
                        game->run.twistId != TWIST_SNIPER;
@@ -673,22 +731,42 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
     printf("Round: %d\n", game->roundNumber);
     printf("Dealer (%s): ", dealerInfo->name);
 
-    for (cardIndex = 0; cardIndex < game->dealer.hands[0].count; cardIndex++) {
-        if (dealerCardHidden && cardIndex == 0) {
-            printf("??");
-        } else {
-            printCard(&game->dealer.hands[0].cards[cardIndex]);
+    for (dealerHandIndex = 0;
+         dealerHandIndex < game->dealer.handCount;
+         dealerHandIndex++) {
+        if (dealerHandIndex > 0) {
+            printf(" | ");
         }
 
-        if (cardIndex < game->dealer.hands[0].count - 1) {
-            printf(" ");
+        for (cardIndex = 0;
+             cardIndex < game->dealer.hands[dealerHandIndex].count;
+             cardIndex++) {
+            if (dealerCardHidden && cardIndex == 0) {
+                printf("??");
+            } else {
+                printCard(&game->dealer.hands[dealerHandIndex].cards[cardIndex]);
+            }
+
+            if (cardIndex < game->dealer.hands[dealerHandIndex].count - 1) {
+                printf(" ");
+            }
         }
     }
 
     if (dealerCardHidden || dealerHidesTotal(game->run.dealerId)) {
-        printf(" | Total value: ??\n");
+        if (game->dealer.handCount == 1) {
+            printf(" | Total value: ??\n");
+        } else {
+            printf(" | Total value: ?? / ??\n");
+        }
     } else {
-        printf(" | Total value: %d\n", dealerValue);
+        if (game->dealer.handCount == 1) {
+            printf(" | Total value: %d\n", dealerValues[0]);
+        } else {
+            printf(" | Total value: %d / %d\n",
+                   dealerValues[0],
+                   dealerValues[1]);
+        }
     }
 
     if (dealerInfo->rule1 != NULL) {

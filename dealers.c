@@ -13,7 +13,8 @@ static const DealerInfo DEALER_INFO[] = {
     {DEALER_VOID, "Void", "Your natural blackjack pays 1:1.", NULL},
     {DEALER_ORACLE, "Oracle", "You see the next deck card before acting.", NULL},
     {DEALER_DEVIL, "Devil", "Your first double down is forced.", NULL},
-    {DEALER_SAINT, "Saint", "Pure wins pay 2:1.", NULL}
+    {DEALER_SAINT, "Saint", "Pure wins pay 2:1.", NULL},
+    {DEALER_TWIN, "Twin", "Dealer plays two hands.", NULL}
 };
 
 const DealerInfo *getDealerInfo(DealerId id) {
@@ -32,9 +33,10 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
         DEALER_VOID,
         DEALER_ORACLE,
         DEALER_DEVIL,
-        DEALER_SAINT
+        DEALER_SAINT,
+        DEALER_TWIN
     };
-    DealerId candidates[7];
+    DealerId candidates[8];
     int candidateCount;
     int dealerIndex;
     int randomIndex;
@@ -53,7 +55,7 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
 
     candidateCount = 0;
 
-    for (dealerIndex = 0; dealerIndex < 7; dealerIndex++) {
+    for (dealerIndex = 0; dealerIndex < 8; dealerIndex++) {
         if (RANDOM_DEALERS[dealerIndex] != previousDealer) {
             candidates[candidateCount] = RANDOM_DEALERS[dealerIndex];
             candidateCount++;
@@ -67,8 +69,6 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
     randomIndex = rngRange(0, candidateCount - 1);
     return candidates[randomIndex];
 }
-
-/* TODO(Stage 9.5): DEALER_TWIN   — two dealer hands (needs multi-hand) */
 
 /* Returns the dealer's standing target value. */
 int dealerTargetValue(DealerId id) {
@@ -118,4 +118,9 @@ int dealerForcesDouble(DealerId id) {
 /* Returns whether the dealer pays the pure-hand bonus. */
 int dealerPaysPureHandBonus(DealerId id) {
     return id == DEALER_SAINT;
+}
+
+/* Returns the number of active dealer hands. */
+int dealerHandsCount(DealerId id) {
+    return id == DEALER_TWIN ? 2 : 1;
 }
