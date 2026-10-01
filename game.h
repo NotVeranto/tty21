@@ -39,6 +39,14 @@ typedef struct {
     int handCount;
 } Dealer;
 
+typedef enum {
+    MSG_DEFAULT,
+    MSG_WIN,
+    MSG_LOSS,
+    MSG_PUSH,
+    MSG_INFO
+} MessageStyle;
+
 typedef struct {
     Deck deck;
     Player player;
@@ -48,6 +56,8 @@ typedef struct {
     Run run;
     GameMode mode;
     int peekActive;
+    char lastEvent[256];
+    MessageStyle lastEventStyle;
 } Game;
 
 void initGame(Game *game, GameMode mode);

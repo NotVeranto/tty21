@@ -13,8 +13,9 @@
 #define ROW_PROMPT 30
 #define ROW_ORACLE 31
 #define ROW_RESULT 32
-#define ROW_CHIPS 33
-#define ROW_MENU_START 34
+#define ROW_EVENT 33
+#define ROW_CHIPS 34
+#define ROW_MENU_START 36
 #define ROW_OVER 39
 #define ROW_FINAL 40
 
@@ -35,15 +36,6 @@
 #include "game.h"
 #include "round.h"
 #include "input_map.h"
-
-typedef enum {
-    MSG_DEFAULT,
-    MSG_WIN,
-    MSG_LOSS,
-    MSG_PUSH,
-    MSG_INFO
-} MessageStyle;
-
 
 void renderTable(const Game *game, int hideDealerCard);
 void renderGameStateFallback(const Game *game, int hideDealerCard);

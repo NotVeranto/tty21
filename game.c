@@ -39,6 +39,8 @@ void initGame(Game *game, GameMode mode) {
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
     game->player.usedDouble = 0;
+    game->lastEvent[0] = '\0';
+    game->lastEventStyle = MSG_DEFAULT;
 }
 
 int calculatePlayerHandValue(const Game *game) {
@@ -125,7 +127,11 @@ void advanceFloor(Game *game) {
              game->run.floor,
              game->run.marks,
              getMinBet(game->run.floor, game->mode));
-    renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+    snprintf(game->lastEvent,
+             sizeof(game->lastEvent),
+             "%s",
+             message);
+    game->lastEventStyle = MSG_DEFAULT;
 }
 
 

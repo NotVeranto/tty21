@@ -1064,8 +1064,13 @@ void resolveRound(Game *game) {
         resultStyle = MSG_PUSH;
     }
 
+    snprintf(game->lastEvent,
+             sizeof(game->lastEvent),
+             "%s",
+             resultMessage);
+    game->lastEventStyle = resultStyle;
+
     renderTable(game, 0);
-    renderMessage(resultMessage, ROW_RESULT, resultStyle);
     snprintf(resultMessage,
              sizeof(resultMessage),
              "Chips: %d",

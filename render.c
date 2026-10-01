@@ -6,7 +6,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#define TABLE_MIN_HEIGHT 40
+#define TABLE_MIN_HEIGHT 42
 #define CARD_WIDTH 11
 #define CARD_GAP 1
 #define CARD_CONTENT_WIDTH 9
@@ -271,6 +271,24 @@ static void drawDealerHands(const Game *game,
 
     handPadding = padding;
 
+    if (game->dealer.handCount > 1) {
+        for (handIndex = 0;
+             handIndex < game->dealer.handCount;
+             handIndex++) {
+            moveToTableRow(DEALER_CARD_ROW - 1, handPadding);
+            printf("%sHAND %d%s",
+                   scrDim(),
+                   handIndex + 1,
+                   scrReset());
+
+            handWidth = game->dealer.hands[handIndex].count * CARD_WIDTH +
+                        (game->dealer.hands[handIndex].count - 1) * CARD_GAP;
+            handPadding += handWidth + 2;
+        }
+    }
+
+    handPadding = padding;
+
     for (handIndex = 0;
          handIndex < game->dealer.handCount;
          handIndex++) {
@@ -346,6 +364,7 @@ static void drawPlayerHands(const Game *game,
     int handIndex;
     int handPadding;
     int handWidth;
+    int isActive;
 
     handPadding = padding;
 
@@ -362,26 +381,114 @@ static void drawPlayerHands(const Game *game,
         handPadding += handWidth + 2;
     }
 
-    handPadding = padding;
+    if (game->player.handCount > 1) {
+        handPadding = padding;
 
-    for (handIndex = 0;
-         handIndex < game->player.handCount;
-         handIndex++) {
-        moveToTableRow(PLAYER_CARD_ROW - 1, handPadding);
+        for (handIndex = 0;
+             handIndex < game->player.handCount;
+             handIndex++) {
+            isActive = handIndex == game->player.activeHand &&
+                       game->player.activeHand < game->player.handCount;
 
-        if (game->player.handCount > 1 &&
-            handIndex == game->player.activeHand &&
-            game->player.activeHand < game->player.handCount) {
-            printf("> ");
-        } else {
-            printf("  ");
+            moveToTableRow(PLAYER_CARD_ROW - 1, handPadding);
+
+            if (isActive) {
+                printf("%s> HAND %d%s",
+                       scrBold(),
+                       handIndex + 1,
+                       scrReset());
+            } else {
+                printf("%s  HAND %d%s",
+                       scrDim(),
+                       handIndex + 1,
+                       scrReset());
+            }
+
+            printPlayerHandStatus(game, handIndex, handPadding);
+
+            handWidth = game->player.hands[handIndex].count * CARD_WIDTH +
+                        (game->player.hands[handIndex].count - 1) * CARD_GAP;
+            handPadding += handWidth + 2;
+        }
+    }
+}
+
+// Renders the persistent event banner on the event row.
+static void renderEventBanner(const Game *game,
+                              int padding,
+                              int terminalWidth) {
+    int maxWidth;
+    int cut;
+    char banner[512];
+    char truncated[512];
+
+    moveToTableRow(ROW_EVENT, padding);
+    printf(SCR_ERASE_EOL);
+
+    if (game->lastEvent[0] == '\0') {
+        return;
+    }
+
+    snprintf(banner,
+             sizeof(banner),
+             ">>> %s <<<",
+             game->lastEvent);
+
+    maxWidth = terminalWidth - padding - 2;
+
+    if (maxWidth < 8) {
+        maxWidth = 8;
+    }
+
+    if ((int)strlen(banner) > maxWidth) {
+        cut = maxWidth - 3;
+
+        if (cut < 1) {
+            cut = 1;
         }
 
-        printPlayerHandStatus(game, handIndex, handPadding);
+        if (cut > (int)sizeof(truncated) - 4) {
+            cut = (int)sizeof(truncated) - 4;
+        }
 
-        handWidth = game->player.hands[handIndex].count * CARD_WIDTH +
-                    (game->player.hands[handIndex].count - 1) * CARD_GAP;
-        handPadding += handWidth + 2;
+        memcpy(truncated, banner, (size_t)cut);
+        truncated[cut] = '.';
+        truncated[cut + 1] = '.';
+        truncated[cut + 2] = '.';
+        truncated[cut + 3] = '\0';
+    } else {
+        snprintf(truncated,
+                 sizeof(truncated),
+                 "%s",
+                 banner);
+    }
+
+    printf("%s", scrBold());
+
+    if (game->lastEventStyle == MSG_WIN) {
+        printf("%s%s%s",
+               scrGreen(),
+               truncated,
+               scrReset());
+    } else if (game->lastEventStyle == MSG_LOSS) {
+        printf("%s%s%s",
+               scrRed(),
+               truncated,
+               scrReset());
+    } else if (game->lastEventStyle == MSG_PUSH) {
+        printf("%s%s%s",
+               scrYellow(),
+               truncated,
+               scrReset());
+    } else if (game->lastEventStyle == MSG_INFO) {
+        printf("%s%s%s",
+               scrDim(),
+               truncated,
+               scrReset());
+    } else {
+        printf("%s%s",
+               truncated,
+               scrReset());
     }
 }
 
@@ -390,6 +497,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     const DealerInfo *dealerInfo;
     const TwistInfo *twistInfo;
     const char *hintText;
+    const char *phaseText;
     int terminalWidth;
     int terminalHeight;
     int tableWidth;
@@ -435,10 +543,30 @@ void renderTable(const Game *game, int hideDealerCard) {
                        &terminalHeight)) {
         tablePadding = (terminalWidth - tableWidth) / 2;
 
+        phaseText = "";
+
+        switch (game->state) {
+            case STATE_BET:
+                phaseText = "[ BET ]";
+                break;
+            case STATE_PLAYER_TURN:
+                phaseText = "[ PLAYER TURN ]";
+                break;
+            case STATE_DEALER_TURN:
+                phaseText = "[ DEALER TURN ]";
+                break;
+            case STATE_RESULT:
+                phaseText = "[ RESULT ]";
+                break;
+            default:
+                break;
+        }
+
         snprintf(roundText,
                  sizeof(roundText),
-                 "Round: %d",
-                 game->roundNumber);
+                 "Round: %d    %s",
+                 game->roundNumber,
+                 phaseText);
 
         if (dealerCardHidden || dealerHidesTotal(game->run.dealerId)) {
             if (game->dealer.handCount == 1) {
@@ -679,6 +807,8 @@ void renderTable(const Game *game, int hideDealerCard) {
                      CARD_SUITS[game->deck.cards[game->deck.top].suit]);
             printf("%s%s%s", scrDim(), oracleText, scrReset());
         }
+
+        renderEventBanner(game, tablePadding, terminalWidth);
 
         fflush(stdout);
     } else {
@@ -1007,9 +1137,13 @@ void renderShop(const Game *game, int selectedIndex) {
 void renderMessage(const char *msg, int row, MessageStyle style) {
     const char *prefix;
     const char *suffix;
+    const char *displayMessage;
     int terminalWidth;
     int terminalHeight;
     int messagePadding;
+    int maxWidth;
+    int cut;
+    char truncated[512];
 
     initColors();
     prefix = "";
@@ -1035,9 +1169,35 @@ void renderMessage(const char *msg, int row, MessageStyle style) {
     if (isatty(STDOUT_FILENO) &&
         terminalWidth >= 72 &&
         terminalHeight >= TABLE_MIN_HEIGHT) {
+        displayMessage = msg;
+        maxWidth = terminalWidth - messagePadding - 2;
+
+        if (maxWidth < 8) {
+            maxWidth = 8;
+        }
+
+        if ((int)strlen(msg) > maxWidth) {
+            cut = maxWidth - 3;
+
+            if (cut < 1) {
+                cut = 1;
+            }
+
+            if (cut > (int)sizeof(truncated) - 4) {
+                cut = (int)sizeof(truncated) - 4;
+            }
+
+            memcpy(truncated, msg, (size_t)cut);
+            truncated[cut] = '.';
+            truncated[cut + 1] = '.';
+            truncated[cut + 2] = '.';
+            truncated[cut + 3] = '\0';
+            displayMessage = truncated;
+        }
+
         printf(SCR_CURSOR, row, messagePadding + 1);
         printf(SCR_ERASE_EOL);
-        printf("%s%s%s", prefix, msg, suffix);
+        printf("%s%s%s", prefix, displayMessage, suffix);
         fflush(stdout);
     } else {
         printf("%s%s%s\n", prefix, msg, suffix);

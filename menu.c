@@ -32,27 +32,7 @@ static void dispatchFloorMenuAction(Game *game,
     } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
                game->player.chips >= nextMinBet) {
         advanceFloor(game);
-        renderMessage("Press any key to continue.",
-                      ROW_PROMPT,
-                      MSG_DEFAULT);
-
-        if (inputIsRaw()) {
-            inputCharacter = getch();
-        } else {
-            inputCharacter = getchar();
-
-            if (inputCharacter != EOF) {
-                while ((inputCharacter = getchar()) != '\n' &&
-                       inputCharacter != EOF) {
-                }
-            }
-        }
-
-        if (inputCharacter == -1 || inputCharacter == EOF) {
-            game->state = STATE_QUIT;
-        } else {
-            game->state = STATE_BET;
-        }
+        game->state = STATE_BET;
     } else if (actionCharacter == 's' || actionCharacter == 'S') {
         game->state = STATE_SHOP;
     } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
