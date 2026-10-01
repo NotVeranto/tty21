@@ -538,6 +538,23 @@ void startRound(Game *game) {
             redrawFirstPlayerCard(game, 0);
         }
 
+        if (dealerForcesDouble(game->run.dealerId)) {
+            if (game->player.hands[0].count == 2 &&
+                (long long)game->player.chips >=
+                    (long long)game->player.bets[0] * 2) {
+
+                game->player.bets[0] *= 2;
+                drawCard(&game->deck, &game->player.hands[0]);
+
+                if (dealerMirrorsOnHit(game->run.dealerId)) {
+                    drawCard(&game->deck, &game->dealer.hand);
+                }
+
+                game->state = STATE_DEALER_TURN;
+                return;
+            }
+        }
+
         playerValue = calculatePlayerHandValue(game);
 
         if (playerValue >= 21) {

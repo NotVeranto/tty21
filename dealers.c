@@ -11,7 +11,8 @@ static const DealerInfo DEALER_INFO[] = {
     {DEALER_MIRROR, "Mirror", "Every player hit makes the dealer draw too.", NULL},
     {DEALER_REAPER, "Reaper", "Dealer total is always hidden.", NULL},
     {DEALER_VOID, "Void", "Your natural blackjack pays 1:1.", NULL},
-    {DEALER_ORACLE, "Oracle", "You see the next deck card before acting.", NULL}
+    {DEALER_ORACLE, "Oracle", "You see the next deck card before acting.", NULL},
+    {DEALER_DEVIL, "Devil", "Your first double down is forced.", NULL}
 };
 
 const DealerInfo *getDealerInfo(DealerId id) {
@@ -28,9 +29,10 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
         DEALER_MIRROR,
         DEALER_REAPER,
         DEALER_VOID,
-        DEALER_ORACLE
+        DEALER_ORACLE,
+        DEALER_DEVIL
     };
-    DealerId candidates[5];
+    DealerId candidates[6];
     int candidateCount;
     int dealerIndex;
     int randomIndex;
@@ -49,7 +51,7 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
 
     candidateCount = 0;
 
-    for (dealerIndex = 0; dealerIndex < 5; dealerIndex++) {
+    for (dealerIndex = 0; dealerIndex < 6; dealerIndex++) {
         if (RANDOM_DEALERS[dealerIndex] != previousDealer) {
             candidates[candidateCount] = RANDOM_DEALERS[dealerIndex];
             candidateCount++;
@@ -64,7 +66,6 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
     return candidates[randomIndex];
 }
 
-/* TODO(Stage 9.5): DEALER_DEVIL  — double down variant */
 /* TODO(Stage 9.5): DEALER_TWIN   — two dealer hands (needs multi-hand) */
 /* TODO(Stage 9.5): DEALER_SAINT  — pure-hand bonus (needs split) */
 
@@ -106,4 +107,9 @@ int dealerShowsNextCard(DealerId id) {
 /* Returns whether dealer aces always count as one. */
 int dealerAcesCountAsOne(DealerId id) {
     return id == DEALER_ACCOUNTANT;
+}
+
+/* Returns whether the dealer forces the opening double down. */
+int dealerForcesDouble(DealerId id) {
+    return id == DEALER_DEVIL;
 }

@@ -10,6 +10,7 @@ typedef enum {
     DEALER_REAPER,
     DEALER_VOID,
     DEALER_ORACLE,
+    DEALER_DEVIL,
     DEALER_COUNT
 } DealerId;
 
@@ -31,5 +32,6 @@ int dealerHidesTotal(DealerId id);
 int dealerMirrorsOnHit(DealerId id);
 int dealerShowsNextCard(DealerId id);
 int dealerAcesCountAsOne(DealerId id);
+int dealerForcesDouble(DealerId id);
 
 #endif
