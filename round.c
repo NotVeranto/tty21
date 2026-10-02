@@ -336,6 +336,15 @@ static void splitHand(Game *game) {
         }
     }
 
+    {
+        char msg[64];
+
+        snprintf(msg, sizeof(msg),
+                 "Split. %d hands.",
+                 game->player.handCount);
+        logPush(game, msg, MSG_DEFAULT);
+    }
+
     renderTable(game, game->state == STATE_PLAYER_TURN);
 }
 
@@ -390,6 +399,13 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             }
         } else if (value == 21) {
             advanceActiveHand(game);
+        } else {
+            char msg[64];
+
+            snprintf(msg, sizeof(msg),
+                     "Hit. Total %d.",
+                     value);
+            logPush(game, msg, MSG_DEFAULT);
         }
 
         renderTable(game, game->state == STATE_PLAYER_TURN);
@@ -400,6 +416,12 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                     "Sticky Hands: cannot stand below 15.",
                     MSG_DEFAULT);
         } else {
+            char msg[64];
+
+            snprintf(msg, sizeof(msg),
+                     "Stand on %d.",
+                     calculatePlayerHandValue(game));
+            logPush(game, msg, MSG_DEFAULT);
             advanceActiveHand(game);
             renderTable(game, game->state == STATE_PLAYER_TURN);
         }
@@ -415,6 +437,15 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
 
             if (dealerMirrorsOnHit(game->run.dealerId)) {
                 drawCard(&game->deck, &game->dealer.hands[0]);
+            }
+
+            {
+                char msg[64];
+
+                snprintf(msg, sizeof(msg),
+                         "Double. Total %d.",
+                         calculatePlayerHandValue(game));
+                logPush(game, msg, MSG_DEFAULT);
             }
 
             advanceActiveHand(game);
@@ -515,6 +546,7 @@ static int calculatePlayerHandValueForIndex(const Game *game,
 
 void startRound(Game *game) {
     int playerValue;
+    int betAmount;
 
     game->peekActive = 0;
 
@@ -546,7 +578,8 @@ void startRound(Game *game) {
     game->player.usedDouble = 0;
     renderTable(game, 0);
 
-    game->player.bets[game->player.activeHand] = readBet(game);
+    betAmount = readBet(game);
+    game->player.bets[game->player.activeHand] = betAmount;
 
     if (game->player.bets[game->player.activeHand] < 0 || game->state == STATE_QUIT) {
         game->state = STATE_QUIT;
@@ -576,6 +609,15 @@ void startRound(Game *game) {
             redrawFirstPlayerCard(game, 1);
         } else if (game->run.twistId == TWIST_COLD_DECK) {
             redrawFirstPlayerCard(game, 0);
+        }
+
+        {
+            char betMsg[64];
+
+            snprintf(betMsg, sizeof(betMsg),
+                     "Bet: %d.",
+                     betAmount);
+            logPush(game, betMsg, MSG_DEFAULT);
         }
 
         if (dealerForcesDouble(game->run.dealerId)) {
@@ -749,6 +791,44 @@ void dealerTurn(Game *game) {
                 dealerValue = calculateDealerHandValue(
                     &game->dealer.hands[dealerHandIndex],
                     game->run.dealerId);
+            }
+        }
+
+        {
+            char msg[64];
+
+            for (dealerHandIndex = 0;
+                 dealerHandIndex < game->dealer.handCount;
+                 dealerHandIndex++) {
+                dealerValue = calculateDealerHandValue(
+                    &game->dealer.hands[dealerHandIndex],
+                    game->run.dealerId);
+
+                if (game->dealer.handCount == 1) {
+                    if (dealerValue > 21) {
+                        snprintf(msg, sizeof(msg),
+                                 "Dealer busts with %d.",
+                                 dealerValue);
+                    } else {
+                        snprintf(msg, sizeof(msg),
+                                 "Dealer stands on %d.",
+                                 dealerValue);
+                    }
+                } else {
+                    if (dealerValue > 21) {
+                        snprintf(msg, sizeof(msg),
+                                 "Dealer hand %d: busts with %d.",
+                                 dealerHandIndex + 1,
+                                 dealerValue);
+                    } else {
+                        snprintf(msg, sizeof(msg),
+                                 "Dealer hand %d: stands on %d.",
+                                 dealerHandIndex + 1,
+                                 dealerValue);
+                    }
+                }
+
+                logPush(game, msg, MSG_DEFAULT);
             }
         }
 

@@ -1291,6 +1291,7 @@ void renderShop(const Game *game,
         printf("%sKeys: 1-5 buy   Q close%s",
                scrDim(),
                scrReset());
+        renderLog(game, shopPadding, terminalWidth);
         fflush(stdout);
     } else {
         printf("SHOP\n");
