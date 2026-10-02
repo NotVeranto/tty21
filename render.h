@@ -17,9 +17,11 @@
 #define ROW_LOG_1 34
 #define ROW_LOG_2 35
 #define ROW_LOG_3 36
-#define ROW_MENU_START 38
-#define ROW_OVER 43
-#define ROW_FINAL 44
+#define ROW_LOG_4 37
+#define ROW_LOG_5 38
+#define ROW_MENU_START 40
+#define ROW_OVER 45
+#define ROW_FINAL 46
 
 #define ROW_SHOP_TITLE 10
 #define ROW_SHOP_SOULS 11

@@ -44,10 +44,12 @@ typedef enum {
     MSG_WIN,
     MSG_LOSS,
     MSG_PUSH,
-    MSG_INFO
+    MSG_INFO,
+    MSG_ACTION,
+    MSG_DEALER
 } MessageStyle;
 
-#define LOG_SIZE 4
+#define LOG_SIZE 6
 #define LOG_LINE_LEN 96
 
 typedef struct {

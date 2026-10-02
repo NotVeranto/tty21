@@ -29,7 +29,7 @@ static void printUsage(FILE *stream) {
 
 static const char *LOGO[] = {
     "TTTTT TTTTT Y   Y 2222    1",
-    "  T     T    Y Y  2  2    1",
+    "  T     T    Y Y  2  2   11",
     "  T     T     Y     2     1",
     "  T     T     Y    2      1",
     "  T     T     Y   2222  111"

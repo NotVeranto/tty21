@@ -342,7 +342,7 @@ static void splitHand(Game *game) {
         snprintf(msg, sizeof(msg),
                  "Split. %d hands.",
                  game->player.handCount);
-        logPush(game, msg, MSG_DEFAULT);
+        logPush(game, msg, MSG_ACTION);
     }
 
     renderTable(game, game->state == STATE_PLAYER_TURN);
@@ -392,7 +392,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                 resetPlayerHandToEleven(game);
                 logPush(game,
                          "Second Wind! Hand reset to 11.",
-                         MSG_INFO);
+                         MSG_WIN);
                 renderTable(game, 1);
             } else {
                 advanceActiveHand(game);
@@ -405,7 +405,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             snprintf(msg, sizeof(msg),
                      "Hit. Total %d.",
                      value);
-            logPush(game, msg, MSG_DEFAULT);
+            logPush(game, msg, MSG_ACTION);
         }
 
         renderTable(game, game->state == STATE_PLAYER_TURN);
@@ -421,7 +421,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             snprintf(msg, sizeof(msg),
                      "Stand on %d.",
                      calculatePlayerHandValue(game));
-            logPush(game, msg, MSG_DEFAULT);
+            logPush(game, msg, MSG_ACTION);
             advanceActiveHand(game);
             renderTable(game, game->state == STATE_PLAYER_TURN);
         }
@@ -445,7 +445,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                 snprintf(msg, sizeof(msg),
                          "Double. Total %d.",
                          calculatePlayerHandValue(game));
-                logPush(game, msg, MSG_DEFAULT);
+                logPush(game, msg, MSG_ACTION);
             }
 
             advanceActiveHand(game);
@@ -477,7 +477,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             game->peekActive = 1;
             logPush(game,
                     "Peek: hole card revealed.",
-                    MSG_INFO);
+                    MSG_ACTION);
             renderTable(game, 1);
         }
     } else if (action == ACTION_QUIT) {
@@ -617,7 +617,7 @@ void startRound(Game *game) {
             snprintf(betMsg, sizeof(betMsg),
                      "Bet: %d.",
                      betAmount);
-            logPush(game, betMsg, MSG_DEFAULT);
+            logPush(game, betMsg, MSG_ACTION);
         }
 
         if (dealerForcesDouble(game->run.dealerId)) {
@@ -828,7 +828,11 @@ void dealerTurn(Game *game) {
                     }
                 }
 
-                logPush(game, msg, MSG_DEFAULT);
+                if (dealerValue > 21) {
+                    logPush(game, msg, MSG_WIN);
+                } else {
+                    logPush(game, msg, MSG_DEALER);
+                }
             }
         }
 

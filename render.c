@@ -6,7 +6,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#define TABLE_MIN_HEIGHT 46
+#define TABLE_MIN_HEIGHT 48
 #define CARD_WIDTH 11
 #define CARD_GAP 1
 #define CARD_CONTENT_WIDTH 9
@@ -84,6 +84,16 @@ static const char *scrGreen(void) {
 // Returns the ANSI yellow sequence when colors are enabled.
 static const char *scrYellow(void) {
     return colorEnabled ? "\033[33m" : "";
+}
+
+// Returns the ANSI cyan sequence when colors are enabled.
+static const char *scrCyan(void) {
+    return colorEnabled ? "\033[36m" : "";
+}
+
+// Returns the ANSI magenta sequence when colors are enabled.
+static const char *scrMagenta(void) {
+    return colorEnabled ? "\033[35m" : "";
 }
 
 // Returns the ANSI bold sequence when colors are enabled.
@@ -510,6 +520,12 @@ static void renderLog(const Game *game,
             suffix = scrReset();
         } else if (game->log.styles[sourceIndex] == MSG_INFO) {
             prefix = scrDim();
+            suffix = scrReset();
+        } else if (game->log.styles[sourceIndex] == MSG_ACTION) {
+            prefix = scrCyan();
+            suffix = scrReset();
+        } else if (game->log.styles[sourceIndex] == MSG_DEALER) {
+            prefix = scrMagenta();
             suffix = scrReset();
         }
 
@@ -1359,6 +1375,12 @@ void renderMessage(const char *msg, int row, MessageStyle style) {
         suffix = scrReset();
     } else if (style == MSG_INFO) {
         prefix = scrDim();
+        suffix = scrReset();
+    } else if (style == MSG_ACTION) {
+        prefix = scrCyan();
+        suffix = scrReset();
+    } else if (style == MSG_DEALER) {
+        prefix = scrMagenta();
         suffix = scrReset();
     }
 
