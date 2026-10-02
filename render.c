@@ -133,7 +133,7 @@ int renderTerminalSizeOk(int *width, int *height) {
 void renderTooSmallScreen(int currentWidth,
                           int currentHeight) {
     const char *msg;
-    char sized[64];
+    char sized[128];
     char current[32];
     int lines;
     int row;
