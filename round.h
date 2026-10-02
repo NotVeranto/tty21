@@ -10,6 +10,9 @@ void resolveRound(Game *game);
 int calculatePlayerHandValue(const Game *game);
 int calculatePlayerHandValueForIndex(const Game *game,
                                      int handIndex);
-int calculateDealerHandValue(const Hand *hand, DealerId id);
+int calculateDealerHandValue(const Game *game,
+                               const Hand *hand,
+                               DealerId id);
+int twistActive(const Game *game, TwistId id);
 
 #endif

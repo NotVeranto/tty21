@@ -9,6 +9,8 @@ typedef enum {
     MODE_CLASSIC
 } GameMode;
 
+typedef struct Game Game;
+
 typedef struct {
     int floor;
     int marks;
@@ -19,6 +21,6 @@ typedef struct {
 } Run;
 
 void initRun(Run *run);
-int getMinBet(int floor, GameMode mode);
+int getMinBet(const Game *game, int floor, GameMode mode);
 
 #endif

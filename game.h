@@ -58,7 +58,7 @@ typedef struct {
     int count;
 } GameLog;
 
-typedef struct {
+struct Game {
     Deck deck;
     Player player;
     Dealer dealer;
@@ -68,7 +68,7 @@ typedef struct {
     GameMode mode;
     int peekActive;
     GameLog log;
-} Game;
+};
 
 void initGame(Game *game, GameMode mode);
 void advanceFloor(Game *game);

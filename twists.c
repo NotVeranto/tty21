@@ -34,24 +34,64 @@ static const TwistInfo TWIST_INFO[] = {
     {TWIST_STICKY_HANDS,
      "Sticky Hands",
      "You cannot stand below 15.",
-     TWIST_CAT_HOSTILE}
+     TWIST_CAT_HOSTILE},
+    {TWIST_JACKPOT,
+     "Jackpot",
+     "5% chance a regular win pays 10:1.",
+     TWIST_CAT_FAVORABLE},
+    {TWIST_DESPERATION,
+     "Desperation",
+     "Doubles pay 3:1. A busted double loses the full bet.",
+     TWIST_CAT_HOSTILE},
+    {TWIST_BUST_INSURANCE,
+     "Bust Insurance",
+     "Busting loses only half your bet.",
+     TWIST_CAT_FAVORABLE},
+    {TWIST_ACES_LOW,
+     "Aces Low",
+     "All aces count as 1, for player and dealer.",
+     TWIST_CAT_NEUTRAL},
+    {TWIST_DEALER_TO_18,
+     "Dealer to 18",
+     "Dealer draws to 18.",
+     TWIST_CAT_HOSTILE},
+    {TWIST_BLOOD_PACT,
+     "Blood Pact",
+     "Wins pay 2:1. Losses cost 2x.",
+     TWIST_CAT_HOSTILE},
+    {TWIST_GREED,
+     "Greed",
+     "Each win grants +1 mark. Minimum bet is doubled.",
+     TWIST_CAT_FAVORABLE},
+    {TWIST_HIGH_STAKES,
+     "High Stakes",
+     "All payouts and losses are doubled.",
+     TWIST_CAT_NEUTRAL}
 };
 
 static const TwistId FAVORABLE_TWISTS[] = {
     TWIST_LUCKY_DRAW,
     TWIST_CHARITY,
-    TWIST_SNIPER
+    TWIST_SNIPER,
+    TWIST_JACKPOT,
+    TWIST_BUST_INSURANCE,
+    TWIST_GREED
 };
 
 static const TwistId NEUTRAL_TWISTS[] = {
     TWIST_SIX_DECK,
-    TWIST_NO_RESHUFFLE
+    TWIST_NO_RESHUFFLE,
+    TWIST_ACES_LOW,
+    TWIST_HIGH_STAKES
 };
 
 static const TwistId HOSTILE_TWISTS[] = {
     TWIST_COLD_DECK,
     TWIST_HALF_PAYOUT,
-    TWIST_STICKY_HANDS
+    TWIST_STICKY_HANDS,
+    TWIST_DESPERATION,
+    TWIST_DEALER_TO_18,
+    TWIST_BLOOD_PACT
 };
 
 // Returns a twist from one category with uniform selection.

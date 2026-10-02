@@ -138,7 +138,7 @@ void advanceFloor(Game *game) {
              "Floor %d. Marks: %d. Minimum bet: %d.",
              game->run.floor,
              game->run.marks,
-             getMinBet(game->run.floor, game->mode));
+             getMinBet(game, game->run.floor, game->mode));
     logPush(game, message, MSG_DEFAULT);
 }
 

@@ -1,4 +1,5 @@
 #include "run.h"
+#include "round.h"
 
 // Initializes the persistent state for a new run.
 void initRun(Run *run) {
@@ -11,26 +12,26 @@ void initRun(Run *run) {
 }
 
 // Returns the minimum bet for a floor.
-int getMinBet(int floor, GameMode mode) {
+int getMinBet(const Game *game, int floor, GameMode mode) {
+    int base;
+
     if (mode == MODE_CLASSIC) {
-        return 1;
+        base = 1;
+    } else if (floor <= 1) {
+        base = 1;
+    } else if (floor <= 3) {
+        base = 5;
+    } else if (floor <= 6) {
+        base = 10;
+    } else if (floor <= 9) {
+        base = 25;
+    } else {
+        base = 50;
     }
 
-    if (floor <= 1) {
-        return 1;
+    if (twistActive(game, TWIST_GREED)) {
+        base *= 2;
     }
 
-    if (floor <= 3) {
-        return 5;
-    }
-
-    if (floor <= 6) {
-        return 10;
-    }
-
-    if (floor <= 9) {
-        return 25;
-    }
-
-    return 50;
+    return base;
 }

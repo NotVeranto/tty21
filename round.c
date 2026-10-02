@@ -2,6 +2,7 @@
 #include "render.h"
 #include "input.h"
 #include "input_map.h"
+#include "rng.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -12,6 +13,10 @@
 
 #define DECK_RESHUFFLE_MARGIN 15
 #define FIRST_CARD_RETRY_LIMIT 50
+
+int twistActive(const Game *game, TwistId id) {
+    return game->run.twistId == id;
+}
 
 static void drawCard(Game *game, Hand *hand) {
     if (game->deck.top >= DECK_SIZE) {
@@ -411,7 +416,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
 
         renderTable(game, game->state == STATE_PLAYER_TURN);
     } else if (action == ACTION_STAND) {
-        if (game->run.twistId == TWIST_STICKY_HANDS &&
+        if (twistActive(game, TWIST_STICKY_HANDS) &&
             calculatePlayerHandValue(game) < 15) {
             logPush(game,
                     "Sticky Hands: cannot stand below 15.",
@@ -486,30 +491,45 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
     }
 }
 
-int calculateDealerHandValue(const Hand *hand, DealerId id) {
-    int totalValue;
-    int cardIndex;
+static int calculateHandValueAcesLow(const Hand *hand) {
+    int total;
+    int i;
+
+    total = 0;
+
+    for (i = 0; i < hand->count; i++) {
+        if (hand->cards[i].rank == ACE) {
+            total += 1;
+        } else {
+            total += getCardValue(&hand->cards[i]);
+        }
+    }
+
+    return total;
+}
+
+int calculateDealerHandValue(const Game *game,
+                             const Hand *hand,
+                             DealerId id) {
+    if (twistActive(game, TWIST_ACES_LOW)) {
+        return calculateHandValueAcesLow(hand);
+    }
 
     if (!dealerAcesCountAsOne(id)) {
         return calculateHandValue(hand);
     }
 
-    totalValue = 0;
-
-    for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
-        if (hand->cards[cardIndex].rank == ACE) {
-            totalValue += 1;
-        } else {
-            totalValue += getCardValue(&hand->cards[cardIndex]);
-        }
-    }
-
-    return totalValue;
+    return calculateHandValueAcesLow(hand);
 }
 
 int calculatePlayerHandValue(const Game *game) {
     int totalValue;
     int cardIndex;
+
+    if (twistActive(game, TWIST_ACES_LOW)) {
+        return calculateHandValueAcesLow(
+            &game->player.hands[game->player.activeHand]);
+    }
 
     if (!game->player.perkOwned[PERK_ACE_HIGH]) {
         return game->player.hands[game->player.activeHand].value;
@@ -532,6 +552,11 @@ int calculatePlayerHandValueForIndex(const Game *game,
     int totalValue;
     int cardIndex;
 
+    if (twistActive(game, TWIST_ACES_LOW)) {
+        return calculateHandValueAcesLow(
+            &game->player.hands[handIndex]);
+    }
+
     if (!game->player.perkOwned[PERK_ACE_HIGH]) {
         return game->player.hands[handIndex].value;
     }
@@ -551,10 +576,10 @@ void startRound(Game *game) {
 
     game->peekActive = 0;
 
-    if (game->run.twistId == TWIST_SIX_DECK) {
+    if (twistActive(game, TWIST_SIX_DECK)) {
         initDeck(&game->deck);
         shuffleDeck(&game->deck);
-    } else if (game->run.twistId != TWIST_NO_RESHUFFLE &&
+    } else if (!twistActive(game, TWIST_NO_RESHUFFLE) &&
                game->deck.top > DECK_SIZE - DECK_RESHUFFLE_MARGIN) {
         initDeck(&game->deck);
         shuffleDeck(&game->deck);
@@ -608,9 +633,9 @@ void startRound(Game *game) {
         }
     }
 
-    if (game->run.twistId == TWIST_LUCKY_DRAW) {
+    if (twistActive(game, TWIST_LUCKY_DRAW)) {
         redrawFirstPlayerCard(game, 1);
-    } else if (game->run.twistId == TWIST_COLD_DECK) {
+    } else if (twistActive(game, TWIST_COLD_DECK)) {
         redrawFirstPlayerCard(game, 0);
     }
 
@@ -781,10 +806,16 @@ void dealerTurn(Game *game) {
     if (game->state == STATE_DEALER_TURN) {
         targetValue = dealerTargetValue(game->run.dealerId);
 
+        if (twistActive(game, TWIST_DEALER_TO_18) &&
+            targetValue < 18) {
+            targetValue = 18;
+        }
+
         for (dealerHandIndex = 0;
              dealerHandIndex < game->dealer.handCount;
              dealerHandIndex++) {
             dealerValue = calculateDealerHandValue(
+                game,
                 &game->dealer.hands[dealerHandIndex],
                 game->run.dealerId);
 
@@ -792,8 +823,9 @@ void dealerTurn(Game *game) {
                 drawCard(game,
                          &game->dealer.hands[dealerHandIndex]);
                 dealerValue = calculateDealerHandValue(
-                    &game->dealer.hands[dealerHandIndex],
-                    game->run.dealerId);
+                game,
+                &game->dealer.hands[dealerHandIndex],
+                game->run.dealerId);
             }
         }
 
@@ -804,8 +836,9 @@ void dealerTurn(Game *game) {
                  dealerHandIndex < game->dealer.handCount;
                  dealerHandIndex++) {
                 dealerValue = calculateDealerHandValue(
-                    &game->dealer.hands[dealerHandIndex],
-                    game->run.dealerId);
+                game,
+                &game->dealer.hands[dealerHandIndex],
+                game->run.dealerId);
 
                 if (game->dealer.handCount == 1) {
                     if (dealerValue > 21) {
@@ -894,6 +927,9 @@ void resolveRound(Game *game) {
     int messageTruncated;
     int dealerHandIndex;
     int anyDealerBlackjack;
+    int skipLossReduction;
+    int greedAwarded;
+    int handWon;
     long long payoutValue;
     long long basePayout;
     long long baseLoss;
@@ -911,7 +947,8 @@ void resolveRound(Game *game) {
          dealerHandIndex < dealerHandCount;
          dealerHandIndex++) {
         dealerValues[dealerHandIndex] =
-            calculateDealerHandValue(&game->dealer.hands[dealerHandIndex],
+            calculateDealerHandValue(game,
+                                     &game->dealer.hands[dealerHandIndex],
                                      game->run.dealerId);
         dealerBlackjacks[dealerHandIndex] =
             game->dealer.hands[dealerHandIndex].count == 2 &&
@@ -920,7 +957,8 @@ void resolveRound(Game *game) {
 
     payoutTotal = 0;
     lossTotal = 0;
-    resultMessage[0] = '\0';
+    greedAwarded = 0;
+    resultMessage[0] = ' ';
     messageTruncated = 0;
 
     for (handIndex = 0;
@@ -948,15 +986,41 @@ void resolveRound(Game *game) {
             payout = 0;
             lossAmount = 0;
             payoutValue = 0;
-
-            baseLoss = ((long long)splitBet *
-                        dealerLossMultiplierPercent(game->run.dealerId)) / 100;
-
-            if (game->run.twistId == TWIST_CHARITY) {
-                baseLoss /= 2;
-            }
+            basePayout = 0;
+            baseLoss = 0;
+            skipLossReduction = 0;
+            handWon = 0;
 
             if (handValue > 21) {
+                baseLoss = ((long long)splitBet *
+                            dealerLossMultiplierPercent(game->run.dealerId)) / 100;
+                skipLossReduction =
+                    twistActive(game, TWIST_DESPERATION) &&
+                    game->player.usedDouble;
+
+                if (!skipLossReduction &&
+                    twistActive(game, TWIST_BUST_INSURANCE)) {
+                    baseLoss /= 2;
+                }
+
+                if (!skipLossReduction &&
+                    twistActive(game, TWIST_CHARITY)) {
+                    baseLoss /= 2;
+                }
+
+                if (!skipLossReduction &&
+                    twistActive(game, TWIST_HIGH_STAKES)) {
+                    baseLoss *= 2;
+                }
+
+                if (twistActive(game, TWIST_BLOOD_PACT)) {
+                    baseLoss *= 2;
+                }
+
+                if (baseLoss > INT_MAX) {
+                    baseLoss = INT_MAX;
+                }
+
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
@@ -989,9 +1053,36 @@ void resolveRound(Game *game) {
                     }
                 }
             } else if (playerBlackjack && !dealerBlackjack) {
-                payoutValue = ((long long)splitBet *
-                               dealerBlackjackNumerator(game->run.dealerId)) /
-                              dealerBlackjackDenominator(game->run.dealerId);
+                basePayout = splitBet;
+
+                if (dealerPaysPureHandBonus(game->run.dealerId) &&
+                    !game->player.usedSplit &&
+                    !game->player.usedDouble) {
+                    basePayout *= 2;
+                }
+
+                basePayout = ((long long)splitBet *
+                              dealerBlackjackNumerator(game->run.dealerId)) /
+                             dealerBlackjackDenominator(game->run.dealerId);
+
+                if (twistActive(game, TWIST_DESPERATION) &&
+                    game->player.usedDouble) {
+                    basePayout *= 3;
+                }
+
+                if (twistActive(game, TWIST_HIGH_STAKES)) {
+                    basePayout *= 2;
+                }
+
+                if (twistActive(game, TWIST_BLOOD_PACT)) {
+                    basePayout *= 2;
+                }
+
+                if (twistActive(game, TWIST_HALF_PAYOUT)) {
+                    basePayout /= 2;
+                }
+
+                payoutValue = basePayout;
 
                 if (payoutValue > INT_MAX - game->player.chips) {
                     payout = INT_MAX - game->player.chips;
@@ -1002,6 +1093,7 @@ void resolveRound(Game *game) {
                 game->player.chips += payout;
                 payoutTotal += payout;
                 handPayoutTotal += payout;
+                handWon = 1;
 
                 if (dealerHandCount == 1) {
                     if (game->player.handCount == 1) {
@@ -1031,6 +1123,25 @@ void resolveRound(Game *game) {
                     }
                 }
             } else if (dealerBlackjack && !playerBlackjack) {
+                baseLoss = ((long long)splitBet *
+                            dealerLossMultiplierPercent(game->run.dealerId)) / 100;
+
+                if (twistActive(game, TWIST_CHARITY)) {
+                    baseLoss /= 2;
+                }
+
+                if (twistActive(game, TWIST_HIGH_STAKES)) {
+                    baseLoss *= 2;
+                }
+
+                if (twistActive(game, TWIST_BLOOD_PACT)) {
+                    baseLoss *= 2;
+                }
+
+                if (baseLoss > INT_MAX) {
+                    baseLoss = INT_MAX;
+                }
+
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
@@ -1094,14 +1205,32 @@ void resolveRound(Game *game) {
                 if (dealerPaysPureHandBonus(game->run.dealerId) &&
                     !game->player.usedSplit &&
                     !game->player.usedDouble) {
-                    basePayout = (long long)splitBet * 2;
+                    basePayout *= 2;
                 }
 
-                if (game->run.twistId == TWIST_HALF_PAYOUT) {
-                    payoutValue = basePayout / 2;
-                } else {
-                    payoutValue = basePayout;
+                if (twistActive(game, TWIST_DESPERATION) &&
+                    game->player.usedDouble) {
+                    basePayout *= 3;
                 }
+
+                if (twistActive(game, TWIST_HIGH_STAKES)) {
+                    basePayout *= 2;
+                }
+
+                if (twistActive(game, TWIST_BLOOD_PACT)) {
+                    basePayout *= 2;
+                }
+
+                if (twistActive(game, TWIST_HALF_PAYOUT)) {
+                    basePayout /= 2;
+                }
+
+                if (twistActive(game, TWIST_JACKPOT) &&
+                    rngRange(0, 99) < 5) {
+                    basePayout *= 10;
+                }
+
+                payoutValue = basePayout;
 
                 if (payoutValue > INT_MAX - game->player.chips) {
                     payout = INT_MAX - game->player.chips;
@@ -1112,6 +1241,7 @@ void resolveRound(Game *game) {
                 game->player.chips += payout;
                 payoutTotal += payout;
                 handPayoutTotal += payout;
+                handWon = 1;
 
                 if (dealerHandCount == 1 && game->player.handCount == 1) {
                     snprintf(resultMessage, sizeof(resultMessage),
@@ -1119,6 +1249,25 @@ void resolveRound(Game *game) {
                              payout, game->player.chips);
                 }
             } else {
+                baseLoss = ((long long)splitBet *
+                            dealerLossMultiplierPercent(game->run.dealerId)) / 100;
+
+                if (twistActive(game, TWIST_CHARITY)) {
+                    baseLoss /= 2;
+                }
+
+                if (twistActive(game, TWIST_HIGH_STAKES)) {
+                    baseLoss *= 2;
+                }
+
+                if (twistActive(game, TWIST_BLOOD_PACT)) {
+                    baseLoss *= 2;
+                }
+
+                if (baseLoss > INT_MAX) {
+                    baseLoss = INT_MAX;
+                }
+
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
@@ -1128,6 +1277,13 @@ void resolveRound(Game *game) {
                              "You lose %d chips. Chips: %d.",
                              lossAmount, game->player.chips);
                 }
+            }
+
+            if (handWon &&
+                twistActive(game, TWIST_GREED) &&
+                !greedAwarded) {
+                game->run.marks += 1;
+                greedAwarded = 1;
             }
         }
 

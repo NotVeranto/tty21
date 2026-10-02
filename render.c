@@ -673,7 +673,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     tableWidth = getDynamicTableWidth(game);
     dealerCardHidden = hideDealerCard &&
                        !game->peekActive &&
-                       game->run.twistId != TWIST_SNIPER;
+                       !twistActive(game, TWIST_SNIPER);
 
     displayHandIndex = game->player.activeHand;
 
@@ -740,8 +740,10 @@ void renderTable(const Game *game, int hideDealerCard) {
                          "Total: ?? / ??");
             }
         } else if (game->dealer.handCount == 1) {
-            dealerValue = calculateDealerHandValue(&game->dealer.hands[0],
-                                                   game->run.dealerId);
+            dealerValue = calculateDealerHandValue(
+                         game,
+                         &game->dealer.hands[0],
+                         game->run.dealerId);
             snprintf(dealerTotal,
                      sizeof(dealerTotal),
                      "Total: %d",
@@ -750,10 +752,14 @@ void renderTable(const Game *game, int hideDealerCard) {
             snprintf(dealerTotal,
                      sizeof(dealerTotal),
                      "Total: %d / %d",
-                     calculateDealerHandValue(&game->dealer.hands[0],
-                                              game->run.dealerId),
-                     calculateDealerHandValue(&game->dealer.hands[1],
-                                              game->run.dealerId));
+                     calculateDealerHandValue(
+                         game,
+                         &game->dealer.hands[0],
+                         game->run.dealerId),
+                     calculateDealerHandValue(
+                         game,
+                         &game->dealer.hands[1],
+                         game->run.dealerId));
         }
 
         displayHandValue =
@@ -1063,12 +1069,14 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
          dealerHandIndex < game->dealer.handCount;
          dealerHandIndex++) {
         dealerValues[dealerHandIndex] =
-            calculateDealerHandValue(&game->dealer.hands[dealerHandIndex],
-                                     game->run.dealerId);
+            calculateDealerHandValue(
+                         game,
+                         &game->dealer.hands[dealerHandIndex],
+                         game->run.dealerId);
     }
     dealerCardHidden = hideDealerCard &&
                        !game->peekActive &&
-                       game->run.twistId != TWIST_SNIPER;
+                       !twistActive(game, TWIST_SNIPER);
 
     displayHandIndex = game->player.activeHand;
 
