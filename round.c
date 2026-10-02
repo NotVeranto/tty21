@@ -559,6 +559,15 @@ void startRound(Game *game) {
         shuffleDeck(&game->deck);
     }
 
+    renderTable(game, 0);
+
+    betAmount = readBet(game);
+
+    if (betAmount < 0 || game->state == STATE_QUIT) {
+        game->state = STATE_QUIT;
+        return;
+    }
+
     {
         int handIndex;
 
@@ -573,77 +582,69 @@ void startRound(Game *game) {
     resetHand(&game->dealer.hands[0]);
     resetHand(&game->dealer.hands[1]);
     game->dealer.handCount = 1;
-    game->player.bets[game->player.activeHand] = 0;
+    game->player.bets[game->player.activeHand] = betAmount;
     game->player.usedSplit = 0;
     game->player.usedDouble = 0;
-    renderTable(game, 0);
 
-    betAmount = readBet(game);
-    game->player.bets[game->player.activeHand] = betAmount;
+    game->roundNumber++;
 
-    if (game->player.bets[game->player.activeHand] < 0 || game->state == STATE_QUIT) {
-        game->state = STATE_QUIT;
+    drawCard(&game->deck, &game->player.hands[0]);
+    drawCard(&game->deck, &game->dealer.hands[0]);
+    drawCard(&game->deck, &game->player.hands[0]);
+    drawCard(&game->deck, &game->dealer.hands[0]);
+    game->dealer.handCount = dealerHandsCount(game->run.dealerId);
+
+    {
+        int dealerHandIndex;
+
+        for (dealerHandIndex = 1;
+             dealerHandIndex < game->dealer.handCount;
+             dealerHandIndex++) {
+            drawCard(&game->deck,
+                     &game->dealer.hands[dealerHandIndex]);
+            drawCard(&game->deck,
+                     &game->dealer.hands[dealerHandIndex]);
+        }
+    }
+
+    if (game->run.twistId == TWIST_LUCKY_DRAW) {
+        redrawFirstPlayerCard(game, 1);
+    } else if (game->run.twistId == TWIST_COLD_DECK) {
+        redrawFirstPlayerCard(game, 0);
+    }
+
+    {
+        char betMsg[64];
+
+        snprintf(betMsg, sizeof(betMsg),
+                 "Bet: %d.",
+                 betAmount);
+        logPush(game, betMsg, MSG_ACTION);
+    }
+
+    if (dealerForcesDouble(game->run.dealerId)) {
+        if (game->player.hands[0].count == 2 &&
+            (long long)game->player.chips >=
+                (long long)game->player.bets[0] * 2) {
+
+            game->player.bets[0] *= 2;
+            drawCard(&game->deck, &game->player.hands[0]);
+
+            if (dealerMirrorsOnHit(game->run.dealerId)) {
+                drawCard(&game->deck, &game->dealer.hands[0]);
+            }
+
+            game->state = STATE_DEALER_TURN;
+            return;
+        }
+    }
+
+    playerValue = calculatePlayerHandValue(game);
+
+    if (playerValue >= 21) {
+        game->state = STATE_RESULT;
     } else {
-        game->roundNumber++;
-
-        drawCard(&game->deck, &game->player.hands[0]);
-        drawCard(&game->deck, &game->dealer.hands[0]);
-        drawCard(&game->deck, &game->player.hands[0]);
-        drawCard(&game->deck, &game->dealer.hands[0]);
-        game->dealer.handCount = dealerHandsCount(game->run.dealerId);
-
-        {
-            int dealerHandIndex;
-
-            for (dealerHandIndex = 1;
-                 dealerHandIndex < game->dealer.handCount;
-                 dealerHandIndex++) {
-                drawCard(&game->deck,
-                         &game->dealer.hands[dealerHandIndex]);
-                drawCard(&game->deck,
-                         &game->dealer.hands[dealerHandIndex]);
-            }
-        }
-
-        if (game->run.twistId == TWIST_LUCKY_DRAW) {
-            redrawFirstPlayerCard(game, 1);
-        } else if (game->run.twistId == TWIST_COLD_DECK) {
-            redrawFirstPlayerCard(game, 0);
-        }
-
-        {
-            char betMsg[64];
-
-            snprintf(betMsg, sizeof(betMsg),
-                     "Bet: %d.",
-                     betAmount);
-            logPush(game, betMsg, MSG_ACTION);
-        }
-
-        if (dealerForcesDouble(game->run.dealerId)) {
-            if (game->player.hands[0].count == 2 &&
-                (long long)game->player.chips >=
-                    (long long)game->player.bets[0] * 2) {
-
-                game->player.bets[0] *= 2;
-                drawCard(&game->deck, &game->player.hands[0]);
-
-                if (dealerMirrorsOnHit(game->run.dealerId)) {
-                    drawCard(&game->deck, &game->dealer.hands[0]);
-                }
-
-                game->state = STATE_DEALER_TURN;
-                return;
-            }
-        }
-
-        playerValue = calculatePlayerHandValue(game);
-
-        if (playerValue >= 21) {
-            game->state = STATE_RESULT;
-        } else {
-            game->state = STATE_PLAYER_TURN;
-        }
+        game->state = STATE_PLAYER_TURN;
     }
 }
 
