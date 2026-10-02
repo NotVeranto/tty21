@@ -963,8 +963,9 @@ void resolveRound(Game *game) {
                     if (game->player.handCount == 1) {
                         snprintf(resultMessage,
                                  sizeof(resultMessage),
-                                 "Player busts. You lose %d chips.",
-                                 lossAmount);
+                                 "Player busts. You lose %d chips. Chips: %d.",
+                                 lossAmount,
+                                 game->player.chips);
                     } else {
                         messageLength = snprintf(handMessage,
                                                  sizeof(handMessage),
@@ -1004,8 +1005,9 @@ void resolveRound(Game *game) {
                     if (game->player.handCount == 1) {
                         snprintf(resultMessage,
                                  sizeof(resultMessage),
-                                 "Blackjack! You win %d chips.",
-                                 payout);
+                                 "Blackjack! You win %d chips. Chips: %d.",
+                                 payout,
+                                 game->player.chips);
                     } else {
                         messageLength = snprintf(handMessage,
                                                  sizeof(handMessage),
@@ -1035,8 +1037,9 @@ void resolveRound(Game *game) {
                     if (game->player.handCount == 1) {
                         snprintf(resultMessage,
                                  sizeof(resultMessage),
-                                 "Dealer has blackjack. You lose %d chips.",
-                                 lossAmount);
+                                 "Dealer has blackjack. You lose %d chips. Chips: %d.",
+                                 lossAmount,
+                                 game->player.chips);
                     } else {
                         messageLength = snprintf(handMessage,
                                                  sizeof(handMessage),
@@ -1062,7 +1065,8 @@ void resolveRound(Game *game) {
                     if (game->player.handCount == 1) {
                         snprintf(resultMessage,
                                  sizeof(resultMessage),
-                                 "Push. Your bet is returned.");
+                                 "Push. Your bet is returned. Chips: %d.",
+                                 game->player.chips);
                     } else {
                         messageLength = snprintf(handMessage,
                                                  sizeof(handMessage),
@@ -1106,10 +1110,22 @@ void resolveRound(Game *game) {
                 game->player.chips += payout;
                 payoutTotal += payout;
                 handPayoutTotal += payout;
+
+                if (dealerHandCount == 1 && game->player.handCount == 1) {
+                    snprintf(resultMessage, sizeof(resultMessage),
+                             "You win %d chips. Chips: %d.",
+                             payout, game->player.chips);
+                }
             } else {
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
+
+                if (dealerHandCount == 1 && game->player.handCount == 1) {
+                    snprintf(resultMessage, sizeof(resultMessage),
+                             "You lose %d chips. Chips: %d.",
+                             lossAmount, game->player.chips);
+                }
             }
         }
 
