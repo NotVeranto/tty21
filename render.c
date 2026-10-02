@@ -6,7 +6,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#define TABLE_MIN_HEIGHT 42
+#define TABLE_MIN_HEIGHT 46
 #define CARD_WIDTH 11
 #define CARD_GAP 1
 #define CARD_CONTENT_WIDTH 9

@@ -47,7 +47,7 @@ typedef enum {
     MSG_INFO
 } MessageStyle;
 
-#define LOG_SIZE 6
+#define LOG_SIZE 4
 #define LOG_LINE_LEN 96
 
 typedef struct {
