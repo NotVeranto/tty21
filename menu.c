@@ -188,6 +188,30 @@ void floorMenu(Game *game) {
     }
 }
 
+static void purchasePerk(Game *game, int perkIndex) {
+    char message[128];
+
+    if (game->player.perkOwned[perkIndex]) {
+        logPush(game, "Already owned.", MSG_DEFAULT);
+    } else if (game->run.marks < perkCost((PerkId)perkIndex)) {
+        logPush(game, "Not enough marks.", MSG_DEFAULT);
+    } else {
+        game->run.marks -= perkCost((PerkId)perkIndex);
+        game->player.perkOwned[perkIndex] = 1;
+
+        if (perkIndex == PERK_PEEK ||
+            perkIndex == PERK_SECOND_WIND) {
+            game->player.perkCharges[perkIndex] = 1;
+        }
+
+        snprintf(message,
+                 sizeof(message),
+                 "%s purchased.",
+                 perkName((PerkId)perkIndex));
+        logPush(game, message, MSG_WIN);
+    }
+}
+
 void runShop(Game *game) {
     char input[64];
     char labels[PERK_COUNT][128];
@@ -201,7 +225,6 @@ void runShop(Game *game) {
     int rawMode;
     int characterIndex;
     int menuIndex;
-    const char *pendingMessage = NULL;
 
     selectedIndex = 0;
 
@@ -231,10 +254,6 @@ void runShop(Game *game) {
 
         renderShop(game, items, selectedIndex);
 
-        if (pendingMessage != NULL) {
-            renderMessage(pendingMessage, ROW_RESULT, MSG_DEFAULT);
-        }
-
         rawMode = inputIsRaw();
 
         if (rawMode) {
@@ -245,40 +264,22 @@ void runShop(Game *game) {
                                               PERK_COUNT,
                                               ownedMask,
                                               -1);
-                pendingMessage = NULL;
             } else if (event.type == KEY_DOWN) {
                 selectedIndex = moveSelection(selectedIndex,
                                               PERK_COUNT,
                                               ownedMask,
                                               1);
-                pendingMessage = NULL;
             } else if (event.type == KEY_LEFT ||
                        event.type == KEY_RIGHT) {
-                pendingMessage = NULL;
             } else if (event.type == KEY_ENTER) {
-                if (allPerksOwned(game)) {
-                    pendingMessage = NULL;
-                } else if (game->player.perkOwned[selectedIndex]) {
-                    pendingMessage = "Already owned.";
-                } else if (game->run.marks < perkCost((PerkId)selectedIndex)) {
-                    pendingMessage = "Not enough marks.";
-                } else {
-                    game->run.marks -= perkCost((PerkId)selectedIndex);
-                    game->player.perkOwned[selectedIndex] = 1;
-
-                    if (selectedIndex == PERK_PEEK ||
-                        selectedIndex == PERK_SECOND_WIND) {
-                        game->player.perkCharges[selectedIndex] = 1;
-                    }
-
-                    pendingMessage = NULL;
+                if (!allPerksOwned(game)) {
+                    purchasePerk(game, selectedIndex);
                 }
             } else if (event.type == KEY_CHAR) {
                 actionCharacter = event.ch;
 
                 if (actionCharacter == 'q' ||
                     actionCharacter == 'Q') {
-                    pendingMessage = NULL;
                     game->state = STATE_MENU;
                 } else {
                     menuIndex = -1;
@@ -292,38 +293,17 @@ void runShop(Game *game) {
 
                     if (menuIndex >= 0) {
                         selectedIndex = menuIndex;
-
-                        if (game->player.perkOwned[selectedIndex]) {
-                            pendingMessage = "Already owned.";
-                        } else if (game->run.marks <
-                                   perkCost((PerkId)selectedIndex)) {
-                            pendingMessage = "Not enough marks.";
-                        } else {
-                            game->run.marks -=
-                                perkCost((PerkId)selectedIndex);
-                            game->player.perkOwned[selectedIndex] = 1;
-
-                            if (selectedIndex == PERK_PEEK ||
-                                selectedIndex == PERK_SECOND_WIND) {
-                                game->player.perkCharges[selectedIndex] = 1;
-                            }
-
-                            pendingMessage = NULL;
-                        }
-                    } else {
-                        pendingMessage = NULL;
+                        purchasePerk(game, selectedIndex);
                     }
                 }
             } else if (event.type == KEY_ESC ||
                        event.type == KEY_EOF) {
-                pendingMessage = NULL;
                 game->state = STATE_MENU;
             }
         } else {
             actionCharacter = -1;
 
             if (fgets(input, sizeof(input), stdin) == NULL) {
-                pendingMessage = NULL;
                 game->state = STATE_MENU;
             } else {
                 if (strchr(input, '\n') == NULL) {
@@ -345,11 +325,9 @@ void runShop(Game *game) {
 
                 if (actionCharacter == -1 ||
                     actionCharacter == 27) {
-                    pendingMessage = NULL;
                     game->state = STATE_MENU;
                 } else if (actionCharacter == 'q' ||
                            actionCharacter == 'Q') {
-                    pendingMessage = NULL;
                     game->state = STATE_MENU;
                 } else {
                     menuIndex = -1;
@@ -365,26 +343,7 @@ void runShop(Game *game) {
 
                     if (menuIndex >= 0) {
                         selectedIndex = menuIndex;
-
-                        if (game->player.perkOwned[selectedIndex]) {
-                            pendingMessage = "Already owned.";
-                        } else if (game->run.marks <
-                                   perkCost((PerkId)selectedIndex)) {
-                            pendingMessage = "Not enough marks.";
-                        } else {
-                            game->run.marks -=
-                                perkCost((PerkId)selectedIndex);
-                            game->player.perkOwned[selectedIndex] = 1;
-
-                            if (selectedIndex == PERK_PEEK ||
-                                selectedIndex == PERK_SECOND_WIND) {
-                                game->player.perkCharges[selectedIndex] = 1;
-                            }
-
-                            pendingMessage = NULL;
-                        }
-                    } else {
-                        pendingMessage = NULL;
+                        purchasePerk(game, selectedIndex);
                     }
                 }
             }

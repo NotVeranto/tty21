@@ -35,9 +35,42 @@ void initGame(Game *game, GameMode mode) {
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
     game->player.usedDouble = 0;
-    game->lastEvent[0] = '\0';
-    game->lastEventStyle = MSG_DEFAULT;
+    game->log.count = 0;
+
+    {
+        int lineIndex;
+
+        for (lineIndex = 0; lineIndex < LOG_SIZE; lineIndex++) {
+            game->log.lines[lineIndex][0] = '\0';
+        }
+    }
 }
+void logPush(Game *game, const char *msg, MessageStyle style) {
+    int i;
+
+    if (game->log.count < LOG_SIZE) {
+        snprintf(game->log.lines[game->log.count],
+                 LOG_LINE_LEN,
+                 "%s",
+                 msg);
+        game->log.styles[game->log.count] = style;
+        game->log.count++;
+    } else {
+        for (i = 0; i < LOG_SIZE - 1; i++) {
+            memcpy(game->log.lines[i],
+                   game->log.lines[i + 1],
+                   LOG_LINE_LEN);
+            game->log.styles[i] = game->log.styles[i + 1];
+        }
+
+        snprintf(game->log.lines[LOG_SIZE - 1],
+                 LOG_LINE_LEN,
+                 "%s",
+                 msg);
+        game->log.styles[LOG_SIZE - 1] = style;
+    }
+}
+
 
 void advanceFloor(Game *game) {
     int bonus;
@@ -106,15 +139,11 @@ void advanceFloor(Game *game) {
              game->run.floor,
              game->run.marks,
              getMinBet(game->run.floor, game->mode));
-    snprintf(game->lastEvent,
-             sizeof(game->lastEvent),
-             "%s",
-             message);
-    game->lastEventStyle = MSG_DEFAULT;
+    logPush(game, message, MSG_DEFAULT);
 }
 
 int runGame(Game *game) {
-    char finalChipsMessage[64];
+    char finalMsg[64];
 
     while (game->state != STATE_QUIT) {
         if (game->state == STATE_BET) {
@@ -136,12 +165,13 @@ int runGame(Game *game) {
         }
     }
 
-    renderMessage("Game over.", ROW_OVER, MSG_DEFAULT);
-    snprintf(finalChipsMessage,
-             sizeof(finalChipsMessage),
-             "Final chips: %d",
+    snprintf(finalMsg,
+             sizeof(finalMsg),
+             "Game over. Final chips: %d.",
              game->player.chips);
-    renderMessage(finalChipsMessage, ROW_FINAL, MSG_DEFAULT);
+    logPush(game, finalMsg, MSG_DEFAULT);
+    renderTable(game, 0);
+    renderShowCursor();
 
     return 0;
 }

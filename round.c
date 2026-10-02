@@ -381,10 +381,10 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                 game->player.perkCharges[PERK_SECOND_WIND] > 0) {
                 game->player.perkCharges[PERK_SECOND_WIND]--;
                 resetPlayerHandToEleven(game);
+                logPush(game,
+                         "Second Wind! Hand reset to 11.",
+                         MSG_INFO);
                 renderTable(game, 1);
-                renderMessage("Second Wind! Hand reset to 11.",
-                              ROW_RESULT,
-                              MSG_INFO);
             } else {
                 advanceActiveHand(game);
             }
@@ -396,18 +396,18 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
     } else if (action == ACTION_STAND) {
         if (game->run.twistId == TWIST_STICKY_HANDS &&
             calculatePlayerHandValue(game) < 15) {
-            renderMessage("Sticky Hands: cannot stand below 15.",
-                          ROW_RESULT,
-                          MSG_DEFAULT);
+            logPush(game,
+                    "Sticky Hands: cannot stand below 15.",
+                    MSG_DEFAULT);
         } else {
             advanceActiveHand(game);
             renderTable(game, game->state == STATE_PLAYER_TURN);
         }
     } else if (action == ACTION_DOUBLE) {
         if (!canDouble(game)) {
-            renderMessage("Cannot double now.",
-                          ROW_RESULT,
-                          MSG_DEFAULT);
+            logPush(game,
+                     "Cannot double now.",
+                     MSG_DEFAULT);
         } else {
             game->player.bets[game->player.activeHand] *= 2;
             game->player.usedDouble = 1;
@@ -422,32 +422,32 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
         }
     } else if (action == ACTION_SPLIT) {
         if (!canSplit(game)) {
-            renderMessage("Cannot split now.",
-                          ROW_RESULT,
-                          MSG_DEFAULT);
+            logPush(game,
+                     "Cannot split now.",
+                     MSG_DEFAULT);
         } else {
             splitHand(game);
         }
     } else if (action == ACTION_PEEK) {
         if (!game->player.perkOwned[PERK_PEEK]) {
-            renderMessage("You do not own Peek.",
-                          ROW_RESULT,
-                          MSG_DEFAULT);
+            logPush(game,
+                    "You do not own Peek.",
+                    MSG_DEFAULT);
         } else if (game->player.perkCharges[PERK_PEEK] <= 0) {
-            renderMessage("Peek already used this floor.",
-                          ROW_RESULT,
-                          MSG_DEFAULT);
+            logPush(game,
+                    "Peek already used this floor.",
+                    MSG_DEFAULT);
         } else if (game->peekActive) {
-            renderMessage("Peek already used this round.",
-                          ROW_RESULT,
-                          MSG_DEFAULT);
+            logPush(game,
+                    "Peek already used this round.",
+                    MSG_DEFAULT);
         } else {
             game->player.perkCharges[PERK_PEEK]--;
             game->peekActive = 1;
+            logPush(game,
+                    "Peek: hole card revealed.",
+                    MSG_INFO);
             renderTable(game, 1);
-            renderMessage("Peek: hole card revealed.",
-                          ROW_RESULT,
-                          MSG_DEFAULT);
         }
     } else if (action == ACTION_QUIT) {
         game->state = STATE_QUIT;
@@ -1084,11 +1084,7 @@ void resolveRound(Game *game) {
         resultStyle = MSG_PUSH;
     }
 
-    snprintf(game->lastEvent,
-             sizeof(game->lastEvent),
-             "%s",
-             resultMessage);
-    game->lastEventStyle = resultStyle;
+    logPush(game, resultMessage, resultStyle);
 
     renderTable(game, 0);
 

@@ -28,11 +28,11 @@ static void printUsage(FILE *stream) {
 }
 
 static const char *LOGO[] = {
-    "TTTTT TTTTT Y   Y  22222 11111",
-    "  T     T    Y Y      2     11",
-    "  T     T     Y      2      11",
-    "  T     T     Y     2       11",
-    "  T     T     Y    22222 11111"
+    "TTTTT TTTTT Y   Y 2222   1",
+    "  T     T    Y Y  2  2  11",
+    "  T     T     Y     2    1",
+    "  T     T     Y    2     1",
+    "  T     T     Y   2222  111"
 };
 static const int LOGO_ROWS = 5;
 
@@ -138,6 +138,8 @@ static GameMode runStartupMenu(void) {
         colors = getenv("NO_COLOR") == NULL &&
                  isatty(STDOUT_FILENO);
 
+        renderHideCursor();
+
         if (isatty(STDOUT_FILENO) && colors) {
             printf("\033[2J\033[H");
         }
@@ -197,15 +199,6 @@ static GameMode runStartupMenu(void) {
                              colors);
         }
 
-        printf("\n");
-
-        padding = (width - (int)strlen("Choice: ")) / 2;
-
-        if (padding < 0) {
-            padding = 0;
-        }
-
-        printf("%*sChoice: ", padding, "");
         fflush(stdout);
 
         if (inputIsRaw()) {
@@ -225,13 +218,16 @@ static GameMode runStartupMenu(void) {
                 }
             } else if (event.type == KEY_ENTER) {
                 if (items[selectedIndex].hotkey == '1') {
+                    renderShowCursor();
                     return MODE_ROGUELIKE;
                 }
 
                 if (items[selectedIndex].hotkey == '2') {
+                    renderShowCursor();
                     return MODE_CLASSIC;
                 }
 
+                renderShowCursor();
                 disableRawMode();
                 exit(0);
             } else if (event.type == KEY_CHAR) {
@@ -240,19 +236,23 @@ static GameMode runStartupMenu(void) {
                         selectedIndex = menuIndex;
 
                         if (items[menuIndex].hotkey == '1') {
+                            renderShowCursor();
                             return MODE_ROGUELIKE;
                         }
 
                         if (items[menuIndex].hotkey == '2') {
+                            renderShowCursor();
                             return MODE_CLASSIC;
                         }
 
+                        renderShowCursor();
                         disableRawMode();
                         exit(0);
                     }
                 }
             } else if (event.type == KEY_ESC ||
                        event.type == KEY_EOF) {
+                renderShowCursor();
                 disableRawMode();
                 exit(0);
             }
@@ -273,13 +273,16 @@ static GameMode runStartupMenu(void) {
                     selectedIndex = menuIndex;
 
                     if (items[menuIndex].hotkey == '1') {
+                        renderShowCursor();
                         return MODE_ROGUELIKE;
                     }
 
                     if (items[menuIndex].hotkey == '2') {
+                        renderShowCursor();
                         return MODE_CLASSIC;
                     }
 
+                    renderShowCursor();
                     exit(0);
                 }
             }

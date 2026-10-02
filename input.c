@@ -1,6 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "input.h"
+#include "render.h"
 
 #include <errno.h>
 #include <signal.h>
@@ -136,6 +137,8 @@ void disableRawMode(void) {
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &originalTermios);
         rawModeEnabled = 0;
     }
+
+    renderShowCursor();
 }
 
 int inputIsRaw(void) {

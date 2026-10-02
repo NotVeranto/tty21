@@ -13,6 +13,12 @@
 #define ROW_PROMPT 30
 #define ROW_ORACLE 31
 #define ROW_RESULT 32
+#define ROW_LOG_0 33
+#define ROW_LOG_1 34
+#define ROW_LOG_2 35
+#define ROW_LOG_3 36
+#define ROW_LOG_4 37
+#define ROW_LOG_5 38
 #define ROW_EVENT 33
 #define ROW_CHIPS 34
 #define ROW_MENU_START 36
@@ -44,6 +50,8 @@ typedef struct {
 
 void renderTable(const Game *game, int hideDealerCard);
 void renderGameStateFallback(const Game *game, int hideDealerCard);
+void renderHideCursor(void);
+void renderShowCursor(void);
 void renderShop(const Game *game,
                 const MenuItem *items,
                 int selectedIndex);

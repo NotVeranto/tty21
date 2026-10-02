@@ -47,6 +47,15 @@ typedef enum {
     MSG_INFO
 } MessageStyle;
 
+#define LOG_SIZE 6
+#define LOG_LINE_LEN 96
+
+typedef struct {
+    char lines[LOG_SIZE][LOG_LINE_LEN];
+    MessageStyle styles[LOG_SIZE];
+    int count;
+} GameLog;
+
 typedef struct {
     Deck deck;
     Player player;
@@ -56,12 +65,12 @@ typedef struct {
     Run run;
     GameMode mode;
     int peekActive;
-    char lastEvent[256];
-    MessageStyle lastEventStyle;
+    GameLog log;
 } Game;
 
 void initGame(Game *game, GameMode mode);
 void advanceFloor(Game *game);
+void logPush(Game *game, const char *msg, MessageStyle style);
 int runGame(Game *game);
 
 #endif

@@ -31,6 +31,7 @@ static const char *CARD_SUITS[] = {
 
 static int tablePadding;
 static int colorEnabled = 1;
+static int cursorHidden;
 
 // Reads NO_COLOR once before the first visible render.
 static void initColors(void) {
@@ -46,6 +47,28 @@ static void initColors(void) {
 // Returns the ANSI reset sequence when colors are enabled.
 static const char *scrReset(void) {
     return colorEnabled ? "\033[0m" : "";
+}
+
+// Hides the hardware cursor while full-screen rendering is active.
+void renderHideCursor(void) {
+    initColors();
+
+    if (colorEnabled && !cursorHidden) {
+        printf("\033[?25l");
+        fflush(stdout);
+        cursorHidden = 1;
+    }
+}
+
+// Restores the hardware cursor after full-screen rendering.
+void renderShowCursor(void) {
+    initColors();
+
+    if (colorEnabled && cursorHidden) {
+        printf("\033[?25h");
+        fflush(stdout);
+        cursorHidden = 0;
+    }
 }
 
 // Returns the ANSI red sequence when colors are enabled.
@@ -413,26 +436,18 @@ static void drawPlayerHands(const Game *game,
     }
 }
 
-/// Renders the persistent event banner on the event row.
-static void renderEventBanner(const Game *game,
-                              int padding,
-                              int terminalWidth) {
+// Renders the persistent event log from oldest to newest.
+static void renderLog(const Game *game,
+                      int padding,
+                      int terminalWidth) {
+    int rowIndex;
+    int sourceIndex;
     int maxWidth;
     int cut;
-    char banner[512];
-    char truncated[512];
-
-    moveToTableRow(ROW_EVENT, padding);
-    printf(SCR_ERASE_EOL);
-
-    if (game->lastEvent[0] == '\0') {
-        return;
-    }
-
-    snprintf(banner,
-             sizeof(banner),
-             ">>> %s <<<",
-             game->lastEvent);
+    const char *prefix;
+    const char *suffix;
+    const char *displayText;
+    char truncated[LOG_LINE_LEN];
 
     maxWidth = terminalWidth - padding - 2;
 
@@ -440,56 +455,68 @@ static void renderEventBanner(const Game *game,
         maxWidth = 8;
     }
 
-    if ((int)strlen(banner) > maxWidth) {
-        cut = maxWidth - 3;
-
-        if (cut < 1) {
-            cut = 1;
+    if (game->log.count == 0) {
+        for (rowIndex = 0; rowIndex < LOG_SIZE; rowIndex++) {
+            moveToTableRow(ROW_LOG_0 + rowIndex, padding);
+            printf(SCR_ERASE_EOL);
         }
 
-        if (cut > (int)sizeof(truncated) - 4) {
-            cut = (int)sizeof(truncated) - 4;
+        fflush(stdout);
+        return;
+    }
+
+    for (rowIndex = 0; rowIndex < LOG_SIZE; rowIndex++) {
+        moveToTableRow(ROW_LOG_0 + rowIndex, padding);
+        printf(SCR_ERASE_EOL);
+
+        sourceIndex = rowIndex - (LOG_SIZE - game->log.count);
+
+        if (sourceIndex < 0) {
+            continue;
         }
 
-        memcpy(truncated, banner, (size_t)cut);
-        truncated[cut] = '.';
-        truncated[cut + 1] = '.';
-        truncated[cut + 2] = '.';
-        truncated[cut + 3] = '\0';
-    } else {
-        snprintf(truncated,
-                 sizeof(truncated),
-                 "%s",
-                 banner);
+        displayText = game->log.lines[sourceIndex];
+
+        if ((int)strlen(displayText) > maxWidth) {
+            cut = maxWidth - 3;
+
+            if (cut < 1) {
+                cut = 1;
+            }
+
+            if (cut > LOG_LINE_LEN - 4) {
+                cut = LOG_LINE_LEN - 4;
+            }
+
+            memcpy(truncated, displayText, (size_t)cut);
+            truncated[cut] = '.';
+            truncated[cut + 1] = '.';
+            truncated[cut + 2] = '.';
+            truncated[cut + 3] = '\0';
+            displayText = truncated;
+        }
+
+        prefix = "";
+        suffix = "";
+
+        if (game->log.styles[sourceIndex] == MSG_WIN) {
+            prefix = scrGreen();
+            suffix = scrReset();
+        } else if (game->log.styles[sourceIndex] == MSG_LOSS) {
+            prefix = scrRed();
+            suffix = scrReset();
+        } else if (game->log.styles[sourceIndex] == MSG_PUSH) {
+            prefix = scrYellow();
+            suffix = scrReset();
+        } else if (game->log.styles[sourceIndex] == MSG_INFO) {
+            prefix = scrDim();
+            suffix = scrReset();
+        }
+
+        printf("%s%s%s", prefix, displayText, suffix);
     }
 
-    printf("%s", scrBold());
-
-    if (game->lastEventStyle == MSG_WIN) {
-        printf("%s%s%s",
-               scrGreen(),
-               truncated,
-               scrReset());
-    } else if (game->lastEventStyle == MSG_LOSS) {
-        printf("%s%s%s",
-               scrRed(),
-               truncated,
-               scrReset());
-    } else if (game->lastEventStyle == MSG_PUSH) {
-        printf("%s%s%s",
-               scrYellow(),
-               truncated,
-               scrReset());
-    } else if (game->lastEventStyle == MSG_INFO) {
-        printf("%s%s%s",
-               scrDim(),
-               truncated,
-               scrReset());
-    } else {
-        printf("%s%s",
-               truncated,
-               scrReset());
-    }
+    fflush(stdout);
 }
 
 // Clears and redraws the complete table on fixed rows.
@@ -541,6 +568,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     if (canRenderTable(tableWidth,
                        &terminalWidth,
                        &terminalHeight)) {
+        renderHideCursor();
         tablePadding = (terminalWidth - tableWidth) / 2;
 
         phaseText = "";
@@ -882,7 +910,7 @@ void renderTable(const Game *game, int hideDealerCard) {
             printf("%s%s%s", scrDim(), oracleText, scrReset());
         }
 
-        renderEventBanner(game, tablePadding, terminalWidth);
+        renderLog(game, tablePadding, terminalWidth);
 
         fflush(stdout);
     } else {
@@ -1005,6 +1033,19 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
     printf("Chips: %d | Bet: %d\n",
            game->player.chips,
            game->player.bets[displayHandIndex]);
+ 
+    {
+        int logIndex;
+        int sourceIndex;
+
+        for (logIndex = 0; logIndex < LOG_SIZE; logIndex++) {
+            sourceIndex = logIndex - (LOG_SIZE - game->log.count);
+
+            if (sourceIndex >= 0) {
+                printf("%s\n", game->log.lines[sourceIndex]);
+            }
+        }
+    }
 }
 
 // Prints a fixed menu block with disabled entries dimmed.
@@ -1030,6 +1071,7 @@ void renderMenu(const char *title,
     if (isatty(STDOUT_FILENO) &&
         terminalWidth >= 72 &&
         terminalHeight >= TABLE_MIN_HEIGHT) {
+        renderHideCursor();
         menuAreaWidth = terminalWidth - tablePadding * 2;
         menuAreaPadding = tablePadding;
 
@@ -1164,6 +1206,7 @@ void renderShop(const Game *game,
     if (isatty(STDOUT_FILENO) &&
         terminalWidth >= 72 &&
         terminalHeight >= TABLE_MIN_HEIGHT) {
+        renderHideCursor();
         shopPadding = (terminalWidth - tableWidth) / 2;
 
         if (shopPadding < 0) {
