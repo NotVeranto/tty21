@@ -13,14 +13,15 @@
 #define DECK_RESHUFFLE_MARGIN 15
 #define FIRST_CARD_RETRY_LIMIT 50
 
-static void drawCard(Deck *deck, Hand *hand) {
-    if (deck->top >= DECK_SIZE) {
-        initDeck(deck);
-        shuffleDeck(deck);
+static void drawCard(Game *game, Hand *hand) {
+    if (game->deck.top >= DECK_SIZE) {
+        initDeck(&game->deck);
+        shuffleDeck(&game->deck);
+        logPush(game, "Deck reshuffled.", MSG_INFO);
     }
 
-    addCardToHand(hand, &deck->cards[deck->top]);
-    deck->top++;
+    addCardToHand(hand, &game->deck.cards[game->deck.top]);
+    game->deck.top++;
 }
 
 static void redrawFirstPlayerCard(Game *game, int requireHighCard) {
@@ -319,8 +320,8 @@ static void splitHand(Game *game) {
 
     isAceSplit = game->player.hands[src].cards[0].rank == ACE;
 
-    drawCard(&game->deck, &game->player.hands[src]);
-    drawCard(&game->deck, &game->player.hands[dst]);
+    drawCard(game, &game->player.hands[src]);
+    drawCard(game, &game->player.hands[dst]);
 
     if (isAceSplit) {
         game->player.isSplitAce[src] = 1;
@@ -377,10 +378,10 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
     int value;
 
     if (action == ACTION_HIT) {
-        drawCard(&game->deck, &game->player.hands[game->player.activeHand]);
+        drawCard(game, &game->player.hands[game->player.activeHand]);
 
         if (dealerMirrorsOnHit(game->run.dealerId)) {
-            drawCard(&game->deck, &game->dealer.hands[0]);
+            drawCard(game, &game->dealer.hands[0]);
         }
 
         value = calculatePlayerHandValue(game);
@@ -433,10 +434,10 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
         } else {
             game->player.bets[game->player.activeHand] *= 2;
             game->player.usedDouble = 1;
-            drawCard(&game->deck, &game->player.hands[game->player.activeHand]);
+            drawCard(game, &game->player.hands[game->player.activeHand]);
 
             if (dealerMirrorsOnHit(game->run.dealerId)) {
-                drawCard(&game->deck, &game->dealer.hands[0]);
+                drawCard(game, &game->dealer.hands[0]);
             }
 
             {
@@ -526,8 +527,8 @@ int calculatePlayerHandValue(const Game *game) {
     return totalValue;
 }
 
-static int calculatePlayerHandValueForIndex(const Game *game,
-                                                    int handIndex) {
+int calculatePlayerHandValueForIndex(const Game *game,
+                                     int handIndex) {
     int totalValue;
     int cardIndex;
 
@@ -588,10 +589,10 @@ void startRound(Game *game) {
 
     game->roundNumber++;
 
-    drawCard(&game->deck, &game->player.hands[0]);
-    drawCard(&game->deck, &game->dealer.hands[0]);
-    drawCard(&game->deck, &game->player.hands[0]);
-    drawCard(&game->deck, &game->dealer.hands[0]);
+    drawCard(game, &game->player.hands[0]);
+    drawCard(game, &game->dealer.hands[0]);
+    drawCard(game, &game->player.hands[0]);
+    drawCard(game, &game->dealer.hands[0]);
     game->dealer.handCount = dealerHandsCount(game->run.dealerId);
 
     {
@@ -600,9 +601,9 @@ void startRound(Game *game) {
         for (dealerHandIndex = 1;
              dealerHandIndex < game->dealer.handCount;
              dealerHandIndex++) {
-            drawCard(&game->deck,
+            drawCard(game,
                      &game->dealer.hands[dealerHandIndex]);
-            drawCard(&game->deck,
+            drawCard(game,
                      &game->dealer.hands[dealerHandIndex]);
         }
     }
@@ -628,10 +629,11 @@ void startRound(Game *game) {
                 (long long)game->player.bets[0] * 2) {
 
             game->player.bets[0] *= 2;
-            drawCard(&game->deck, &game->player.hands[0]);
+            game->player.usedDouble = 1;
+            drawCard(game, &game->player.hands[0]);
 
             if (dealerMirrorsOnHit(game->run.dealerId)) {
-                drawCard(&game->deck, &game->dealer.hands[0]);
+                drawCard(game, &game->dealer.hands[0]);
             }
 
             game->state = STATE_DEALER_TURN;
@@ -787,7 +789,7 @@ void dealerTurn(Game *game) {
                 game->run.dealerId);
 
             while (dealerValue < targetValue) {
-                drawCard(&game->deck,
+                drawCard(game,
                          &game->dealer.hands[dealerHandIndex]);
                 dealerValue = calculateDealerHandValue(
                     &game->dealer.hands[dealerHandIndex],

@@ -8,6 +8,8 @@ void playerTurn(Game *game);
 void dealerTurn(Game *game);
 void resolveRound(Game *game);
 int calculatePlayerHandValue(const Game *game);
+int calculatePlayerHandValueForIndex(const Game *game,
+                                     int handIndex);
 int calculateDealerHandValue(const Hand *hand, DealerId id);
 
 #endif

@@ -29,6 +29,7 @@ Planned:
 - GCC or Clang with C11 support.
 - A terminal with UTF-8 locale (for card suit symbols).
 - Linux (uses termios and ANSI escape codes).
+- A terminal window of at least 80x50 characters.
 
 ## Build
 
@@ -70,6 +71,8 @@ Betting:
 - [x] Game loop.
 - [x] CLI flags, versioning and install targets.
 - [x] ASCII rendering.
+- [x] Persistent event log with colored events.
+- [x] Between-round card persistence.
 - [x] Raw terminal input.
 - [x] Floors and advance menu.
 - [x] Named dealers.

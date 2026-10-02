@@ -24,7 +24,9 @@ static void printUsage(FILE *stream) {
             "  -v, --version   Show version and exit.\n"
             "  -s, --seed N    Use N as the RNG seed (default: time-based).\n"
             "  -r, --roguelike Start in roguelike mode (default).\n"
-            "  -c, --classic   Start in classic blackjack mode.\n");
+            "  -c, --classic   Start in classic blackjack mode.\n"
+            "\n"
+            "Requires a terminal of at least 80x50.\n");
 }
 
 static const char *LOGO[] = {
@@ -134,6 +136,29 @@ static GameMode runStartupMenu(void) {
     selectedIndex = 0;
 
     while (1) {
+        if (isatty(STDOUT_FILENO)) {
+            struct winsize ws;
+            int w = 0;
+            int h = 0;
+
+            if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0) {
+                w = ws.ws_col;
+                h = ws.ws_row;
+            }
+
+            if (w < MIN_TERMINAL_WIDTH || h < MIN_TERMINAL_HEIGHT) {
+                renderTooSmallScreen(w, h);
+
+                if (inputIsRaw()) {
+                    (void)readKey();
+                } else {
+                    (void)getchar();
+                }
+
+                continue;
+            }
+        }
+
         width = getStartupWidth();
         colors = getenv("NO_COLOR") == NULL &&
                  isatty(STDOUT_FILENO);

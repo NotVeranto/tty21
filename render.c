@@ -6,7 +6,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#define TABLE_MIN_HEIGHT 48
+#define TABLE_MIN_HEIGHT MIN_TERMINAL_HEIGHT
 #define CARD_WIDTH 11
 #define CARD_GAP 1
 #define CARD_CONTENT_WIDTH 9
@@ -124,6 +124,125 @@ static void getTerminalSize(int *width, int *height) {
     }
 }
 
+int renderTerminalSizeOk(int *width, int *height) {
+    getTerminalSize(width, height);
+    return *width >= MIN_TERMINAL_WIDTH &&
+           *height >= MIN_TERMINAL_HEIGHT;
+}
+
+void renderTooSmallScreen(int currentWidth,
+                          int currentHeight) {
+    const char *msg;
+    char sized[64];
+    char current[32];
+    int lines;
+    int row;
+
+    if (currentWidth <= 0 || currentHeight <= 0) {
+        fprintf(stderr,
+                "error: terminal too small.\n"
+                "tty21 needs at least %dx%d.\n",
+                MIN_TERMINAL_WIDTH, MIN_TERMINAL_HEIGHT);
+        return;
+    }
+
+    if (currentWidth >= 40 && currentHeight >= 6) {
+        msg =
+            "Terminal too small.\n"
+            "\n"
+            "Current: %dx%d\n"
+            "Minimum: %dx%d\n"
+            "\n"
+            "Resize the window to continue.";
+        snprintf(sized, sizeof(sized), msg,
+                 currentWidth, currentHeight,
+                 MIN_TERMINAL_WIDTH, MIN_TERMINAL_HEIGHT);
+        lines = 6;
+    } else if (currentWidth >= 24 && currentHeight >= 3) {
+        snprintf(sized, sizeof(sized),
+                 "Need %dx%d (got %dx%d)",
+                 MIN_TERMINAL_WIDTH, MIN_TERMINAL_HEIGHT,
+                 currentWidth, currentHeight);
+        lines = 1;
+    } else {
+        snprintf(current, sizeof(current),
+                 "%dx%d", currentWidth, currentHeight);
+        msg = current;
+        snprintf(sized, sizeof(sized), "%s", msg);
+        lines = 1;
+    }
+
+    if (colorEnabled && isatty(STDOUT_FILENO)) {
+        printf("%s%s", SCR_CLEAR, SCR_HOME);
+    }
+
+    row = (currentHeight - lines) / 2;
+    if (row < 1) {
+        row = 1;
+    }
+
+    {
+        /* Split sized on '\n' and center each line. */
+        char *cursor;
+        char *start;
+        int lineNo;
+
+        cursor = sized;
+        lineNo = 0;
+
+        while (*cursor != '\0' &&
+               lineNo < lines) {
+            char *nl;
+            int len;
+            int pad;
+
+            start = cursor;
+            nl = strchr(cursor, '\n');
+
+            if (nl != NULL) {
+                *nl = '\0';
+            }
+
+            len = (int)strlen(start);
+
+            if (len > currentWidth) {
+                start[currentWidth] = '\0';
+                len = currentWidth;
+            }
+
+            pad = (currentWidth - len) / 2;
+            if (pad < 0) {
+                pad = 0;
+            }
+
+            if (colorEnabled && isatty(STDOUT_FILENO)) {
+                printf(SCR_CURSOR, row + lineNo, pad + 1);
+            } else {
+                int k;
+                for (k = 0; k < pad; k++) {
+                    putchar(' ');
+                }
+            }
+
+            printf("%s", start);
+
+            if (!(colorEnabled && isatty(STDOUT_FILENO))) {
+                putchar('\n');
+            }
+
+            lineNo++;
+
+            if (nl == NULL) {
+                break;
+            }
+
+            cursor = nl + 1;
+        }
+    }
+
+    fflush(stdout);
+}
+
 // Calculates the table width from the largest hand with a stable minimum.
 static int getDynamicTableWidth(const Game *game) {
     int cardsTotal;
@@ -166,17 +285,6 @@ static int getDynamicTableWidth(const Game *game) {
     }
 
     return cardsTotal * CARD_WIDTH + (cardsTotal - 1) * CARD_GAP;
-}
-
-// Checks whether the dynamic table grid fits the current terminal.
-static int canRenderTable(int tableWidth,
-                          int *width,
-                          int *height) {
-    getTerminalSize(width, height);
-
-    return isatty(STDOUT_FILENO) &&
-           *width >= tableWidth + 2 &&
-           *height >= TABLE_MIN_HEIGHT;
 }
 
 // Moves the cursor to a table row and left-aligns content with the table.
@@ -354,12 +462,8 @@ static void printPlayerHandStatus(const Game *game,
     handWidth = game->player.hands[handIndex].count * CARD_WIDTH +
                 (game->player.hands[handIndex].count - 1) * CARD_GAP;
 
-    if (handIndex == game->player.activeHand &&
-        game->player.activeHand < game->player.handCount) {
-        handValue = calculatePlayerHandValue(game);
-    } else {
-        handValue = game->player.hands[handIndex].value;
-    }
+    handValue =
+        calculatePlayerHandValueForIndex(game, handIndex);
 
     if (handValue > 21) {
         snprintf(statusText, sizeof(statusText), "BUST");
@@ -581,9 +685,17 @@ void renderTable(const Game *game, int hideDealerCard) {
         displayHandIndex = 0;
     }
 
-    if (canRenderTable(tableWidth,
-                       &terminalWidth,
-                       &terminalHeight)) {
+    getTerminalSize(&terminalWidth, &terminalHeight);
+
+    if (isatty(STDOUT_FILENO) &&
+        !renderTerminalSizeOk(&terminalWidth,
+                              &terminalHeight)) {
+        renderTooSmallScreen(terminalWidth, terminalHeight);
+        return;
+    }
+
+    if (isatty(STDOUT_FILENO) &&
+        terminalWidth >= tableWidth + 2) {
         renderHideCursor();
         tablePadding = (terminalWidth - tableWidth) / 2;
 
@@ -644,11 +756,8 @@ void renderTable(const Game *game, int hideDealerCard) {
                                               game->run.dealerId));
         }
 
-        if (game->player.activeHand < game->player.handCount) {
-            displayHandValue = calculatePlayerHandValue(game);
-        } else {
-            displayHandValue = game->player.hands[displayHandIndex].value;
-        }
+        displayHandValue =
+            calculatePlayerHandValueForIndex(game, displayHandIndex);
 
         snprintf(playerTotal,
                  sizeof(playerTotal),
@@ -863,7 +972,8 @@ void renderTable(const Game *game, int hideDealerCard) {
         if (game->state == STATE_BET) {
             hintText = "Type a bet and press Enter.";
         } else if (game->state == STATE_PLAYER_TURN) {
-            hintText = "";
+            hintText =
+                "Keys: h hit   s stand   d double   p split   k peek   q quit";
         } else if (game->state == STATE_MENU) {
             hintText = "Keys: C continue   A advance   S shop   Q quit";
         } else {
@@ -929,7 +1039,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         renderLog(game, tablePadding, terminalWidth);
 
         fflush(stdout);
-    } else {
+    } else if (!isatty(STDOUT_FILENO)) {
         renderGameStateFallback(game, hideDealerCard);
     }
 }
@@ -970,11 +1080,8 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
         displayHandIndex = 0;
     }
 
-    if (game->player.activeHand < game->player.handCount) {
-        playerValue = calculatePlayerHandValue(game);
-    } else {
-        playerValue = game->player.hands[displayHandIndex].value;
-    }
+    playerValue =
+        calculatePlayerHandValueForIndex(game, displayHandIndex);
 
     printf("Round: %d\n", game->roundNumber);
     printf("Dealer (%s): ", dealerInfo->name);
@@ -1085,8 +1192,15 @@ void renderMenu(const char *title,
     getTerminalSize(&terminalWidth, &terminalHeight);
 
     if (isatty(STDOUT_FILENO) &&
-        terminalWidth >= 72 &&
-        terminalHeight >= TABLE_MIN_HEIGHT) {
+        !renderTerminalSizeOk(&terminalWidth,
+                              &terminalHeight)) {
+        renderTooSmallScreen(terminalWidth, terminalHeight);
+        return;
+    }
+
+    if (isatty(STDOUT_FILENO) &&
+        terminalWidth >= MIN_TERMINAL_WIDTH &&
+        terminalHeight >= MIN_TERMINAL_HEIGHT) {
         renderHideCursor();
         menuAreaWidth = terminalWidth - tablePadding * 2;
         menuAreaPadding = tablePadding;
@@ -1217,11 +1331,19 @@ void renderShop(const Game *game,
 
     initColors();
     getTerminalSize(&terminalWidth, &terminalHeight);
+
+    if (isatty(STDOUT_FILENO) &&
+        !renderTerminalSizeOk(&terminalWidth,
+                              &terminalHeight)) {
+        renderTooSmallScreen(terminalWidth, terminalHeight);
+        return;
+    }
+
     tableWidth = getDynamicTableWidth(game);
 
     if (isatty(STDOUT_FILENO) &&
-        terminalWidth >= 72 &&
-        terminalHeight >= TABLE_MIN_HEIGHT) {
+        terminalWidth >= MIN_TERMINAL_WIDTH &&
+        terminalHeight >= MIN_TERMINAL_HEIGHT) {
         renderHideCursor();
         shopPadding = (terminalWidth - tableWidth) / 2;
 
@@ -1238,6 +1360,9 @@ void renderShop(const Game *game,
 
         moveToTableRow(ROW_SHOP_SOULS, shopPadding);
         printf("Marks: %d", game->run.marks);
+
+        moveToTableRow(ROW_SHOP_CHIPS, shopPadding);
+        printf("Chips: %d", game->player.chips);
 
         for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
             itemRow = ITEM_ROWS[perkIndex];
@@ -1311,7 +1436,9 @@ void renderShop(const Game *game,
         fflush(stdout);
     } else {
         printf("SHOP\n");
-        printf("Marks: %d\n\n", game->run.marks);
+        printf("Marks: %d | Chips: %d\n\n",
+               game->run.marks,
+               game->player.chips);
 
         for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
             isOwned = game->player.perkOwned[perkIndex];
@@ -1385,11 +1512,19 @@ void renderMessage(const char *msg, int row, MessageStyle style) {
     }
 
     getTerminalSize(&terminalWidth, &terminalHeight);
+
+    if (isatty(STDOUT_FILENO) &&
+        !renderTerminalSizeOk(&terminalWidth,
+                              &terminalHeight)) {
+        renderTooSmallScreen(terminalWidth, terminalHeight);
+        return;
+    }
+
     messagePadding = tablePadding;
 
     if (isatty(STDOUT_FILENO) &&
-        terminalWidth >= 72 &&
-        terminalHeight >= TABLE_MIN_HEIGHT) {
+        terminalWidth >= MIN_TERMINAL_WIDTH &&
+        terminalHeight >= MIN_TERMINAL_HEIGHT) {
         displayMessage = msg;
         maxWidth = terminalWidth - messagePadding - 2;
 
@@ -1445,9 +1580,16 @@ void renderActionBar(const ActionId *actions,
 
     getTerminalSize(&terminalWidth, &terminalHeight);
 
+    if (isatty(STDOUT_FILENO) &&
+        !renderTerminalSizeOk(&terminalWidth,
+                              &terminalHeight)) {
+        renderTooSmallScreen(terminalWidth, terminalHeight);
+        return;
+    }
+
     if (!isatty(STDOUT_FILENO) ||
-        terminalWidth < 72 ||
-        terminalHeight < TABLE_MIN_HEIGHT ||
+        terminalWidth < MIN_TERMINAL_WIDTH ||
+        terminalHeight < MIN_TERMINAL_HEIGHT ||
         actionCount <= 0 ||
         selectedIndex < 0 ||
         selectedIndex >= actionCount) {

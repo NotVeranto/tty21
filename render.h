@@ -1,6 +1,9 @@
 #ifndef RENDER_H
 #define RENDER_H
 
+#define MIN_TERMINAL_WIDTH  80
+#define MIN_TERMINAL_HEIGHT 50
+
 #define SCR_CLEAR "\033[2J"
 #define SCR_HOME "\033[H"
 #define SCR_CURSOR "\033[%d;%dH"
@@ -25,6 +28,7 @@
 
 #define ROW_SHOP_TITLE 10
 #define ROW_SHOP_SOULS 11
+#define ROW_SHOP_CHIPS 12
 #define ROW_SHOP_ITEM_0 13
 #define ROW_SHOP_ITEM_1 15
 #define ROW_SHOP_ITEM_2 17
@@ -46,6 +50,9 @@ typedef struct {
     const char *label;    /* description shown next to hotkey */
 } MenuItem;
 
+int renderTerminalSizeOk(int *width, int *height);
+void renderTooSmallScreen(int currentWidth,
+                          int currentHeight);
 void renderTable(const Game *game, int hideDealerCard);
 void renderGameStateFallback(const Game *game, int hideDealerCard);
 void renderHideCursor(void);
