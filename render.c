@@ -1091,7 +1091,7 @@ void renderTable(const Game *game, int hideDealerCard) {
             }
 
             for (nextIndex = 0; nextIndex < nextCount; nextIndex++) {
-                Card *nextCard;
+                const Card *nextCard;
 
                 nextCard = &game->deck.cards[game->deck.top + nextIndex];
                 len += snprintf(oracleText + len,
