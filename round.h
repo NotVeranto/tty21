@@ -14,5 +14,6 @@ int calculateDealerHandValue(const Game *game,
                                const Hand *hand,
                                DealerId id);
 int twistActive(const Game *game, TwistId id);
+int fatiguePercent(int roundsOnFloor);
 
 #endif

@@ -11,6 +11,8 @@ typedef enum {
 
 typedef struct Game Game;
 
+#define MAX_EXTRA_TWISTS 4
+
 typedef struct {
     int floor;
     int marks;
@@ -18,6 +20,9 @@ typedef struct {
     DealerId previousDealerId;
     TwistId twistId;
     TwistId previousTwistId;
+    TwistId extraTwists[MAX_EXTRA_TWISTS];
+    int extraTwistCount;
+    int roundsOnFloor;
 } Run;
 
 void initRun(Run *run);

@@ -75,11 +75,13 @@ void floorMenu(Game *game) {
 
     snprintf(continueLabel,
              sizeof(continueLabel),
-             "Continue playing on floor %d",
-             game->run.floor);
+             "Continue on floor %d (round %d, fatigue %d%%)",
+             game->run.floor,
+             game->run.roundsOnFloor,
+             fatiguePercent(game->run.roundsOnFloor));
     snprintf(advanceLabel,
              sizeof(advanceLabel),
-             "Advance to floor %d (earn marks)",
+             "Advance to floor %d (earn marks, reset fatigue)",
              game->run.floor + 1);
     snprintf(shopLabel,
              sizeof(shopLabel),
@@ -200,7 +202,12 @@ static void purchasePerk(Game *game, int perkIndex) {
         game->player.perkOwned[perkIndex] = 1;
 
         if (perkIndex == PERK_PEEK ||
-            perkIndex == PERK_SECOND_WIND) {
+            perkIndex == PERK_SECOND_WIND ||
+            perkIndex == PERK_INSURANCE_PERK ||
+            perkIndex == PERK_DEALERS_FAVOR ||
+            perkIndex == PERK_MARKED_CARD ||
+            perkIndex == PERK_MULLIGAN ||
+            perkIndex == PERK_EXTRA_LIFE) {
             game->player.perkCharges[perkIndex] = 1;
         }
 
@@ -240,7 +247,11 @@ void runShop(Game *game) {
                      perkCost((PerkId)perkIndex),
                      status);
 
-            items[perkIndex].hotkey = (char)('1' + perkIndex);
+            if (perkIndex < 9) {
+                items[perkIndex].hotkey = (char)('1' + perkIndex);
+            } else {
+                items[perkIndex].hotkey = (char)('A' + perkIndex - 9);
+            }
             items[perkIndex].label = labels[perkIndex];
         }
 

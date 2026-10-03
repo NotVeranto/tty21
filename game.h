@@ -67,6 +67,9 @@ struct Game {
     Run run;
     GameMode mode;
     int peekActive;
+    int fastMode;
+    int fatigueTier;
+    int winStreak;
     GameLog log;
 };
 

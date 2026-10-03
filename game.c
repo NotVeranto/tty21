@@ -31,6 +31,9 @@ void initGame(Game *game, GameMode mode) {
     }
 
     game->peekActive = 0;
+    game->fastMode = 0;
+    game->fatigueTier = 0;
+    game->winStreak = 0;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
@@ -96,11 +99,26 @@ void advanceFloor(Game *game) {
     game->run.previousDealerId = game->run.dealerId;
     game->run.previousTwistId = game->run.twistId;
     game->run.floor++;
+    game->run.roundsOnFloor = 0;
+    game->run.extraTwistCount = 0;
+    game->fatigueTier = 0;
     game->run.dealerId = selectDealerForFloor(game->run.floor,
                                           game->run.previousDealerId);
 
     if (game->player.perkOwned[PERK_PEEK]) {
         game->player.perkCharges[PERK_PEEK] = 1;
+    }
+
+    if (game->player.perkOwned[PERK_INSURANCE_PERK]) {
+        game->player.perkCharges[PERK_INSURANCE_PERK] = 1;
+    }
+
+    if (game->player.perkOwned[PERK_DEALERS_FAVOR]) {
+        game->player.perkCharges[PERK_DEALERS_FAVOR] = 1;
+    }
+
+    if (game->player.perkOwned[PERK_MARKED_CARD]) {
+        game->player.perkCharges[PERK_MARKED_CARD] = 1;
     }
 
     {
@@ -116,6 +134,11 @@ void advanceFloor(Game *game) {
                  game->run.floor >= 4 &&
                  getTwistInfo(game->run.twistId)->category == TWIST_CAT_HOSTILE &&
                  attempts < 10);
+    }
+
+    if (game->player.perkOwned[PERK_BANKROLL]) {
+        game->player.chips += 10;
+        logPush(game, "Bankroll: +10 chips.", MSG_WIN);
     }
 
     {

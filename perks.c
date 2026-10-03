@@ -20,7 +20,29 @@ static const PerkInfo PERK_INFO[] = {
     {PERK_SIXTH_SENSE,
      "Sixth Sense",
      "Twists on floors 4+ are always favorable or neutral.",
-     80}
+     80},
+    {PERK_DEALERS_FAVOR, "Dealer's Favor",
+     "Once per floor, a bust is treated as a push.", 70},
+    {PERK_SPLIT_MASTERY, "Split Mastery",
+     "Split hands may be re-split once more.", 60},
+    {PERK_DOUBLE_DIP, "Double Dip",
+     "A doubled win pays an extra half bet.", 55},
+    {PERK_COMPOUNDING, "Compounding",
+     "Every consecutive win adds +1 to the next payout.", 75},
+    {PERK_INSURANCE_PERK, "Insurance",
+     "Once per floor, a losing hand loses half the bet.", 50},
+    {PERK_SLEIGHT, "Sleight",
+     "Once per floor, swap the last drawn player card for the next deck card.", 65},
+    {PERK_MULLIGAN, "Mulligan",
+     "Once per run, discard your hand and redraw it.", 90},
+    {PERK_MARKED_CARD, "Marked Card",
+     "The top three deck cards are visible each round.", 45},
+    {PERK_FREEZE, "Freeze",
+     "Once per floor, freeze the dealer at their current total.", 85},
+    {PERK_BANKROLL, "Bankroll",
+     "Start each floor with +10 chips.", 40},
+    {PERK_EXTRA_LIFE, "Extra Life",
+     "Once per run, a loss that would end the run is forgiven.", 100}
 };
 
 const PerkInfo *getPerkInfo(PerkId id) {

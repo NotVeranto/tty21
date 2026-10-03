@@ -25,6 +25,7 @@ static void printUsage(FILE *stream) {
             "  -s, --seed N    Use N as the RNG seed (default: time-based).\n"
             "  -r, --roguelike Start in roguelike mode (default).\n"
             "  -c, --classic   Start in classic blackjack mode.\n"
+            "  --fast          Skip dealer animation pauses.\n"
             "\n"
             "Requires a terminal of at least 80x50.\n");
 }
@@ -346,8 +347,10 @@ int main(int argc, char **argv) {
     int forced;
     GameMode forcedMode;
     GameMode mode;
+    int fastFlag;
 
     seed = 0;
+    fastFlag = 0;
     forced = 0;
     forcedMode = MODE_ROGUELIKE;
 
@@ -363,6 +366,11 @@ int main(int argc, char **argv) {
             strcmp(argv[argumentIndex], "-c") == 0) {
             forced = 1;
             forcedMode = MODE_CLASSIC;
+            continue;
+        }
+
+        if (strcmp(argv[argumentIndex], "--fast") == 0) {
+            fastFlag = 1;
             continue;
         }
 
@@ -444,6 +452,7 @@ int main(int argc, char **argv) {
     rngInit(seed);
 
     initGame(&game, mode);
+    game.fastMode = fastFlag;
     runGame(&game);
 
     return 0;

@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include "round.h"
 #include "render.h"
 #include "input.h"
@@ -10,12 +11,114 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define DECK_RESHUFFLE_MARGIN 15
 #define FIRST_CARD_RETRY_LIMIT 50
 
 int twistActive(const Game *game, TwistId id) {
-    return game->run.twistId == id;
+    int i;
+
+    if (game->run.twistId == id) {
+        return 1;
+    }
+
+    for (i = 0; i < game->run.extraTwistCount; i++) {
+        if (game->run.extraTwists[i] == id) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+static TwistId pickHostileTwistExcluding(const Game *game) {
+    static const TwistId POOL[] = {
+        TWIST_COLD_DECK,
+        TWIST_HALF_PAYOUT,
+        TWIST_STICKY_HANDS,
+        TWIST_DESPERATION,
+        TWIST_DEALER_TO_18,
+        TWIST_BLOOD_PACT
+    };
+    TwistId candidates[6];
+    int count;
+    int i;
+
+    count = 0;
+
+    for (i = 0; i < 6; i++) {
+        if (!twistActive(game, POOL[i])) {
+            candidates[count] = POOL[i];
+            count++;
+        }
+    }
+
+    if (count == 0) {
+        return TWIST_NONE;
+    }
+
+    return candidates[rngRange(0, count - 1)];
+}
+
+static void applyAntiFarmPressure(Game *game) {
+    int r;
+    int threshold;
+
+    r = game->run.roundsOnFloor;
+    threshold = 0;
+
+    if (r >= 16) {
+        threshold = 3 + (r - 16) / 3;
+
+        if (threshold > MAX_EXTRA_TWISTS) {
+            threshold = MAX_EXTRA_TWISTS;
+        }
+    } else if (r >= 11) {
+        threshold = 2;
+    } else if (r >= 6) {
+        threshold = 1;
+    }
+
+    while (game->run.extraTwistCount < threshold) {
+        TwistId pick;
+        char msg[96];
+
+        pick = pickHostileTwistExcluding(game);
+
+        if (pick == TWIST_NONE) {
+            break;
+        }
+
+        game->run.extraTwists[game->run.extraTwistCount] = pick;
+        game->run.extraTwistCount++;
+
+        snprintf(msg,
+                 sizeof(msg),
+                 "Floor tension rises: %s activates.",
+                 getTwistInfo(pick)->name);
+        logPush(game, msg, MSG_LOSS);
+    }
+}
+
+int fatiguePercent(int roundsOnFloor) {
+    if (roundsOnFloor <= 5) {
+        return 100;
+    }
+
+    if (roundsOnFloor <= 8) {
+        return 80;
+    }
+
+    if (roundsOnFloor <= 11) {
+        return 60;
+    }
+
+    if (roundsOnFloor <= 14) {
+        return 50;
+    }
+
+    return 30;
 }
 
 static void drawCard(Game *game, Hand *hand) {
@@ -134,7 +237,7 @@ static int readBet(Game *game) {
     int validBet;
     KeyEvent event;
 
-    minBet = getMinBet(game->run.floor, game->mode);
+    minBet = getMinBet(game, game->run.floor, game->mode);
 
     if (game->player.chips < minBet) {
         snprintf(prompt,
@@ -613,6 +716,8 @@ void startRound(Game *game) {
     game->player.usedDouble = 0;
 
     game->roundNumber++;
+    game->run.roundsOnFloor++;
+    applyAntiFarmPressure(game);
 
     drawCard(game, &game->player.hands[0]);
     drawCard(game, &game->dealer.hands[0]);
@@ -631,6 +736,11 @@ void startRound(Game *game) {
             drawCard(game,
                      &game->dealer.hands[dealerHandIndex]);
         }
+    }
+
+    if (game->player.perkOwned[PERK_MARKED_CARD] &&
+        game->player.perkCharges[PERK_MARKED_CARD] > 0) {
+        game->player.perkCharges[PERK_MARKED_CARD] = 0;
     }
 
     if (twistActive(game, TWIST_LUCKY_DRAW)) {
@@ -820,12 +930,28 @@ void dealerTurn(Game *game) {
                 game->run.dealerId);
 
             while (dealerValue < targetValue) {
+                KeyEvent event;
+
                 drawCard(game,
                          &game->dealer.hands[dealerHandIndex]);
                 dealerValue = calculateDealerHandValue(
-                game,
-                &game->dealer.hands[dealerHandIndex],
-                game->run.dealerId);
+                    game,
+                    &game->dealer.hands[dealerHandIndex],
+                    game->run.dealerId);
+                renderTable(game, 0);
+
+                if (game->fastMode) {
+                    usleep(180000);
+                } else if (inputIsRaw()) {
+                    renderMessage("Press any key for next card...",
+                                  ROW_PROMPT,
+                                  MSG_INFO);
+                    event = readKey();
+
+                    if (event.type == KEY_EOF) {
+                        break;
+                    }
+                }
             }
         }
 
@@ -836,9 +962,9 @@ void dealerTurn(Game *game) {
                  dealerHandIndex < game->dealer.handCount;
                  dealerHandIndex++) {
                 dealerValue = calculateDealerHandValue(
-                game,
-                &game->dealer.hands[dealerHandIndex],
-                game->run.dealerId);
+                    game,
+                    &game->dealer.hands[dealerHandIndex],
+                    game->run.dealerId);
 
                 if (game->dealer.handCount == 1) {
                     if (dealerValue > 21) {
@@ -850,18 +976,16 @@ void dealerTurn(Game *game) {
                                  "Dealer stands on %d.",
                                  dealerValue);
                     }
+                } else if (dealerValue > 21) {
+                    snprintf(msg, sizeof(msg),
+                             "Dealer hand %d: busts with %d.",
+                             dealerHandIndex + 1,
+                             dealerValue);
                 } else {
-                    if (dealerValue > 21) {
-                        snprintf(msg, sizeof(msg),
-                                 "Dealer hand %d: busts with %d.",
-                                 dealerHandIndex + 1,
-                                 dealerValue);
-                    } else {
-                        snprintf(msg, sizeof(msg),
-                                 "Dealer hand %d: stands on %d.",
-                                 dealerHandIndex + 1,
-                                 dealerValue);
-                    }
+                    snprintf(msg, sizeof(msg),
+                             "Dealer hand %d: stands on %d.",
+                             dealerHandIndex + 1,
+                             dealerValue);
                 }
 
                 if (dealerValue > 21) {
@@ -930,6 +1054,7 @@ void resolveRound(Game *game) {
     int skipLossReduction;
     int greedAwarded;
     int handWon;
+    int currentFatigue;
     long long payoutValue;
     long long basePayout;
     long long baseLoss;
@@ -958,7 +1083,22 @@ void resolveRound(Game *game) {
     payoutTotal = 0;
     lossTotal = 0;
     greedAwarded = 0;
-    resultMessage[0] = ' ';
+    currentFatigue = fatiguePercent(game->run.roundsOnFloor);
+
+    if (game->fatigueTier == 0) {
+        game->fatigueTier = currentFatigue;
+    } else if (currentFatigue < game->fatigueTier) {
+        char fatigueMessage[64];
+
+        snprintf(fatigueMessage,
+                 sizeof(fatigueMessage),
+                 "Payout reduced to %d%% (floor fatigue).",
+                 currentFatigue);
+        logPush(game, fatigueMessage, MSG_LOSS);
+        game->fatigueTier = currentFatigue;
+    }
+
+    resultMessage[0] = '\0';
     messageTruncated = 0;
 
     for (handIndex = 0;
@@ -1021,46 +1161,62 @@ void resolveRound(Game *game) {
                     baseLoss = INT_MAX;
                 }
 
-                lossAmount = applyLoss(game, baseLoss);
-                lossTotal += lossAmount;
-                handLossTotal += lossAmount;
+                if (game->player.perkOwned[PERK_DEALERS_FAVOR] &&
+                    game->player.perkCharges[PERK_DEALERS_FAVOR] > 0) {
+                    game->player.perkCharges[PERK_DEALERS_FAVOR]--;
+                    game->winStreak = 0;
 
-                if (dealerHandCount == 1) {
-                    if (game->player.handCount == 1) {
+                    if (dealerHandCount == 1 &&
+                        game->player.handCount == 1) {
                         snprintf(resultMessage,
                                  sizeof(resultMessage),
-                                 "Player busts. You lose %d chips. Chips: %d.",
-                                 lossAmount,
-                                 game->player.chips);
-                    } else {
-                        messageLength = snprintf(handMessage,
-                                                 sizeof(handMessage),
-                                                 "Hand %d: bust (-%d)",
-                                                 handIndex + 1,
-                                                 lossAmount);
+                                 "Dealer's Favor: bust pushed.");
+                    }
+                } else {
+                    if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
+                        game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
+                        baseLoss > 0) {
+                        baseLoss /= 2;
+                        game->player.perkCharges[PERK_INSURANCE_PERK]--;
+                        logPush(game,
+                                "Insurance used: loss halved.",
+                                MSG_INFO);
+                    }
 
-                        if (messageLength < 0) {
-                            snprintf(handMessage,
-                                     sizeof(handMessage),
-                                     "Hand %d: bust",
-                                     handIndex + 1);
+                    lossAmount = applyLoss(game, baseLoss);
+                    lossTotal += lossAmount;
+                    handLossTotal += lossAmount;
+                    game->winStreak = 0;
+
+                    if (dealerHandCount == 1) {
+                        if (game->player.handCount == 1) {
+                            snprintf(resultMessage,
+                                     sizeof(resultMessage),
+                                     "Player busts. You lose %d chips. Chips: %d.",
+                                     lossAmount,
+                                     game->player.chips);
+                        } else {
+                            messageLength = snprintf(handMessage,
+                                                     sizeof(handMessage),
+                                                     "Hand %d: bust (-%d)",
+                                                     handIndex + 1,
+                                                     lossAmount);
+
+                            if (messageLength < 0) {
+                                snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: bust",
+                                         handIndex + 1);
+                            }
+
+                            appendResultMessage(resultMessage,
+                                                sizeof(resultMessage),
+                                                handMessage,
+                                                &messageTruncated);
                         }
-
-                        appendResultMessage(resultMessage,
-                                            sizeof(resultMessage),
-                                            handMessage,
-                                            &messageTruncated);
                     }
                 }
             } else if (playerBlackjack && !dealerBlackjack) {
-                basePayout = splitBet;
-
-                if (dealerPaysPureHandBonus(game->run.dealerId) &&
-                    !game->player.usedSplit &&
-                    !game->player.usedDouble) {
-                    basePayout *= 2;
-                }
-
                 basePayout = ((long long)splitBet *
                               dealerBlackjackNumerator(game->run.dealerId)) /
                              dealerBlackjackDenominator(game->run.dealerId);
@@ -1082,7 +1238,19 @@ void resolveRound(Game *game) {
                     basePayout /= 2;
                 }
 
-                payoutValue = basePayout;
+                if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
+                    game->player.usedDouble &&
+                    !game->player.usedSplit) {
+                    basePayout += splitBet / 2;
+                }
+
+                if (game->player.perkOwned[PERK_COMPOUNDING]) {
+                    basePayout += game->winStreak < 10 ?
+                                  game->winStreak : 10;
+                }
+
+                payoutValue = basePayout *
+                              currentFatigue / 100;
 
                 if (payoutValue > INT_MAX - game->player.chips) {
                     payout = INT_MAX - game->player.chips;
@@ -1094,6 +1262,7 @@ void resolveRound(Game *game) {
                 payoutTotal += payout;
                 handPayoutTotal += payout;
                 handWon = 1;
+                game->winStreak++;
 
                 if (dealerHandCount == 1) {
                     if (game->player.handCount == 1) {
@@ -1142,9 +1311,20 @@ void resolveRound(Game *game) {
                     baseLoss = INT_MAX;
                 }
 
+                if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
+                    game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
+                    baseLoss > 0) {
+                    baseLoss /= 2;
+                    game->player.perkCharges[PERK_INSURANCE_PERK]--;
+                    logPush(game,
+                            "Insurance used: loss halved.",
+                            MSG_INFO);
+                }
+
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
+                game->winStreak = 0;
 
                 if (dealerHandCount == 1) {
                     if (game->player.handCount == 1) {
@@ -1174,6 +1354,8 @@ void resolveRound(Game *game) {
                     }
                 }
             } else if (handValue == dealerValue) {
+                game->winStreak = 0;
+
                 if (dealerHandCount == 1) {
                     if (game->player.handCount == 1) {
                         snprintf(resultMessage,
@@ -1230,7 +1412,19 @@ void resolveRound(Game *game) {
                     basePayout *= 10;
                 }
 
-                payoutValue = basePayout;
+                if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
+                    game->player.usedDouble &&
+                    !game->player.usedSplit) {
+                    basePayout += splitBet / 2;
+                }
+
+                if (game->player.perkOwned[PERK_COMPOUNDING]) {
+                    basePayout += game->winStreak < 10 ?
+                                  game->winStreak : 10;
+                }
+
+                payoutValue = basePayout *
+                              currentFatigue / 100;
 
                 if (payoutValue > INT_MAX - game->player.chips) {
                     payout = INT_MAX - game->player.chips;
@@ -1242,6 +1436,7 @@ void resolveRound(Game *game) {
                 payoutTotal += payout;
                 handPayoutTotal += payout;
                 handWon = 1;
+                game->winStreak++;
 
                 if (dealerHandCount == 1 && game->player.handCount == 1) {
                     snprintf(resultMessage, sizeof(resultMessage),
@@ -1268,9 +1463,20 @@ void resolveRound(Game *game) {
                     baseLoss = INT_MAX;
                 }
 
+                if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
+                    game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
+                    baseLoss > 0) {
+                    baseLoss /= 2;
+                    game->player.perkCharges[PERK_INSURANCE_PERK]--;
+                    logPush(game,
+                            "Insurance used: loss halved.",
+                            MSG_INFO);
+                }
+
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
+                game->winStreak = 0;
 
                 if (dealerHandCount == 1 && game->player.handCount == 1) {
                     snprintf(resultMessage, sizeof(resultMessage),

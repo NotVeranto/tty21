@@ -19,6 +19,9 @@
 #define DEALER_CARD_ROW 8
 #define PLAYER_LABEL_ROW 16
 #define PLAYER_CARD_ROW 18
+#define SHOP_ITEM_START_ROW 13
+#define SHOP_DESCRIPTION_ROW 30
+#define SHOP_HINT_ROW 31
 
 static const char *CARD_RANKS[] = {
     "", "A", "2", "3", "4", "5", "6",
@@ -657,11 +660,13 @@ void renderTable(const Game *game, int hideDealerCard) {
     int displayHandIndex;
     int displayHandValue;
     int dealerValue;
+    int i;
+    int len;
     char dealerName[64];
     char statusText[256];
     char rulesText[256];
-    char twistText[256];
-    char oracleText[64];
+    char twistsLine[256];
+    char oracleText[256];
     char roundText[64];
     char dealerTotal[32];
     char playerTotal[32];
@@ -1016,20 +1021,40 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_TWIST, tablePadding);
         printf(SCR_ERASE_EOL);
 
-        if (twistInfo->id != TWIST_NONE) {
-            snprintf(twistText,
-                     sizeof(twistText),
+        if (game->run.extraTwistCount == 0) {
+            snprintf(twistsLine,
+                     sizeof(twistsLine),
                      "Twist: %s — %s",
                      twistInfo->name,
                      twistInfo->description);
-            printf("%s%s%s",
-                   scrDim(),
-                   twistText,
-                   scrReset());
+        } else {
+            len = snprintf(twistsLine,
+                           sizeof(twistsLine),
+                           "Twists: %s",
+                           twistInfo->name);
+
+            for (i = 0;
+                 i < game->run.extraTwistCount && len < (int)sizeof(twistsLine);
+                 i++) {
+                const TwistInfo *extraInfo;
+
+                extraInfo = getTwistInfo(game->run.extraTwists[i]);
+                len += snprintf(twistsLine + len,
+                                sizeof(twistsLine) - (size_t)len,
+                                " | %s",
+                                extraInfo->name);
+            }
         }
+
+        printf("%s%s%s",
+               scrDim(),
+               twistsLine,
+               scrReset());
 
         moveToTableRow(ROW_ORACLE, tablePadding);
         printf(SCR_ERASE_EOL);
+
+        oracleText[0] = '\0';
 
         if (dealerShowsNextCard(game->run.dealerId) &&
             game->state == STATE_PLAYER_TURN &&
@@ -1039,6 +1064,45 @@ void renderTable(const Game *game, int hideDealerCard) {
                      "Next card: %s%s",
                      CARD_RANKS[game->deck.cards[game->deck.top].rank],
                      CARD_SUITS[game->deck.cards[game->deck.top].suit]);
+        }
+
+        if (game->player.perkOwned[PERK_MARKED_CARD] &&
+            game->player.perkCharges[PERK_MARKED_CARD] > 0 &&
+            game->deck.top < DECK_SIZE) {
+            int nextIndex;
+            int nextCount;
+
+            nextCount = DECK_SIZE - game->deck.top;
+
+            if (nextCount > 3) {
+                nextCount = 3;
+            }
+
+            len = (int)strlen(oracleText);
+
+            if (len > 0) {
+                len += snprintf(oracleText + len,
+                                sizeof(oracleText) - (size_t)len,
+                                " | Next:");
+            } else {
+                len += snprintf(oracleText + len,
+                                sizeof(oracleText) - (size_t)len,
+                                "Next:");
+            }
+
+            for (nextIndex = 0; nextIndex < nextCount; nextIndex++) {
+                Card *nextCard;
+
+                nextCard = &game->deck.cards[game->deck.top + nextIndex];
+                len += snprintf(oracleText + len,
+                                sizeof(oracleText) - (size_t)len,
+                                " %s%s",
+                                CARD_RANKS[nextCard->rank],
+                                CARD_SUITS[nextCard->suit]);
+            }
+        }
+
+        if (oracleText[0] != '\0') {
             printf("%s%s%s", scrDim(), oracleText, scrReset());
         }
 
@@ -1312,7 +1376,6 @@ void renderShop(const Game *game,
     int shopPadding;
     int titlePadding;
     int itemRow;
-    int descriptionRow;
     int perkIndex;
     int isOwned;
     int canAfford;
@@ -1320,22 +1383,6 @@ void renderShop(const Game *game,
     int menuAreaWidth;
     int menuAreaPadding;
     int rowPadding;
-
-    static const int ITEM_ROWS[] = {
-        ROW_SHOP_ITEM_0,
-        ROW_SHOP_ITEM_1,
-        ROW_SHOP_ITEM_2,
-        ROW_SHOP_ITEM_3,
-        ROW_SHOP_ITEM_4
-    };
-
-    static const int DESCRIPTION_ROWS[] = {
-        ROW_SHOP_DESC_0,
-        ROW_SHOP_DESC_1,
-        ROW_SHOP_DESC_2,
-        ROW_SHOP_DESC_3,
-        ROW_SHOP_DESC_4
-    };
 
     initColors();
     getTerminalSize(&terminalWidth, &terminalHeight);
@@ -1373,8 +1420,7 @@ void renderShop(const Game *game,
         printf("Chips: %d", game->player.chips);
 
         for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
-            itemRow = ITEM_ROWS[perkIndex];
-            descriptionRow = DESCRIPTION_ROWS[perkIndex];
+            itemRow = SHOP_ITEM_START_ROW + perkIndex;
             isOwned = game->player.perkOwned[perkIndex];
             canAfford = game->run.marks >= perkCost((PerkId)perkIndex);
 
@@ -1428,16 +1474,18 @@ void renderShop(const Game *game,
             } else {
                 printf("%s", items[perkIndex].label);
             }
-
-            moveToTableRow(descriptionRow, shopPadding);
-            printf("%s%s%s",
-                   scrDim(),
-                   perkDescription((PerkId)perkIndex),
-                   scrReset());
         }
 
-        moveToTableRow(ROW_SHOP_HINT, shopPadding);
-        printf("%sKeys: 1-5 buy   Q close%s",
+        moveToTableRow(SHOP_DESCRIPTION_ROW, shopPadding);
+        printf(SCR_ERASE_EOL);
+        printf("%s%s%s",
+               scrDim(),
+               perkDescription((PerkId)selectedIndex),
+               scrReset());
+
+        moveToTableRow(SHOP_HINT_ROW, shopPadding);
+        printf(SCR_ERASE_EOL);
+        printf("%sKeys: 1-9/A-G buy   Q close%s",
                scrDim(),
                scrReset());
         renderLog(game, shopPadding, terminalWidth);
@@ -1476,7 +1524,7 @@ void renderShop(const Game *game,
                    scrReset());
         }
 
-        printf("%sKeys: 1-5 buy   Q close%s\n",
+        printf("%sKeys: 1-9/A-G buy   Q close%s\n",
                scrDim(),
                scrReset());
         fflush(stdout);
