@@ -17,9 +17,10 @@ Implemented:
 - Roguelike progression: floors, marks, advance menu.
 - Full-screen ASCII table with ANSI styling.
 - Raw terminal input via termios.
-- Twists: per-floor rule modifiers.
+- Twists: 16 floor rule modifiers with anti-farm pressure.
 - Deterministic runs via --seed.
-- Perks and between-floor shop (5 perks).
+- Perks and between-floor shop (16 perks).
+- Dealer turn step-through with optional --fast mode.
 
 Planned:
 - Save and load (XDG).

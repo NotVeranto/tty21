@@ -46,6 +46,3 @@ int rngRange(int minInclusive, int maxInclusive) {
     return minimum + (int)((unsigned long long)randomValue % range);
 }
 
-unsigned int rngGetSeed(void) {
-    return rngSeed;
-}
