@@ -670,8 +670,20 @@ void renderTable(const Game *game, int hideDealerCard) {
     char roundText[64];
     char dealerTotal[32];
     char playerTotal[32];
+    char loanText[64];
 
     initColors();
+
+    loanText[0] = '\0';
+
+    if (game->mode == MODE_ROGUELIKE &&
+        game->loanAmount > 0) {
+        snprintf(loanText,
+                 sizeof(loanText),
+                 "  Loan: %d by F%d",
+                 game->loanAmount,
+                 game->loanDueFloor);
+    }
 
     dealerInfo = getDealerInfo(game->run.dealerId);
     twistInfo = getTwistInfo(game->run.twistId);
@@ -796,23 +808,25 @@ void renderTable(const Game *game, int hideDealerCard) {
         } else if (game->player.handCount == 1) {
             snprintf(statusText,
                      sizeof(statusText),
-                     "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d",
+                     "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d%s",
                      game->run.floor,
                      dealerInfo->name,
                      game->run.marks,
                      game->player.chips,
-                     game->player.bets[displayHandIndex]);
+                     game->player.bets[displayHandIndex],
+                     loanText);
         } else {
             snprintf(statusText,
                      sizeof(statusText),
-                     "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
+                     "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)%s",
                      game->run.floor,
                      dealerInfo->name,
                      game->run.marks,
                      game->player.chips,
                      game->player.bets[displayHandIndex],
                      displayHandIndex + 1,
-                     game->player.handCount);
+                     game->player.handCount,
+                     loanText);
         }
 
         effectiveStatusWidth = terminalWidth - tablePadding;
@@ -853,19 +867,21 @@ void renderTable(const Game *game, int hideDealerCard) {
                 if (game->player.handCount == 1) {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "    Marks: %d    Chips: %d    Bet: %d",
+                             "    Marks: %d    Chips: %d    Bet: %d%s",
                              game->run.marks,
                              game->player.chips,
-                             game->player.bets[displayHandIndex]);
+                             game->player.bets[displayHandIndex],
+                             loanText);
                 } else {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
+                             "    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)%s",
                              game->run.marks,
                              game->player.chips,
                              game->player.bets[displayHandIndex],
                              displayHandIndex + 1,
-                             game->player.handCount);
+                             game->player.handCount,
+                             loanText);
                 }
             }
 
@@ -1022,16 +1038,25 @@ void renderTable(const Game *game, int hideDealerCard) {
         printf(SCR_ERASE_EOL);
 
         if (game->run.extraTwistCount == 0) {
-            snprintf(twistsLine,
-                     sizeof(twistsLine),
-                     "Twist: %s — %s",
-                     twistInfo->name,
-                     twistInfo->description);
+            if (game->run.twistBlocked) {
+                snprintf(twistsLine,
+                         sizeof(twistsLine),
+                         "Twist: %s (blocked) — %s",
+                         twistInfo->name,
+                         twistInfo->description);
+            } else {
+                snprintf(twistsLine,
+                         sizeof(twistsLine),
+                         "Twist: %s — %s",
+                         twistInfo->name,
+                         twistInfo->description);
+            }
         } else {
             len = snprintf(twistsLine,
                            sizeof(twistsLine),
-                           "Twists: %s",
-                           twistInfo->name);
+                           "Twists: %s%s",
+                           twistInfo->name,
+                           game->run.twistBlocked ? " (blocked)" : "");
 
             for (i = 0;
                  i < game->run.extraTwistCount && len < (int)sizeof(twistsLine);
@@ -1201,9 +1226,15 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
     }
 
     if (twistInfo->id != TWIST_NONE) {
-        printf("Twist: %s — %s\n",
-               twistInfo->name,
-               twistInfo->description);
+        if (game->run.twistBlocked) {
+            printf("Twist: %s (blocked) — %s\n",
+                   twistInfo->name,
+                   twistInfo->description);
+        } else {
+            printf("Twist: %s — %s\n",
+                   twistInfo->name,
+                   twistInfo->description);
+        }
     }
 
     if (game->player.handCount > 1) {
@@ -1225,9 +1256,18 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
     }
 
     printf(" | Total value: %d\n", playerValue);
-    printf("Chips: %d | Bet: %d\n",
+    printf("Chips: %d | Bet: %d",
            game->player.chips,
            game->player.bets[displayHandIndex]);
+
+    if (game->mode == MODE_ROGUELIKE &&
+        game->loanAmount > 0) {
+        printf(" | Loan: %d by F%d",
+               game->loanAmount,
+               game->loanDueFloor);
+    }
+
+    printf("\n");
  
     {
         int logIndex;

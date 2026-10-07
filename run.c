@@ -11,6 +11,8 @@ void initRun(Run *run) {
     run->previousTwistId = TWIST_NONE;
     run->extraTwistCount = 0;
     run->roundsOnFloor = 0;
+    run->twistBlocked = 0;
+    run->twistRerolled = 0;
 }
 
 // Returns the minimum bet for a floor.

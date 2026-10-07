@@ -19,6 +19,11 @@
 int twistActive(const Game *game, TwistId id) {
     int i;
 
+    if (game->run.twistBlocked &&
+        id == game->run.twistId) {
+        return 0;
+    }
+
     if (game->run.twistId == id) {
         return 1;
     }
@@ -1164,7 +1169,6 @@ void resolveRound(Game *game) {
                 if (game->player.perkOwned[PERK_DEALERS_FAVOR] &&
                     game->player.perkCharges[PERK_DEALERS_FAVOR] > 0) {
                     game->player.perkCharges[PERK_DEALERS_FAVOR]--;
-                    game->winStreak = 0;
 
                     if (dealerHandCount == 1 &&
                         game->player.handCount == 1) {
@@ -1186,7 +1190,6 @@ void resolveRound(Game *game) {
                     lossAmount = applyLoss(game, baseLoss);
                     lossTotal += lossAmount;
                     handLossTotal += lossAmount;
-                    game->winStreak = 0;
 
                     if (dealerHandCount == 1) {
                         if (game->player.handCount == 1) {
@@ -1249,7 +1252,14 @@ void resolveRound(Game *game) {
                                   game->winStreak : 10;
                 }
 
-                payoutValue = basePayout *
+                payoutValue = basePayout;
+
+                if (game->winStreak >= 3) {
+                    /* Apply the streak bonus before floor fatigue. */
+                    payoutValue *= 2;
+                }
+
+                payoutValue = payoutValue *
                               currentFatigue / 100;
 
                 if (payoutValue > INT_MAX - game->player.chips) {
@@ -1262,7 +1272,6 @@ void resolveRound(Game *game) {
                 payoutTotal += payout;
                 handPayoutTotal += payout;
                 handWon = 1;
-                game->winStreak++;
 
                 if (dealerHandCount == 1) {
                     if (game->player.handCount == 1) {
@@ -1423,7 +1432,14 @@ void resolveRound(Game *game) {
                                   game->winStreak : 10;
                 }
 
-                payoutValue = basePayout *
+                payoutValue = basePayout;
+
+                if (game->winStreak >= 3) {
+                    /* Apply the streak bonus before floor fatigue. */
+                    payoutValue *= 2;
+                }
+
+                payoutValue = payoutValue *
                               currentFatigue / 100;
 
                 if (payoutValue > INT_MAX - game->player.chips) {
@@ -1436,7 +1452,6 @@ void resolveRound(Game *game) {
                 payoutTotal += payout;
                 handPayoutTotal += payout;
                 handWon = 1;
-                game->winStreak++;
 
                 if (dealerHandCount == 1 && game->player.handCount == 1) {
                     snprintf(resultMessage, sizeof(resultMessage),
@@ -1549,11 +1564,33 @@ void resolveRound(Game *game) {
         resultStyle = MSG_PUSH;
     }
 
+    if (resultStyle == MSG_WIN) {
+        game->winStreak++;
+        game->lossStreak = 0;
+
+        if (game->winStreak == 3) {
+            logPush(game,
+                    "Streak 3! Next floor pays double.",
+                    MSG_WIN);
+        }
+    } else if (resultStyle == MSG_LOSS) {
+        game->lossStreak++;
+        game->winStreak = 0;
+    }
+
     logPush(game, resultMessage, resultStyle);
+
+    if (game->lossStreak >= 5) {
+        logPush(game,
+                "Five losses in a row. The pit boss ends your run.",
+                MSG_LOSS);
+        game->state = STATE_QUIT;
+    }
 
     renderTable(game, 0);
 
-    if (game->player.chips == 0) {
+    if (game->state == STATE_QUIT ||
+        game->player.chips == 0) {
         game->state = STATE_QUIT;
     } else if (game->mode == MODE_CLASSIC) {
         game->state = STATE_BET;

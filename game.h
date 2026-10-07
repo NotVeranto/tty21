@@ -70,6 +70,10 @@ struct Game {
     int fastMode;
     int fatigueTier;
     int winStreak;
+    int lossStreak;
+    int loanAmount;        /* chips owed, 0 if no loan */
+    int loanDueFloor;      /* floor by which loan must be repaid */
+    int extraPerkSlots;    /* from marks economy */
     GameLog log;
 };
 

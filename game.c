@@ -34,6 +34,10 @@ void initGame(Game *game, GameMode mode) {
     game->fastMode = 0;
     game->fatigueTier = 0;
     game->winStreak = 0;
+    game->lossStreak = 0;
+    game->loanAmount = 0;
+    game->loanDueFloor = 0;
+    game->extraPerkSlots = 0;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
@@ -99,6 +103,23 @@ void advanceFloor(Game *game) {
     game->run.previousDealerId = game->run.dealerId;
     game->run.previousTwistId = game->run.twistId;
     game->run.floor++;
+
+    if (game->loanAmount > 0 &&
+        game->run.floor >= game->loanDueFloor) {
+        if (game->player.chips >= game->loanAmount) {
+            game->player.chips -= game->loanAmount;
+            logPush(game, "Loan repaid: -75 chips.", MSG_INFO);
+            game->loanAmount = 0;
+            game->loanDueFloor = 0;
+        } else {
+            logPush(game, "Loan defaulted. Run over.", MSG_LOSS);
+            game->state = STATE_QUIT;
+            return;
+        }
+    }
+
+    game->run.twistRerolled = 0;
+    game->run.twistBlocked = 0;
     game->run.roundsOnFloor = 0;
     game->run.extraTwistCount = 0;
     game->fatigueTier = 0;

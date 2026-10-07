@@ -24,26 +24,81 @@ static void dispatchFloorMenuAction(Game *game,
                                     char actionCharacter,
                                     int currentMinBet,
                                     int nextMinBet) {
-
     if ((actionCharacter == 'c' || actionCharacter == 'C') &&
         game->player.chips >= currentMinBet) {
         game->state = STATE_BET;
     } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
                game->player.chips >= nextMinBet) {
         advanceFloor(game);
-        game->state = STATE_BET;
+        if (game->state != STATE_QUIT) {
+            game->state = STATE_BET;
+        }
     } else if (actionCharacter == 's' || actionCharacter == 'S') {
         game->state = STATE_SHOP;
+    } else if ((actionCharacter == 'l' || actionCharacter == 'L') &&
+               game->loanAmount == 0 &&
+               game->player.chips < nextMinBet) {
+        char message[128];
+
+        game->player.chips += 50;
+        game->loanAmount = 75;
+        game->loanDueFloor = game->run.floor + 3;
+        snprintf(message,
+                 sizeof(message),
+                 "Loan taken: +50 chips, repay 75 by floor %d.",
+                 game->loanDueFloor);
+        logPush(game, message, MSG_INFO);
+    } else if ((actionCharacter == 'r' || actionCharacter == 'R') &&
+               game->mode == MODE_ROGUELIKE &&
+               game->run.floor >= 4 &&
+               game->run.twistRerolled == 0 &&
+               game->run.marks >= 30) {
+        game->run.twistId = selectTwistForFloor(game->run.floor,
+                                                TWIST_NONE);
+        game->run.twistRerolled = 1;
+        game->run.marks -= 30;
+        logPush(game, "Twist rerolled.", MSG_INFO);
+    } else if ((actionCharacter == 'b' || actionCharacter == 'B') &&
+               game->mode == MODE_ROGUELIKE &&
+               game->run.floor >= 4 &&
+               game->run.twistBlocked == 0 &&
+               game->run.twistId != TWIST_NONE &&
+               game->run.marks >= 40) {
+        game->run.twistBlocked = 1;
+        game->run.marks -= 40;
+        logPush(game, "Twist blocked this floor.", MSG_INFO);
+    } else if ((actionCharacter == 'k' || actionCharacter == 'K') &&
+               game->mode == MODE_ROGUELIKE &&
+               game->run.floor >= 4 &&
+               game->player.chips >= nextMinBet &&
+               game->run.marks >= 60) {
+        game->run.marks -= 60;
+        advanceFloor(game);
+        if (game->state != STATE_QUIT) {
+            game->state = STATE_BET;
+            logPush(game, "Floor skipped.", MSG_INFO);
+        }
+    } else if ((actionCharacter == 'p' || actionCharacter == 'P') &&
+               game->extraPerkSlots == 0 &&
+               game->run.marks >= 100) {
+        game->run.marks -= 100;
+        game->extraPerkSlots = 1;
+        logPush(game, "Extra perk slot unlocked.", MSG_WIN);
     } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
         game->state = STATE_QUIT;
     }
 }
 
 void floorMenu(Game *game) {
-    MenuItem menuItems[4];
+    MenuItem menuItems[8];
     char continueLabel[128];
     char advanceLabel[128];
     char shopLabel[128];
+    char loanLabel[128];
+    char rerollLabel[128];
+    char blockLabel[128];
+    char skipLabel[128];
+    char perkSlotLabel[128];
     char input[64];
     KeyEvent event;
     int nextMinBet;
@@ -55,6 +110,8 @@ void floorMenu(Game *game) {
     int inputCharacter;
     int menuIndex;
     int rawMode;
+    int itemCount;
+    int loanAvailable;
 
     currentMinBet = getMinBet(game, game->run.floor, game->mode);
 
@@ -67,44 +124,113 @@ void floorMenu(Game *game) {
     }
 
     nextMinBet = getMinBet(game, game->run.floor + 1, game->mode);
-    disabledMask = 0;
-
-    if (game->player.chips < nextMinBet) {
-        disabledMask |= 1 << 1;
-    }
-
-    snprintf(continueLabel,
-             sizeof(continueLabel),
-             "Continue on floor %d (round %d, fatigue %d%%)",
-             game->run.floor,
-             game->run.roundsOnFloor,
-             fatiguePercent(game->run.roundsOnFloor));
-    snprintf(advanceLabel,
-             sizeof(advanceLabel),
-             "Advance to floor %d (earn marks, reset fatigue)",
-             game->run.floor + 1);
-    snprintf(shopLabel,
-             sizeof(shopLabel),
-             "Shop (%d marks)",
-             game->run.marks);
-
-    menuItems[0].hotkey = 'c';
-    menuItems[0].label = continueLabel;
-    menuItems[1].hotkey = 'a';
-    menuItems[1].label = advanceLabel;
-    menuItems[2].hotkey = 's';
-    menuItems[2].label = shopLabel;
-    menuItems[3].hotkey = 'q';
-    menuItems[3].label = "Quit run";
-
     selectedIndex = 0;
 
     while (game->state == STATE_MENU) {
+        disabledMask = game->player.chips < nextMinBet ? 1 << 1 : 0;
+
+        snprintf(continueLabel,
+                 sizeof(continueLabel),
+                 "Continue on floor %d (round %d, fatigue %d%%)",
+                 game->run.floor,
+                 game->run.roundsOnFloor,
+                 fatiguePercent(game->run.roundsOnFloor));
+        snprintf(advanceLabel,
+                 sizeof(advanceLabel),
+                 "Advance to floor %d (earn marks, reset fatigue)",
+                 game->run.floor + 1);
+        snprintf(shopLabel,
+                 sizeof(shopLabel),
+                 "Shop (%d marks)",
+                 game->run.marks);
+        snprintf(loanLabel,
+                 sizeof(loanLabel),
+                 "Take a loan (50 chips, repay 75 by floor %d)",
+                 game->run.floor + 3);
+        snprintf(rerollLabel,
+                 sizeof(rerollLabel),
+                 "Reroll twist (30 marks)");
+        snprintf(blockLabel,
+                 sizeof(blockLabel),
+                 "Block twist (40 marks)");
+        snprintf(skipLabel,
+                 sizeof(skipLabel),
+                 "Skip floor (60 marks)");
+        snprintf(perkSlotLabel,
+                 sizeof(perkSlotLabel),
+                 "Buy extra perk slot (100 marks)");
+
+        itemCount = 0;
+
+        menuItems[itemCount].hotkey = 'c';
+        menuItems[itemCount].label = continueLabel;
+        itemCount++;
+
+        menuItems[itemCount].hotkey = 'a';
+        menuItems[itemCount].label = advanceLabel;
+        itemCount++;
+
+        menuItems[itemCount].hotkey = 's';
+        menuItems[itemCount].label = shopLabel;
+        itemCount++;
+
+        loanAvailable = game->loanAmount == 0 &&
+                        game->player.chips < nextMinBet;
+
+        if (loanAvailable) {
+            menuItems[itemCount].hotkey = 'l';
+            menuItems[itemCount].label = loanLabel;
+            itemCount++;
+        }
+
+        if (game->mode == MODE_ROGUELIKE &&
+            game->run.floor >= 4 &&
+            game->run.twistRerolled == 0 &&
+            game->run.marks >= 30) {
+            menuItems[itemCount].hotkey = 'r';
+            menuItems[itemCount].label = rerollLabel;
+            itemCount++;
+        }
+
+        if (game->mode == MODE_ROGUELIKE &&
+            game->run.floor >= 4 &&
+            game->run.twistBlocked == 0 &&
+            game->run.twistId != TWIST_NONE &&
+            game->run.marks >= 40) {
+            menuItems[itemCount].hotkey = 'b';
+            menuItems[itemCount].label = blockLabel;
+            itemCount++;
+        }
+
+        if (game->mode == MODE_ROGUELIKE &&
+            game->run.floor >= 4 &&
+            game->player.chips >= nextMinBet &&
+            game->run.marks >= 60) {
+            menuItems[itemCount].hotkey = 'k';
+            menuItems[itemCount].label = skipLabel;
+            itemCount++;
+        }
+
+        if (game->extraPerkSlots == 0 &&
+            game->run.marks >= 100) {
+            menuItems[itemCount].hotkey = 'p';
+            menuItems[itemCount].label = perkSlotLabel;
+            itemCount++;
+        }
+
+        menuItems[itemCount].hotkey = 'q';
+        menuItems[itemCount].label = "Quit run";
+        itemCount++;
+
+        if (selectedIndex >= itemCount) {
+            selectedIndex = itemCount - 1;
+        }
+
         rawMode = inputIsRaw();
 
         renderMenu("What's next?",
                    menuItems,
-                   4,
+                   itemCount,
                    disabledMask,
                    selectedIndex,
                    ROW_MENU_START);
@@ -114,12 +240,12 @@ void floorMenu(Game *game) {
 
             if (event.type == KEY_UP) {
                 selectedIndex = moveSelection(selectedIndex,
-                                              4,
+                                              itemCount,
                                               disabledMask,
                                               -1);
             } else if (event.type == KEY_DOWN) {
                 selectedIndex = moveSelection(selectedIndex,
-                                              4,
+                                              itemCount,
                                               disabledMask,
                                               1);
             } else if (event.type == KEY_LEFT ||
@@ -131,7 +257,7 @@ void floorMenu(Game *game) {
                                         currentMinBet,
                                         nextMinBet);
             } else if (event.type == KEY_CHAR) {
-                for (menuIndex = 0; menuIndex < 4; menuIndex++) {
+                for (menuIndex = 0; menuIndex < itemCount; menuIndex++) {
                     if (event.ch == menuItems[menuIndex].hotkey ||
                         tolower((unsigned char)event.ch) ==
                         menuItems[menuIndex].hotkey) {
@@ -172,7 +298,7 @@ void floorMenu(Game *game) {
                 }
 
                 if (actionCharacter != -1) {
-                    for (menuIndex = 0; menuIndex < 4; menuIndex++) {
+                    for (menuIndex = 0; menuIndex < itemCount; menuIndex++) {
                         if (actionCharacter == menuItems[menuIndex].hotkey ||
                             tolower((unsigned char)actionCharacter) ==
                             menuItems[menuIndex].hotkey) {
