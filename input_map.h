@@ -11,6 +11,7 @@ typedef enum {
 } ActionId;
 
 ActionId mapPlayerKey(char ch);
+int actionToChar(ActionId action);
 int moveSelection(int selectedIndex,
                    int itemCount,
                    int skippedMask,

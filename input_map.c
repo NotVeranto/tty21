@@ -38,3 +38,14 @@ ActionId mapPlayerKey(char ch) {
     if (ch == 'q' || ch == 'Q') return ACTION_QUIT;
     return (ActionId)-1;
 }
+
+
+int actionToChar(ActionId action) {
+    if (action == ACTION_HIT) return 'h';
+    if (action == ACTION_STAND) return 's';
+    if (action == ACTION_DOUBLE) return 'd';
+    if (action == ACTION_SPLIT) return 'p';
+    if (action == ACTION_PEEK) return 'k';
+    if (action == ACTION_QUIT) return 'q';
+    return -1;
+}

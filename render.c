@@ -999,8 +999,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         if (game->state == STATE_BET) {
             hintText = "Type a bet and press Enter.";
         } else if (game->state == STATE_PLAYER_TURN) {
-            hintText =
-                "Keys: h hit   s stand   d double   p split   k peek   q quit";
+            hintText = "";
         } else if (game->state == STATE_MENU) {
             hintText = "Keys: C continue   A advance   S shop   Q quit";
         } else {
@@ -1037,7 +1036,8 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_TWIST, tablePadding);
         printf(SCR_ERASE_EOL);
 
-        if (game->run.extraTwistCount == 0) {
+        if (game->mode == MODE_ROGUELIKE &&
+            game->run.extraTwistCount == 0) {
             if (game->run.twistBlocked) {
                 snprintf(twistsLine,
                          sizeof(twistsLine),
@@ -1051,7 +1051,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                          twistInfo->name,
                          twistInfo->description);
             }
-        } else {
+        } else if (game->mode == MODE_ROGUELIKE) {
             len = snprintf(twistsLine,
                            sizeof(twistsLine),
                            "Twists: %s%s",
@@ -1071,10 +1071,14 @@ void renderTable(const Game *game, int hideDealerCard) {
             }
         }
 
-        printf("%s%s%s",
-               scrDim(),
-               twistsLine,
-               scrReset());
+        if (game->mode == MODE_ROGUELIKE) {
+            printf("%s%s%s",
+                   scrDim(),
+                   twistsLine,
+                   scrReset());
+        } else {
+            printf(SCR_ERASE_EOL);
+        }
 
         moveToTableRow(ROW_ORACLE, tablePadding);
         printf(SCR_ERASE_EOL);
@@ -1657,6 +1661,285 @@ void renderMessage(const char *msg, int row, MessageStyle style) {
     }
 }
 
+static void printHelpColumnLine(int row,
+                               int column,
+                               int width,
+                               const char *text) {
+    int length;
+
+    length = (int)strlen(text);
+
+    if (length > width) {
+        length = width;
+    }
+
+    printf(SCR_CURSOR, row, column);
+    printf(SCR_ERASE_EOL);
+    printf("%.*s", length, text);
+}
+
+void renderHelpOverlay(const Game *game) {
+    const DealerInfo *dealerInfo;
+    const TwistInfo *twistInfo;
+    int terminalWidth;
+    int terminalHeight;
+    int leftColumn;
+    int rightColumn;
+    int columnWidth;
+    int leftRow;
+    int rightRow;
+    int activeTwistCount;
+    int ownedPerkCount;
+    int index;
+    int bottomRow;
+    char line[256];
+
+    getTerminalSize(&terminalWidth, &terminalHeight);
+    initColors();
+
+    if (isatty(STDOUT_FILENO) &&
+        renderTerminalSizeOk(&terminalWidth, &terminalHeight)) {
+        dealerInfo = getDealerInfo(game->run.dealerId);
+        columnWidth = terminalWidth / 2 - 4;
+
+        if (columnWidth < 24) {
+            columnWidth = 24;
+        }
+
+        leftColumn = 2;
+        rightColumn = terminalWidth / 2 + 2;
+        leftRow = 4;
+        rightRow = 4;
+
+        renderHideCursor();
+        printf("%s%s", SCR_CLEAR, SCR_HOME);
+        printf("%sTTY21 — HELP%s\n",
+               scrBold(),
+               scrReset());
+
+        printHelpColumnLine(3,
+                             1,
+                             terminalWidth - 2,
+                             "============================================================");
+
+        printf(SCR_CURSOR, leftRow, leftColumn);
+        printf("%sDealer:%s  %s",
+               scrDim(),
+               scrReset(),
+               dealerInfo->name);
+        leftRow++;
+
+        if (dealerInfo->rule1 != NULL) {
+            snprintf(line,
+                     sizeof(line),
+                     "  %s",
+                     dealerInfo->rule1);
+            printHelpColumnLine(leftRow,
+                                leftColumn,
+                                columnWidth,
+                                line);
+            leftRow++;
+        }
+
+        if (dealerInfo->rule2 != NULL) {
+            snprintf(line,
+                     sizeof(line),
+                     "  %s",
+                     dealerInfo->rule2);
+            printHelpColumnLine(leftRow,
+                                leftColumn,
+                                columnWidth,
+                                line);
+            leftRow++;
+        }
+
+        activeTwistCount = 0;
+
+        if (twistActive(game, game->run.twistId) &&
+            game->run.twistId != TWIST_NONE) {
+            activeTwistCount++;
+        }
+
+        activeTwistCount += game->run.extraTwistCount;
+
+        printf(SCR_CURSOR, leftRow + 1, leftColumn);
+        printf("%sTwists (%d active):%s",
+               scrDim(),
+               activeTwistCount,
+               scrReset());
+        leftRow += 2;
+
+        if (activeTwistCount == 0) {
+            printHelpColumnLine(leftRow,
+                                leftColumn,
+                                columnWidth,
+                                "  None");
+            leftRow++;
+        } else {
+            if (twistActive(game, game->run.twistId) &&
+                game->run.twistId != TWIST_NONE) {
+                twistInfo = getTwistInfo(game->run.twistId);
+                snprintf(line,
+                         sizeof(line),
+                         "  - %s: %s",
+                         twistInfo->name,
+                         twistInfo->description);
+                printHelpColumnLine(leftRow,
+                                    leftColumn,
+                                    columnWidth,
+                                    line);
+                leftRow++;
+            }
+
+            for (index = 0;
+                 index < game->run.extraTwistCount;
+                 index++) {
+                twistInfo = getTwistInfo(game->run.extraTwists[index]);
+                snprintf(line,
+                         sizeof(line),
+                         "  - %s: %s",
+                         twistInfo->name,
+                         twistInfo->description);
+                printHelpColumnLine(leftRow,
+                                    leftColumn,
+                                    columnWidth,
+                                    line);
+                leftRow++;
+            }
+        }
+
+        printf(SCR_CURSOR, rightRow, rightColumn);
+        printf("%sPerks owned:%s",
+               scrDim(),
+               scrReset());
+        rightRow += 2;
+
+        ownedPerkCount = 0;
+
+        for (index = 0; index < PERK_COUNT; index++) {
+            if (game->player.perkOwned[index]) {
+                snprintf(line,
+                         sizeof(line),
+                         "  - %s: %s",
+                         perkName((PerkId)index),
+                         perkDescription((PerkId)index));
+                printHelpColumnLine(rightRow,
+                                    rightColumn,
+                                    columnWidth,
+                                    line);
+                rightRow++;
+                ownedPerkCount++;
+            }
+        }
+
+        if (ownedPerkCount == 0) {
+            printHelpColumnLine(rightRow,
+                                rightColumn,
+                                columnWidth,
+                                "  None");
+            rightRow++;
+        }
+
+        bottomRow = leftRow > rightRow ? leftRow : rightRow;
+        bottomRow++;
+
+        printf(SCR_CURSOR, bottomRow, leftColumn);
+        printf("Floor: %d    Marks: %d    Chips: %d    Bet: %d",
+               game->run.floor,
+               game->run.marks,
+               game->player.chips,
+               game->player.bets[game->player.activeHand]);
+        bottomRow++;
+
+        printf(SCR_CURSOR, bottomRow, leftColumn);
+        printf("Min bet: %d    Max bet: %d",
+               getMinBet(game, game->run.floor, game->mode),
+               game->player.chips);
+        bottomRow += 2;
+
+        printf(SCR_CURSOR, bottomRow, leftColumn);
+        printf("%sPress any key to return.%s",
+               scrDim(),
+               scrReset());
+        fflush(stdout);
+        return;
+    }
+
+    if (!isatty(STDOUT_FILENO)) {
+        dealerInfo = getDealerInfo(game->run.dealerId);
+        printf("TTY21 - HELP\n");
+        printf("============\n\n");
+        printf("Dealer: %s\n", dealerInfo->name);
+
+        if (dealerInfo->rule1 != NULL) {
+            printf("  %s\n", dealerInfo->rule1);
+        }
+
+        if (dealerInfo->rule2 != NULL) {
+            printf("  %s\n", dealerInfo->rule2);
+        }
+
+        activeTwistCount = 0;
+
+        if (twistActive(game, game->run.twistId) &&
+            game->run.twistId != TWIST_NONE) {
+            activeTwistCount++;
+        }
+
+        activeTwistCount += game->run.extraTwistCount;
+
+        printf("\nTwists (%d active):\n", activeTwistCount);
+
+        if (activeTwistCount == 0) {
+            printf("  None\n");
+        } else {
+            if (twistActive(game, game->run.twistId) &&
+                game->run.twistId != TWIST_NONE) {
+                twistInfo = getTwistInfo(game->run.twistId);
+                printf("  - %s: %s\n",
+                       twistInfo->name,
+                       twistInfo->description);
+            }
+
+            for (index = 0;
+                 index < game->run.extraTwistCount;
+                 index++) {
+                twistInfo = getTwistInfo(game->run.extraTwists[index]);
+                printf("  - %s: %s\n",
+                       twistInfo->name,
+                       twistInfo->description);
+            }
+        }
+
+        printf("\nPerks owned:\n");
+        ownedPerkCount = 0;
+
+        for (index = 0; index < PERK_COUNT; index++) {
+            if (game->player.perkOwned[index]) {
+                printf("  - %s: %s\n",
+                       perkName((PerkId)index),
+                       perkDescription((PerkId)index));
+                ownedPerkCount++;
+            }
+        }
+
+        if (ownedPerkCount == 0) {
+            printf("  None\n");
+        }
+
+        printf("\nFloor: %d    Marks: %d    Chips: %d    Bet: %d\n",
+               game->run.floor,
+               game->run.marks,
+               game->player.chips,
+               game->player.bets[game->player.activeHand]);
+        printf("Min bet: %d    Max bet: %d\n",
+               getMinBet(game, game->run.floor, game->mode),
+               game->player.chips);
+        printf("\nPress any key to return.\n");
+        fflush(stdout);
+    }
+}
+
 // Renders the horizontal player action bar.
 void renderActionBar(const ActionId *actions,
                      int actionCount,
@@ -1694,24 +1977,31 @@ void renderActionBar(const ActionId *actions,
 
     printf(SCR_CURSOR, row, tablePadding + 1);
     printf(SCR_ERASE_EOL);
-    printf("%s", scrDim());
-
     for (actionIndex = 0; actionIndex < actionCount; actionIndex++) {
         if (actionIndex > 0) {
             printf("   ");
         }
 
         if (actionIndex == selectedIndex) {
-            printf("%s> %s%s",
+            printf("%s> %s[%c]%s %s%s%s",
+                   scrBold(),
+                   scrDim(),
+                   actionToChar(actions[actionIndex]),
+                   scrReset(),
                    scrBold(),
                    ACTION_NAMES[actions[actionIndex]],
-                   scrDim());
+                   scrReset());
         } else {
-            printf("  %s", ACTION_NAMES[actions[actionIndex]]);
+            printf("  %s[%c]%s %s",
+                   scrDim(),
+                   actionToChar(actions[actionIndex]),
+                   scrReset(),
+                   ACTION_NAMES[actions[actionIndex]]);
         }
     }
 
-    printf("  ");
-    printf("%s", scrReset());
+    printf("   %s? help%s",
+           scrDim(),
+           scrReset());
     fflush(stdout);
 }

@@ -52,6 +52,7 @@ In-game (during the player's turn):
 - `p` — split (two cards of the same rank)
 - `k` — peek at dealer hole card (requires Peek perk)
 - `q` — quit the current run
+- `?` — show help overlay (active twists, dealer rule, owned perks, current limits)
 - Arrow keys + Enter — navigate and confirm menus and player actions
 - `Ctrl+C` — force quit, terminal state restored
 

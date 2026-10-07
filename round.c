@@ -817,6 +817,17 @@ void playerTurn(Game *game) {
 
             event = readKey();
 
+            if (event.type == KEY_CHAR && event.ch == '?') {
+                renderHelpOverlay(game);
+                (void)readKey();
+                renderTable(game, 1);
+                renderActionBar(actions,
+                                actionCount,
+                                actionIndex,
+                                ROW_PROMPT);
+                continue;
+            }
+
             if (event.type == KEY_LEFT) {
                 actionIndex = moveSelection(actionIndex,
                                             actionCount,
@@ -877,6 +888,16 @@ void playerTurn(Game *game) {
 
                 while ((inputCharacter = getchar()) != '\n' &&
                        inputCharacter != EOF) {
+                }
+
+                if (event.type == KEY_CHAR && event.ch == '?') {
+                    renderHelpOverlay(game);
+                    renderTable(game, 1);
+                    renderActionBar(actions,
+                                    actionCount,
+                                    actionIndex,
+                                    ROW_PROMPT);
+                    continue;
                 }
 
                 if (event.type == KEY_CHAR) {

@@ -54,6 +54,7 @@ void renderActionBar(const ActionId *actions,
                      int actionCount,
                      int selectedIndex,
                      int row);
+void renderHelpOverlay(const Game *game);
 void renderMessage(const char *msg, int row, MessageStyle style);
 void renderMenu(const char *title,
                 const MenuItem *items,
