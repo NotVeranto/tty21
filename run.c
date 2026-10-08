@@ -37,5 +37,7 @@ int getMinBet(const Game *game, int floor, GameMode mode) {
         base *= 2;
     }
 
+    base *= game->minBetMultiplier;
+
     return base;
 }

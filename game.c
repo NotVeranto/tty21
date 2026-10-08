@@ -2,6 +2,7 @@
 #include "round.h"
 #include "render.h"
 #include "menu.h"
+#include "rng.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -38,6 +39,8 @@ void initGame(Game *game, GameMode mode) {
     game->loanAmount = 0;
     game->loanDueFloor = 0;
     game->extraPerkSlots = 0;
+    game->freePeekReady = 0;
+    game->minBetMultiplier = 1;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
@@ -155,6 +158,45 @@ void advanceFloor(Game *game) {
                  game->run.floor >= 4 &&
                  getTwistInfo(game->run.twistId)->category == TWIST_CAT_HOSTILE &&
                  attempts < 10);
+    }
+
+    game->freePeekReady = 0;
+    game->minBetMultiplier = 1;
+
+    if (rngRange(0, 99) < 25) {
+        int eventId;
+
+        eventId = rngRange(0, 3);
+
+        if (eventId == 0) {
+            game->run.marks += 25;
+            logPush(game,
+                    "Floor event: Mark Cache (+25 marks).",
+                    MSG_INFO);
+        } else if (eventId == 1) {
+            game->player.perkCharges[PERK_PEEK] = 1;
+
+            if (game->player.perkOwned[PERK_PEEK]) {
+                logPush(game,
+                        "Floor event: Free Peek (charge refilled).",
+                        MSG_INFO);
+            } else {
+                game->freePeekReady = 1;
+                logPush(game,
+                        "Floor event: Free Peek (one free peek this floor).",
+                        MSG_INFO);
+            }
+        } else if (eventId == 2) {
+            game->run.twistBlocked = 1;
+            logPush(game,
+                    "Floor event: Dealer Lapse (twist forgotten).",
+                    MSG_INFO);
+        } else {
+            game->minBetMultiplier = 2;
+            logPush(game,
+                    "Floor event: Tight Table (minimum bet doubled).",
+                    MSG_INFO);
+        }
     }
 
     if (game->player.perkOwned[PERK_BANKROLL]) {

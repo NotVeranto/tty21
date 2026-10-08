@@ -22,6 +22,7 @@ void initDeck(Deck *deck) {
         for (rankIndex = ACE; rankIndex <= KING; rankIndex++) {
             deck->cards[cardIndex].suit = (Suit)suitIndex;
             deck->cards[cardIndex].rank = (Rank)rankIndex;
+            deck->cards[cardIndex].cursed = CURSED_NONE;
             cardIndex++;
         }
     }

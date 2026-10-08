@@ -26,9 +26,17 @@ typedef enum {
     KING
 } Rank;
 
+typedef enum {
+    CURSED_NONE = 0,
+    CURSED_BLEED,     /* -1 chip while held */
+    CURSED_FROST,     /* -2 to hand value while held */
+    CURSED_ECHO       /* on stand, 10% chance to redraw */
+} CurseId;
+
 typedef struct {
     Suit suit;
     Rank rank;
+    int cursed;   /* 0 = normal, 1..N = cursed variant */
 } Card;
 
 typedef struct {

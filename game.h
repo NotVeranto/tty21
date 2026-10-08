@@ -74,6 +74,8 @@ struct Game {
     int loanAmount;        /* chips owed, 0 if no loan */
     int loanDueFloor;      /* floor by which loan must be repaid */
     int extraPerkSlots;    /* from marks economy */
+    int freePeekReady;
+    int minBetMultiplier;
     GameLog log;
 };
 

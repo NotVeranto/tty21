@@ -126,15 +126,38 @@ int fatiguePercent(int roundsOnFloor) {
     return 30;
 }
 
+static const char *CURSE_NAMES[] = {
+    "None",
+    "Bleed",
+    "Frost",
+    "Echo"
+};
+
 static void drawCard(Game *game, Hand *hand) {
+    int previousCount;
+    CurseId curseId;
+    char message[64];
+
     if (game->deck.top >= DECK_SIZE) {
         initDeck(&game->deck);
         shuffleDeck(&game->deck);
         logPush(game, "Deck reshuffled.", MSG_INFO);
     }
 
+    previousCount = hand->count;
     addCardToHand(hand, &game->deck.cards[game->deck.top]);
     game->deck.top++;
+
+    if (hand->count > previousCount &&
+        rngRange(0, 99) < 3) {
+        curseId = (CurseId)rngRange(1, 3);
+        hand->cards[hand->count - 1].cursed = curseId;
+        snprintf(message,
+                 sizeof(message),
+                 "Cursed card: %s.",
+                 CURSE_NAMES[curseId]);
+        logPush(game, message, MSG_INFO);
+    }
 }
 
 static void redrawFirstPlayerCard(Game *game, int requireHighCard) {
@@ -204,6 +227,7 @@ static void resetPlayerHandToEleven(Game *game) {
     resetHand(&game->player.hands[game->player.activeHand]);
     recoveryCard.suit = HEARTS;
     recoveryCard.rank = ACE;
+    recoveryCard.cursed = CURSED_NONE;
     addCardToHand(&game->player.hands[game->player.activeHand], &recoveryCard);
     game->player.hands[game->player.activeHand].value = 11;
 }
@@ -477,8 +501,9 @@ static int buildPlayerActions(const Game *game, ActionId *actions) {
         actions[actionCount++] = ACTION_SPLIT;
     }
 
-    if (game->player.perkOwned[PERK_PEEK] &&
-        game->player.perkCharges[PERK_PEEK] > 0) {
+    if ((game->player.perkOwned[PERK_PEEK] &&
+         game->player.perkCharges[PERK_PEEK] > 0) ||
+        game->freePeekReady) {
         actions[actionCount++] = ACTION_PEEK;
     }
 
@@ -529,14 +554,54 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             logPush(game,
                     "Sticky Hands: cannot stand below 15.",
                     MSG_DEFAULT);
-        } else {
-            char msg[64];
+        } else if (game->player.hands[game->player.activeHand].count > 0) {
+            int hasEcho;
+            int cardIndex;
 
-            snprintf(msg, sizeof(msg),
-                     "Stand on %d.",
-                     calculatePlayerHandValue(game));
-            logPush(game, msg, MSG_ACTION);
-            advanceActiveHand(game);
+            hasEcho = 0;
+
+            for (cardIndex = 0;
+                 cardIndex < game->player.hands[game->player.activeHand].count;
+                 cardIndex++) {
+                if (game->player.hands[game->player.activeHand]
+                        .cards[cardIndex].cursed == CURSED_ECHO) {
+                    hasEcho = 1;
+                }
+            }
+
+            if (hasEcho && rngRange(0, 99) < 10) {
+                drawCard(game,
+                         &game->player.hands[game->player.activeHand]);
+                logPush(game,
+                        "Echo triggers! Extra card drawn.",
+                        MSG_INFO);
+
+                value = calculatePlayerHandValue(game);
+
+                if (value > 21) {
+                    if (game->player.perkOwned[PERK_SECOND_WIND] &&
+                        game->player.perkCharges[PERK_SECOND_WIND] > 0) {
+                        game->player.perkCharges[PERK_SECOND_WIND]--;
+                        resetPlayerHandToEleven(game);
+                        logPush(game,
+                                "Second Wind! Hand reset to 11.",
+                                MSG_WIN);
+                    } else {
+                        advanceActiveHand(game);
+                    }
+                } else if (value == 21) {
+                    advanceActiveHand(game);
+                }
+            } else {
+                char msg[64];
+
+                snprintf(msg, sizeof(msg),
+                         "Stand on %d.",
+                         calculatePlayerHandValue(game));
+                logPush(game, msg, MSG_ACTION);
+                advanceActiveHand(game);
+            }
+
             renderTable(game, game->state == STATE_PLAYER_TURN);
         }
     } else if (action == ACTION_DOUBLE) {
@@ -574,11 +639,14 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             splitHand(game);
         }
     } else if (action == ACTION_PEEK) {
-        if (!game->player.perkOwned[PERK_PEEK]) {
+        if (!game->player.perkOwned[PERK_PEEK] &&
+            !game->freePeekReady) {
             logPush(game,
                     "You do not own Peek.",
                     MSG_DEFAULT);
-        } else if (game->player.perkCharges[PERK_PEEK] <= 0) {
+        } else if (game->player.perkOwned[PERK_PEEK] &&
+                   game->player.perkCharges[PERK_PEEK] <= 0 &&
+                   !game->freePeekReady) {
             logPush(game,
                     "Peek already used this floor.",
                     MSG_DEFAULT);
@@ -587,7 +655,17 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                     "Peek already used this round.",
                     MSG_DEFAULT);
         } else {
-            game->player.perkCharges[PERK_PEEK]--;
+            if (game->player.perkOwned[PERK_PEEK] &&
+                game->player.perkCharges[PERK_PEEK] > 0) {
+                game->player.perkCharges[PERK_PEEK]--;
+            } else {
+                game->player.perkCharges[PERK_PEEK] = 0;
+            }
+
+            if (game->freePeekReady) {
+                game->freePeekReady = 0;
+            }
+
             game->peekActive = 1;
             logPush(game,
                     "Peek: hole card revealed.",
@@ -597,6 +675,21 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
     } else if (action == ACTION_QUIT) {
         game->state = STATE_QUIT;
     }
+}
+
+static int countCursedFrost(const Hand *hand) {
+    int count;
+    int cardIndex;
+
+    count = 0;
+
+    for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
+        if (hand->cards[cardIndex].cursed == CURSED_FROST) {
+            count++;
+        }
+    }
+
+    return count;
 }
 
 static int calculateHandValueAcesLow(const Hand *hand) {
@@ -632,24 +725,33 @@ int calculateDealerHandValue(const Game *game,
 
 int calculatePlayerHandValue(const Game *game) {
     int totalValue;
-    int cardIndex;
+    int frostCount;
 
     if (twistActive(game, TWIST_ACES_LOW)) {
-        return calculateHandValueAcesLow(
+        totalValue = calculateHandValueAcesLow(
             &game->player.hands[game->player.activeHand]);
+    } else if (!game->player.perkOwned[PERK_ACE_HIGH]) {
+        totalValue = game->player.hands[game->player.activeHand].value;
+    } else {
+        int cardIndex;
+
+        totalValue = 0;
+
+        for (cardIndex = 0;
+             cardIndex < game->player.hands[game->player.activeHand].count;
+             cardIndex++) {
+            totalValue +=
+                getCardValue(&game->player.hands[game->player.activeHand]
+                                 .cards[cardIndex]);
+        }
     }
 
-    if (!game->player.perkOwned[PERK_ACE_HIGH]) {
-        return game->player.hands[game->player.activeHand].value;
-    }
+    frostCount = countCursedFrost(
+        &game->player.hands[game->player.activeHand]);
+    totalValue -= frostCount * 2;
 
-    totalValue = 0;
-
-    for (cardIndex = 0;
-         cardIndex < game->player.hands[game->player.activeHand].count;
-         cardIndex++) {
-        totalValue +=
-            getCardValue(&game->player.hands[game->player.activeHand].cards[cardIndex]);
+    if (totalValue < 0) {
+        totalValue = 0;
     }
 
     return totalValue;
@@ -658,21 +760,33 @@ int calculatePlayerHandValue(const Game *game) {
 int calculatePlayerHandValueForIndex(const Game *game,
                                      int handIndex) {
     int totalValue;
-    int cardIndex;
+    int frostCount;
 
     if (twistActive(game, TWIST_ACES_LOW)) {
-        return calculateHandValueAcesLow(
+        totalValue = calculateHandValueAcesLow(
             &game->player.hands[handIndex]);
+    } else if (!game->player.perkOwned[PERK_ACE_HIGH]) {
+        totalValue = game->player.hands[handIndex].value;
+    } else {
+        int cardIndex;
+
+        totalValue = 0;
+
+        for (cardIndex = 0;
+             cardIndex < game->player.hands[handIndex].count;
+             cardIndex++) {
+            totalValue +=
+                getCardValue(&game->player.hands[handIndex]
+                                 .cards[cardIndex]);
+        }
     }
 
-    if (!game->player.perkOwned[PERK_ACE_HIGH]) {
-        return game->player.hands[handIndex].value;
-    }
+    frostCount = countCursedFrost(
+        &game->player.hands[handIndex]);
+    totalValue -= frostCount * 2;
 
-    totalValue = 0;
-
-    for (cardIndex = 0; cardIndex < game->player.hands[handIndex].count; cardIndex++) {
-        totalValue += getCardValue(&game->player.hands[handIndex].cards[cardIndex]);
+    if (totalValue < 0) {
+        totalValue = 0;
     }
 
     return totalValue;
@@ -1106,6 +1220,52 @@ void resolveRound(Game *game) {
             dealerValues[dealerHandIndex] == 21;
     }
 
+    {
+        int bleedCount;
+        int playerCardIndex;
+
+        bleedCount = 0;
+
+        for (handIndex = 0;
+             handIndex < game->player.handCount;
+             handIndex++) {
+            for (playerCardIndex = 0;
+                 playerCardIndex < game->player.hands[handIndex].count;
+                 playerCardIndex++) {
+                if (game->player.hands[handIndex]
+                        .cards[playerCardIndex].cursed == CURSED_BLEED) {
+                    bleedCount++;
+                }
+            }
+        }
+
+        if (bleedCount > 0) {
+            int bleedLoss;
+
+            bleedLoss = bleedCount;
+
+            if (bleedLoss > game->player.chips) {
+                bleedLoss = game->player.chips;
+            }
+
+            game->player.chips -= bleedLoss;
+
+            if (game->player.chips < 0) {
+                game->player.chips = 0;
+            }
+
+            {
+                char bleedMessage[64];
+
+                snprintf(bleedMessage,
+                         sizeof(bleedMessage),
+                         "Bleed: -%d chips.",
+                         bleedCount);
+                logPush(game, bleedMessage, MSG_LOSS);
+            }
+        }
+    }
+
     payoutTotal = 0;
     lossTotal = 0;
     greedAwarded = 0;
@@ -1190,6 +1350,7 @@ void resolveRound(Game *game) {
                 if (game->player.perkOwned[PERK_DEALERS_FAVOR] &&
                     game->player.perkCharges[PERK_DEALERS_FAVOR] > 0) {
                     game->player.perkCharges[PERK_DEALERS_FAVOR]--;
+                    game->winStreak = 0;
 
                     if (dealerHandCount == 1 &&
                         game->player.handCount == 1) {
@@ -1591,7 +1752,7 @@ void resolveRound(Game *game) {
 
         if (game->winStreak == 3) {
             logPush(game,
-                    "Streak 3! Next floor pays double.",
+                    "Streak 3! Wins now pay double.",
                     MSG_WIN);
         }
     } else if (resultStyle == MSG_LOSS) {

@@ -1750,7 +1750,7 @@ void renderHelpOverlay(const Game *game) {
         terminalHeight >= 20) {
         dealerInfo = getDealerInfo(game->run.dealerId);
         showBox = terminalWidth >= 70;
-        helpTitle = "TTY21 — HELP";
+        helpTitle = "TTY21 - HELP";
 
         if (showBox) {
             boxWidth = terminalWidth - 8;
