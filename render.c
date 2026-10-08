@@ -1036,46 +1036,92 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_TWIST, tablePadding);
         printf(SCR_ERASE_EOL);
 
-        if (game->mode == MODE_ROGUELIKE &&
-            game->run.extraTwistCount == 0) {
-            if (game->run.twistBlocked) {
-                snprintf(twistsLine,
-                         sizeof(twistsLine),
-                         "Twist: %s (blocked) — %s",
-                         twistInfo->name,
-                         twistInfo->description);
-            } else {
-                snprintf(twistsLine,
-                         sizeof(twistsLine),
-                         "Twist: %s — %s",
-                         twistInfo->name,
-                         twistInfo->description);
-            }
-        } else if (game->mode == MODE_ROGUELIKE) {
-            len = snprintf(twistsLine,
-                           sizeof(twistsLine),
-                           "Twists: %s%s",
-                           twistInfo->name,
-                           game->run.twistBlocked ? " (blocked)" : "");
-
-            for (i = 0;
-                 i < game->run.extraTwistCount && len < (int)sizeof(twistsLine);
-                 i++) {
-                const TwistInfo *extraInfo;
-
-                extraInfo = getTwistInfo(game->run.extraTwists[i]);
-                len += snprintf(twistsLine + len,
-                                sizeof(twistsLine) - (size_t)len,
-                                " | %s",
-                                extraInfo->name);
-            }
-        }
-
         if (game->mode == MODE_ROGUELIKE) {
-            printf("%s%s%s",
-                   scrDim(),
-                   twistsLine,
-                   scrReset());
+            int showPrimary;
+            int showExtras;
+            int showBlockedPrimary;
+            int hasTwistName;
+
+            showPrimary = game->run.twistId != TWIST_NONE &&
+                          !game->run.twistBlocked;
+            showBlockedPrimary = game->run.twistId != TWIST_NONE &&
+                                 game->run.twistBlocked;
+            showExtras = 0;
+
+            for (i = 0; i < game->run.extraTwistCount; i++) {
+                if (game->run.extraTwists[i] != TWIST_NONE) {
+                    showExtras = 1;
+                    break;
+                }
+            }
+
+            twistsLine[0] = '\0';
+
+            if (!showPrimary &&
+                !showBlockedPrimary &&
+                !showExtras) {
+                printf(SCR_ERASE_EOL);
+            } else if ((showPrimary || showBlockedPrimary) &&
+                       !showExtras) {
+                snprintf(twistsLine,
+                         sizeof(twistsLine),
+                         "Twist: %s%s - %s",
+                         twistInfo->name,
+                         showBlockedPrimary ? " (blocked)" : "",
+                         twistInfo->description);
+                printf("%s%s%s",
+                       scrDim(),
+                       twistsLine,
+                       scrReset());
+            } else {
+                len = snprintf(twistsLine,
+                               sizeof(twistsLine),
+                               "Twists: ");
+                hasTwistName = 0;
+
+                if (showPrimary || showBlockedPrimary) {
+                    len += snprintf(twistsLine + len,
+                                    sizeof(twistsLine) - (size_t)len,
+                                    "%s%s",
+                                    twistInfo->name,
+                                    showBlockedPrimary ? " (blocked)" : "");
+                    hasTwistName = 1;
+                }
+
+                for (i = 0;
+                     i < game->run.extraTwistCount &&
+                     len < (int)sizeof(twistsLine);
+                     i++) {
+                    const TwistInfo *extraInfo;
+
+                    if (game->run.extraTwists[i] == TWIST_NONE) {
+                        continue;
+                    }
+
+                    extraInfo = getTwistInfo(game->run.extraTwists[i]);
+
+                    if (hasTwistName) {
+                        len += snprintf(twistsLine + len,
+                                        sizeof(twistsLine) - (size_t)len,
+                                        " | ");
+                    }
+
+                    len += snprintf(twistsLine + len,
+                                    sizeof(twistsLine) - (size_t)len,
+                                    "%s",
+                                    extraInfo->name);
+                    hasTwistName = 1;
+                }
+
+                if (hasTwistName) {
+                    printf("%s%s%s",
+                           scrDim(),
+                           twistsLine,
+                           scrReset());
+                } else {
+                    printf(SCR_ERASE_EOL);
+                }
+            }
         } else {
             printf(SCR_ERASE_EOL);
         }
@@ -1231,11 +1277,11 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
 
     if (twistInfo->id != TWIST_NONE) {
         if (game->run.twistBlocked) {
-            printf("Twist: %s (blocked) — %s\n",
+            printf("Twist: %s (blocked) - %s\n",
                    twistInfo->name,
                    twistInfo->description);
         } else {
-            printf("Twist: %s — %s\n",
+            printf("Twist: %s - %s\n",
                    twistInfo->name,
                    twistInfo->description);
         }
@@ -1684,61 +1730,97 @@ void renderHelpOverlay(const Game *game) {
     int terminalWidth;
     int terminalHeight;
     int leftColumn;
-    int rightColumn;
     int columnWidth;
-    int leftRow;
-    int rightRow;
+    int boxWidth;
+    int boxLeft;
+    int boxTop;
+    int contentRow;
     int activeTwistCount;
     int ownedPerkCount;
     int index;
     int bottomRow;
+    int showBox;
     char line[256];
+    const char *helpTitle;
 
     getTerminalSize(&terminalWidth, &terminalHeight);
     initColors();
 
     if (isatty(STDOUT_FILENO) &&
-        renderTerminalSizeOk(&terminalWidth, &terminalHeight)) {
+        terminalHeight >= 20) {
         dealerInfo = getDealerInfo(game->run.dealerId);
-        columnWidth = terminalWidth / 2 - 4;
+        showBox = terminalWidth >= 70;
+        helpTitle = "TTY21 — HELP";
 
-        if (columnWidth < 24) {
-            columnWidth = 24;
+        if (showBox) {
+            boxWidth = terminalWidth - 8;
+
+            if (boxWidth > 100) {
+                boxWidth = 100;
+            }
+
+            if (boxWidth < 60) {
+                boxWidth = 60;
+            }
+
+            boxLeft = (terminalWidth - boxWidth) / 2 + 1;
+            leftColumn = boxLeft;
+            columnWidth = boxWidth;
+            boxTop = 2;
+            contentRow = boxTop + 4;
+        } else {
+            leftColumn = 2;
+            columnWidth = terminalWidth - 3;
+
+            if (columnWidth < 20) {
+                columnWidth = 20;
+            }
+
+            boxTop = 1;
+            contentRow = 4;
         }
-
-        leftColumn = 2;
-        rightColumn = terminalWidth / 2 + 2;
-        leftRow = 4;
-        rightRow = 4;
 
         renderHideCursor();
         printf("%s%s", SCR_CLEAR, SCR_HOME);
-        printf("%sTTY21 — HELP%s\n",
-               scrBold(),
-               scrReset());
 
-        printHelpColumnLine(3,
-                             1,
-                             terminalWidth - 2,
-                             "============================================================");
+        if (showBox) {
+            printf(SCR_CURSOR,
+                   boxTop,
+                   (terminalWidth - (int)strlen(helpTitle)) / 2 + 1);
+            printf("%s%s%s",
+                   scrBold(),
+                   helpTitle,
+                   scrReset());
 
-        printf(SCR_CURSOR, leftRow, leftColumn);
+            printf(SCR_CURSOR, boxTop + 1, boxLeft);
+            for (index = 0; index < boxWidth; index++) {
+                putchar('=');
+            }
+        } else {
+            printf(SCR_CURSOR, boxTop, leftColumn);
+            printf("%s%s%s",
+                   scrBold(),
+                   helpTitle,
+                   scrReset());
+        }
+
+        printf(SCR_CURSOR, contentRow, leftColumn);
         printf("%sDealer:%s  %s",
                scrDim(),
                scrReset(),
                dealerInfo->name);
-        leftRow++;
+        contentRow++;
 
         if (dealerInfo->rule1 != NULL) {
             snprintf(line,
                      sizeof(line),
                      "  %s",
                      dealerInfo->rule1);
-            printHelpColumnLine(leftRow,
+            printHelpColumnLine(contentRow,
                                 leftColumn,
                                 columnWidth,
                                 line);
-            leftRow++;
+            contentRow++;
         }
 
         if (dealerInfo->rule2 != NULL) {
@@ -1746,73 +1828,75 @@ void renderHelpOverlay(const Game *game) {
                      sizeof(line),
                      "  %s",
                      dealerInfo->rule2);
-            printHelpColumnLine(leftRow,
+            printHelpColumnLine(contentRow,
                                 leftColumn,
                                 columnWidth,
                                 line);
-            leftRow++;
+            contentRow++;
         }
 
-        activeTwistCount = 0;
+        if (game->mode == MODE_ROGUELIKE) {
+            activeTwistCount = 0;
 
-        if (twistActive(game, game->run.twistId) &&
-            game->run.twistId != TWIST_NONE) {
-            activeTwistCount++;
-        }
-
-        activeTwistCount += game->run.extraTwistCount;
-
-        printf(SCR_CURSOR, leftRow + 1, leftColumn);
-        printf("%sTwists (%d active):%s",
-               scrDim(),
-               activeTwistCount,
-               scrReset());
-        leftRow += 2;
-
-        if (activeTwistCount == 0) {
-            printHelpColumnLine(leftRow,
-                                leftColumn,
-                                columnWidth,
-                                "  None");
-            leftRow++;
-        } else {
             if (twistActive(game, game->run.twistId) &&
                 game->run.twistId != TWIST_NONE) {
-                twistInfo = getTwistInfo(game->run.twistId);
-                snprintf(line,
-                         sizeof(line),
-                         "  - %s: %s",
-                         twistInfo->name,
-                         twistInfo->description);
-                printHelpColumnLine(leftRow,
-                                    leftColumn,
-                                    columnWidth,
-                                    line);
-                leftRow++;
+                activeTwistCount++;
             }
 
-            for (index = 0;
-                 index < game->run.extraTwistCount;
-                 index++) {
-                twistInfo = getTwistInfo(game->run.extraTwists[index]);
-                snprintf(line,
-                         sizeof(line),
-                         "  - %s: %s",
-                         twistInfo->name,
-                         twistInfo->description);
-                printHelpColumnLine(leftRow,
+            activeTwistCount += game->run.extraTwistCount;
+
+            printf(SCR_CURSOR, contentRow + 1, leftColumn);
+            printf("%sTwists (%d active):%s",
+                   scrDim(),
+                   activeTwistCount,
+                   scrReset());
+            contentRow += 2;
+
+            if (activeTwistCount == 0) {
+                printHelpColumnLine(contentRow,
                                     leftColumn,
                                     columnWidth,
-                                    line);
-                leftRow++;
+                                    "  None");
+                contentRow++;
+            } else {
+                if (twistActive(game, game->run.twistId) &&
+                    game->run.twistId != TWIST_NONE) {
+                    twistInfo = getTwistInfo(game->run.twistId);
+                    snprintf(line,
+                             sizeof(line),
+                             "  - %s: %s",
+                             twistInfo->name,
+                             twistInfo->description);
+                    printHelpColumnLine(contentRow,
+                                        leftColumn,
+                                        columnWidth,
+                                        line);
+                    contentRow++;
+                }
+
+                for (index = 0;
+                     index < game->run.extraTwistCount;
+                     index++) {
+                    twistInfo = getTwistInfo(game->run.extraTwists[index]);
+                    snprintf(line,
+                             sizeof(line),
+                             "  - %s: %s",
+                             twistInfo->name,
+                             twistInfo->description);
+                    printHelpColumnLine(contentRow,
+                                        leftColumn,
+                                        columnWidth,
+                                        line);
+                    contentRow++;
+                }
             }
         }
 
-        printf(SCR_CURSOR, rightRow, rightColumn);
+        printf(SCR_CURSOR, contentRow + 1, leftColumn);
         printf("%sPerks owned:%s",
                scrDim(),
                scrReset());
-        rightRow += 2;
+        contentRow += 2;
 
         ownedPerkCount = 0;
 
@@ -1823,25 +1907,24 @@ void renderHelpOverlay(const Game *game) {
                          "  - %s: %s",
                          perkName((PerkId)index),
                          perkDescription((PerkId)index));
-                printHelpColumnLine(rightRow,
-                                    rightColumn,
+                printHelpColumnLine(contentRow,
+                                    leftColumn,
                                     columnWidth,
                                     line);
-                rightRow++;
+                contentRow++;
                 ownedPerkCount++;
             }
         }
 
         if (ownedPerkCount == 0) {
-            printHelpColumnLine(rightRow,
-                                rightColumn,
+            printHelpColumnLine(contentRow,
+                                leftColumn,
                                 columnWidth,
                                 "  None");
-            rightRow++;
+            contentRow++;
         }
 
-        bottomRow = leftRow > rightRow ? leftRow : rightRow;
-        bottomRow++;
+        bottomRow = contentRow + 1;
 
         printf(SCR_CURSOR, bottomRow, leftColumn);
         printf("Floor: %d    Marks: %d    Chips: %d    Bet: %d",
@@ -1879,35 +1962,37 @@ void renderHelpOverlay(const Game *game) {
             printf("  %s\n", dealerInfo->rule2);
         }
 
-        activeTwistCount = 0;
+        if (game->mode == MODE_ROGUELIKE) {
+            activeTwistCount = 0;
 
-        if (twistActive(game, game->run.twistId) &&
-            game->run.twistId != TWIST_NONE) {
-            activeTwistCount++;
-        }
-
-        activeTwistCount += game->run.extraTwistCount;
-
-        printf("\nTwists (%d active):\n", activeTwistCount);
-
-        if (activeTwistCount == 0) {
-            printf("  None\n");
-        } else {
             if (twistActive(game, game->run.twistId) &&
                 game->run.twistId != TWIST_NONE) {
-                twistInfo = getTwistInfo(game->run.twistId);
-                printf("  - %s: %s\n",
-                       twistInfo->name,
-                       twistInfo->description);
+                activeTwistCount++;
             }
 
-            for (index = 0;
-                 index < game->run.extraTwistCount;
-                 index++) {
-                twistInfo = getTwistInfo(game->run.extraTwists[index]);
-                printf("  - %s: %s\n",
-                       twistInfo->name,
-                       twistInfo->description);
+            activeTwistCount += game->run.extraTwistCount;
+
+            printf("\nTwists (%d active):\n", activeTwistCount);
+
+            if (activeTwistCount == 0) {
+                printf("  None\n");
+            } else {
+                if (twistActive(game, game->run.twistId) &&
+                    game->run.twistId != TWIST_NONE) {
+                    twistInfo = getTwistInfo(game->run.twistId);
+                    printf("  - %s: %s\n",
+                           twistInfo->name,
+                           twistInfo->description);
+                }
+
+                for (index = 0;
+                     index < game->run.extraTwistCount;
+                     index++) {
+                    twistInfo = getTwistInfo(game->run.extraTwists[index]);
+                    printf("  - %s: %s\n",
+                           twistInfo->name,
+                           twistInfo->description);
+                }
             }
         }
 
