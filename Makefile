@@ -9,6 +9,10 @@ BINDIR  = $(PREFIX)/bin
 TARGET  = tty21
 SRCS    = main.c card.c hand.c game.c round.c render.c menu.c input.c input_map.c dealers.c twists.c rng.c perks.c run.c
 OBJS    = $(SRCS:.c=.o)
+TESTS_SRCS = tests/run_tests.c tests/test_hand.c \
+             tests/test_card.c tests/test_rng.c tests/test_twists.c \
+             tests/test_dealers.c tests/test_perks.c tests/test_run.c
+LIB_SRCS = card.c hand.c dealers.c twists.c perks.c rng.c run.c
 
 all: $(TARGET)
 
@@ -18,8 +22,12 @@ $(TARGET): $(OBJS)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+test: $(TESTS_SRCS) $(LIB_SRCS)
+	$(CC) $(filter-out -MMD -MP,$(CFLAGS)) -I. -o tests/tty21_tests $(TESTS_SRCS) $(LIB_SRCS)
+	./tests/tty21_tests
+
 clean:
-	rm -f $(OBJS) $(TARGET) *.d
+	rm -f $(OBJS) $(TARGET) *.d tests/tty21_tests tests/tty21_tests.d
 
 install: $(TARGET)
 	install -Dm755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
@@ -27,6 +35,6 @@ install: $(TARGET)
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/$(TARGET)
 
-.PHONY: all clean install uninstall
+.PHONY: all test clean install uninstall
 
 -include $(OBJS:.o=.d)
