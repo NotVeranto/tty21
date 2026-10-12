@@ -25,6 +25,7 @@ typedef struct {
     int roundsOnFloor;
     int twistBlocked;      /* 1 if current twist is neutralized */
     int twistRerolled;     /* 1 if reroll used this floor */
+    int bossRewarded;      /* 1 if current boss floor already paid */
 } Run;
 
 void initRun(Run *run);

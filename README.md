@@ -22,6 +22,7 @@ Implemented:
 - Perks and between-floor shop (16 perks).
 - Dealer turn step-through with optional --fast mode.
 - Cursed cards (3% of drawn cards): Bleed (-1 chip per round), Frost (-2 to hand value), Echo (10% chance of an extra card on stand).
+- Boss floors every 5 floors: two combined dealer rules, one-time marks reward on victory.
 
 Planned:
 - Save and load (XDG).

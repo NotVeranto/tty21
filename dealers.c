@@ -14,7 +14,19 @@ static const DealerInfo DEALER_INFO[] = {
     {DEALER_ORACLE, "Oracle", "You see the next deck card before acting.", NULL},
     {DEALER_DEVIL, "Devil", "Your first double down is forced.", NULL},
     {DEALER_SAINT, "Saint", "Pure wins pay 2:1.", NULL},
-    {DEALER_TWIN, "Twin", "Dealer plays two hands.", NULL}
+    {DEALER_TWIN, "Twin", "Dealer plays two hands.", NULL},
+    {DEALER_BOSS_PIT, "The Pit Boss",
+     "All losses cost 150% of your bet.",
+     "Dealer total is always hidden."},
+    {DEALER_BOSS_PRIME, "Croupier Prime",
+     "Every player hit makes the dealer draw too.",
+     "Dealer draws to 18."},
+    {DEALER_BOSS_SUPREME, "Accountant Supreme",
+     "All dealer aces count as 1.",
+     "Your first double down is forced."},
+    {DEALER_BOSS_VOID, "Void Saint",
+     "Your natural blackjack pays 1:1.",
+     "Pure wins pay 2:1."}
 };
 
 const DealerInfo *getDealerInfo(DealerId id) {
@@ -23,6 +35,13 @@ const DealerInfo *getDealerInfo(DealerId id) {
     }
 
     return &DEALER_INFO[id];
+}
+
+int dealerIsBoss(DealerId id) {
+    return id == DEALER_BOSS_PIT ||
+           id == DEALER_BOSS_PRIME ||
+           id == DEALER_BOSS_SUPREME ||
+           id == DEALER_BOSS_VOID;
 }
 
 DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
@@ -40,6 +59,18 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
     int candidateCount;
     int dealerIndex;
     int randomIndex;
+
+    if (floor >= 5 && floor % 5 == 0) {
+        static const DealerId BOSSES[] = {
+            DEALER_BOSS_PIT,
+            DEALER_BOSS_PRIME,
+            DEALER_BOSS_SUPREME,
+            DEALER_BOSS_VOID
+        };
+        int bossIndex = (floor / 5 - 1) % 4;
+
+        return BOSSES[bossIndex];
+    }
 
     if (floor == 1) {
         return DEALER_CROUPIER;
@@ -72,32 +103,32 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
 
 /* Returns the dealer's standing target value. */
 int dealerTargetValue(DealerId id) {
-    return id == DEALER_CLOCKMAKER ? 18 : 17;
+    return id == DEALER_CLOCKMAKER || id == DEALER_BOSS_PRIME ? 18 : 17;
 }
 
 /* Returns the dealer's loss multiplier in percent. */
 int dealerLossMultiplierPercent(DealerId id) {
-    return id == DEALER_BUTCHER ? 150 : 100;
+    return id == DEALER_BUTCHER || id == DEALER_BOSS_PIT ? 150 : 100;
 }
 
 /* Returns the numerator for a natural blackjack payout. */
 int dealerBlackjackNumerator(DealerId id) {
-    return id == DEALER_VOID ? 1 : 3;
+    return id == DEALER_VOID || id == DEALER_BOSS_VOID ? 1 : 3;
 }
 
 /* Returns the denominator for a natural blackjack payout. */
 int dealerBlackjackDenominator(DealerId id) {
-    return id == DEALER_VOID ? 1 : 2;
+    return id == DEALER_VOID || id == DEALER_BOSS_VOID ? 1 : 2;
 }
 
 /* Returns whether the dealer total is always hidden. */
 int dealerHidesTotal(DealerId id) {
-    return id == DEALER_REAPER;
+    return id == DEALER_REAPER || id == DEALER_BOSS_PIT;
 }
 
 /* Returns whether the dealer draws when the player hits. */
 int dealerMirrorsOnHit(DealerId id) {
-    return id == DEALER_MIRROR;
+    return id == DEALER_MIRROR || id == DEALER_BOSS_PRIME;
 }
 
 /* Returns whether the next deck card is shown during the player turn. */
@@ -107,17 +138,17 @@ int dealerShowsNextCard(DealerId id) {
 
 /* Returns whether dealer aces always count as one. */
 int dealerAcesCountAsOne(DealerId id) {
-    return id == DEALER_ACCOUNTANT;
+    return id == DEALER_ACCOUNTANT || id == DEALER_BOSS_SUPREME;
 }
 
 /* Returns whether the dealer forces the opening double down. */
 int dealerForcesDouble(DealerId id) {
-    return id == DEALER_DEVIL;
+    return id == DEALER_DEVIL || id == DEALER_BOSS_SUPREME;
 }
 
 /* Returns whether the dealer pays the pure-hand bonus. */
 int dealerPaysPureHandBonus(DealerId id) {
-    return id == DEALER_SAINT;
+    return id == DEALER_SAINT || id == DEALER_BOSS_VOID;
 }
 
 /* Returns the number of active dealer hands. */

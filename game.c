@@ -122,12 +122,23 @@ void advanceFloor(Game *game) {
     }
 
     game->run.twistRerolled = 0;
+    game->run.bossRewarded = 0;
     game->run.twistBlocked = 0;
     game->run.roundsOnFloor = 0;
     game->run.extraTwistCount = 0;
     game->fatigueTier = 0;
     game->run.dealerId = selectDealerForFloor(game->run.floor,
                                           game->run.previousDealerId);
+
+    if (game->run.floor >= 5 &&
+        game->run.floor % 5 == 0 &&
+        dealerIsBoss(game->run.dealerId)) {
+        snprintf(message,
+                 sizeof(message),
+                 "BOSS FLOOR. %s awaits.",
+                 getDealerInfo(game->run.dealerId)->name);
+        logPush(game, message, MSG_LOSS);
+    }
 
     if (game->player.perkOwned[PERK_PEEK]) {
         game->player.perkCharges[PERK_PEEK] = 1;

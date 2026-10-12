@@ -665,6 +665,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     int displayHandIndex;
     int displayHandValue;
     int dealerValue;
+    int bossActive;
     int i;
     int len;
     char dealerName[64];
@@ -691,6 +692,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     }
 
     dealerInfo = getDealerInfo(game->run.dealerId);
+    bossActive = dealerIsBoss(game->run.dealerId);
     twistInfo = getTwistInfo(game->run.twistId);
     tableWidth = getDynamicTableWidth(game);
     dealerCardHidden = hideDealerCard &&
@@ -965,13 +967,20 @@ void renderTable(const Game *game, int hideDealerCard) {
 
         char headerText[32];
 
-        snprintf(headerText, sizeof(headerText), "TTY21  %s", modeText);
+        if (bossActive) {
+            snprintf(headerText, sizeof(headerText), "TTY21  %s  BOSS", modeText);
+        } else {
+            snprintf(headerText, sizeof(headerText), "TTY21  %s", modeText);
+        }
 
         printf(SCR_CURSOR, TITLE_ROW,
                (terminalWidth - (int)strlen(headerText)) / 2 + 1);
         printf("%sTTY21%s  %s%s%s",
                scrBold(), scrReset(),
                scrDim(), modeText, scrReset());
+        if (bossActive) {
+            printf("  %s%sBOSS%s", scrRed(), scrBold(), scrReset());
+        }
 
         moveToTableRow(SEPARATOR_ROW, tablePadding);
 
@@ -982,7 +991,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         }
 
         printCenteredAtRow(roundText, ROUND_ROW, terminalWidth);
-        printHandHeader("DEALER",
+        printHandHeader(bossActive ? "DEALER  BOSS" : "DEALER",
                         dealerTotal,
                         DEALER_LABEL_ROW,
                         tablePadding,
@@ -1810,9 +1819,10 @@ void renderHelpOverlay(const Game *game) {
         }
 
         printf(SCR_CURSOR, contentRow, leftColumn);
-        printf("%sDealer:%s  %s",
+        printf("%sDealer:%s  %s%s",
                scrDim(),
                scrReset(),
+               dealerIsBoss(game->run.dealerId) ? "BOSS " : "",
                dealerInfo->name);
         contentRow++;
 
@@ -1957,7 +1967,9 @@ void renderHelpOverlay(const Game *game) {
         dealerInfo = getDealerInfo(game->run.dealerId);
         printf("TTY21 - HELP\n");
         printf("============\n\n");
-        printf("Dealer: %s\n", dealerInfo->name);
+        printf("Dealer: %s%s\n",
+               dealerIsBoss(game->run.dealerId) ? "BOSS " : "",
+               dealerInfo->name);
 
         if (dealerInfo->rule1 != NULL) {
             printf("  %s\n", dealerInfo->rule1);

@@ -1762,6 +1762,36 @@ void resolveRound(Game *game) {
         game->winStreak = 0;
     }
 
+    if (resultStyle == MSG_WIN &&
+        dealerIsBoss(game->run.dealerId) &&
+        !game->run.bossRewarded) {
+        long long rewardValue;
+        long long availableMarks;
+        int reward;
+        char bossMsg[96];
+
+        rewardValue = 20LL + (long long)game->run.floor * 5LL;
+        if (rewardValue > INT_MAX) {
+            rewardValue = INT_MAX;
+        }
+
+        availableMarks = (long long)INT_MAX - game->run.marks;
+        if (rewardValue > availableMarks) {
+            rewardValue = availableMarks;
+        }
+
+        if (rewardValue < 0) {
+            rewardValue = 0;
+        }
+
+        reward = (int)rewardValue;
+        game->run.marks += reward;
+        game->run.bossRewarded = 1;
+        snprintf(bossMsg, sizeof(bossMsg),
+                 "BOSS DEFEATED. +%d marks.", reward);
+        logPush(game, bossMsg, MSG_WIN);
+    }
+
     logPush(game, resultMessage, resultStyle);
 
     if (game->lossStreak >= 5) {

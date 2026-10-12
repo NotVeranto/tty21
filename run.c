@@ -13,6 +13,7 @@ void initRun(Run *run) {
     run->roundsOnFloor = 0;
     run->twistBlocked = 0;
     run->twistRerolled = 0;
+    run->bossRewarded = 0;
 }
 
 // Returns the minimum bet for a floor.

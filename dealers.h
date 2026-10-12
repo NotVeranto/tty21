@@ -13,6 +13,10 @@ typedef enum {
     DEALER_DEVIL,
     DEALER_SAINT,
     DEALER_TWIN,
+    DEALER_BOSS_PIT,
+    DEALER_BOSS_PRIME,
+    DEALER_BOSS_SUPREME,
+    DEALER_BOSS_VOID,
     DEALER_COUNT
 } DealerId;
 
@@ -24,6 +28,7 @@ typedef struct {
 } DealerInfo;
 
 const DealerInfo *getDealerInfo(DealerId id);
+int dealerIsBoss(DealerId id);
 DealerId selectDealerForFloor(int floor, DealerId previousDealer);
 
 int dealerTargetValue(DealerId id);
