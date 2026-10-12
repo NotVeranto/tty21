@@ -21,6 +21,7 @@ Implemented:
 - Deterministic runs via --seed.
 - Perks and between-floor shop (16 perks).
 - Dealer turn step-through with optional --fast mode.
+- Cursed cards (3% of drawn cards): Bleed (-1 chip per round), Frost (-2 to hand value), Echo (10% chance of an extra card on stand).
 
 Planned:
 - Save and load (XDG).

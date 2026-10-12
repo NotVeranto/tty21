@@ -62,4 +62,7 @@ int getCardValue(const Card *card) {
 // Prints a card using its rank and Unicode suit symbol.
 void printCard(const Card *card) {
     printf("%s%s", RANK_NAMES[card->rank], SUIT_SYMBOLS[card->suit]);
+    if (card->cursed != CURSED_NONE) {
+        printf("*");
+    }
 }

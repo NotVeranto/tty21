@@ -133,7 +133,7 @@ static const char *CURSE_NAMES[] = {
     "Echo"
 };
 
-static void drawCard(Game *game, Hand *hand) {
+static void drawCard(Game *game, Hand *hand, int allowCurse) {
     int previousCount;
     CurseId curseId;
     char message[64];
@@ -148,7 +148,8 @@ static void drawCard(Game *game, Hand *hand) {
     addCardToHand(hand, &game->deck.cards[game->deck.top]);
     game->deck.top++;
 
-    if (hand->count > previousCount &&
+    if (allowCurse &&
+        hand->count > previousCount &&
         rngRange(0, 99) < 3) {
         curseId = (CurseId)rngRange(1, 3);
         hand->cards[hand->count - 1].cursed = curseId;
@@ -457,8 +458,8 @@ static void splitHand(Game *game) {
 
     isAceSplit = game->player.hands[src].cards[0].rank == ACE;
 
-    drawCard(game, &game->player.hands[src]);
-    drawCard(game, &game->player.hands[dst]);
+    drawCard(game, &game->player.hands[src], 1);
+    drawCard(game, &game->player.hands[dst], 1);
 
     if (isAceSplit) {
         game->player.isSplitAce[src] = 1;
@@ -516,10 +517,10 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
     int value;
 
     if (action == ACTION_HIT) {
-        drawCard(game, &game->player.hands[game->player.activeHand]);
+        drawCard(game, &game->player.hands[game->player.activeHand], 1);
 
         if (dealerMirrorsOnHit(game->run.dealerId)) {
-            drawCard(game, &game->dealer.hands[0]);
+            drawCard(game, &game->dealer.hands[0], 0);
         }
 
         value = calculatePlayerHandValue(game);
@@ -571,7 +572,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
 
             if (hasEcho && rngRange(0, 99) < 10) {
                 drawCard(game,
-                         &game->player.hands[game->player.activeHand]);
+                         &game->player.hands[game->player.activeHand], 1);
                 logPush(game,
                         "Echo triggers! Extra card drawn.",
                         MSG_INFO);
@@ -612,10 +613,10 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
         } else {
             game->player.bets[game->player.activeHand] *= 2;
             game->player.usedDouble = 1;
-            drawCard(game, &game->player.hands[game->player.activeHand]);
+            drawCard(game, &game->player.hands[game->player.activeHand], 1);
 
             if (dealerMirrorsOnHit(game->run.dealerId)) {
-                drawCard(game, &game->dealer.hands[0]);
+                drawCard(game, &game->dealer.hands[0], 0);
             }
 
             {
@@ -838,10 +839,10 @@ void startRound(Game *game) {
     game->run.roundsOnFloor++;
     applyAntiFarmPressure(game);
 
-    drawCard(game, &game->player.hands[0]);
-    drawCard(game, &game->dealer.hands[0]);
-    drawCard(game, &game->player.hands[0]);
-    drawCard(game, &game->dealer.hands[0]);
+    drawCard(game, &game->player.hands[0], 1);
+    drawCard(game, &game->dealer.hands[0], 0);
+    drawCard(game, &game->player.hands[0], 1);
+    drawCard(game, &game->dealer.hands[0], 0);
     game->dealer.handCount = dealerHandsCount(game->run.dealerId);
 
     {
@@ -851,9 +852,9 @@ void startRound(Game *game) {
              dealerHandIndex < game->dealer.handCount;
              dealerHandIndex++) {
             drawCard(game,
-                     &game->dealer.hands[dealerHandIndex]);
+                     &game->dealer.hands[dealerHandIndex], 0);
             drawCard(game,
-                     &game->dealer.hands[dealerHandIndex]);
+                     &game->dealer.hands[dealerHandIndex], 0);
         }
     }
 
@@ -884,10 +885,10 @@ void startRound(Game *game) {
 
             game->player.bets[0] *= 2;
             game->player.usedDouble = 1;
-            drawCard(game, &game->player.hands[0]);
+            drawCard(game, &game->player.hands[0], 1);
 
             if (dealerMirrorsOnHit(game->run.dealerId)) {
-                drawCard(game, &game->dealer.hands[0]);
+                drawCard(game, &game->dealer.hands[0], 0);
             }
 
             game->state = STATE_DEALER_TURN;
@@ -1073,7 +1074,7 @@ void dealerTurn(Game *game) {
                 KeyEvent event;
 
                 drawCard(game,
-                         &game->dealer.hands[dealerHandIndex]);
+                         &game->dealer.hands[dealerHandIndex], 0);
                 dealerValue = calculateDealerHandValue(
                     game,
                     &game->dealer.hands[dealerHandIndex],
@@ -1293,7 +1294,8 @@ void resolveRound(Game *game) {
         handValue = calculatePlayerHandValueForIndex(game, handIndex);
         handBet = game->player.bets[handIndex];
         playerBlackjack = game->player.hands[handIndex].count == 2 &&
-                          handValue == 21;
+                          handValue == 21 &&
+                          !game->player.usedSplit;
         splitBet = handBet / dealerHandCount;
         handPayoutTotal = 0;
         handLossTotal = 0;

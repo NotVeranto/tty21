@@ -353,11 +353,16 @@ static void printFaceDownLine(int lineIndex) {
 // Prints one line from a visible card.
 static void printVisibleCardLine(const Card *card, int lineIndex) {
     const char *rankName;
+    char marker = ' ';
 
     rankName = CARD_RANKS[card->rank];
 
+    if (card->cursed != CURSED_NONE) {
+        marker = '*';
+    }
+
     if (lineIndex == 0) {
-        printf("|%-2s       |", rankName);
+        printf("|%-2s      %c|", rankName, marker);
     } else if (lineIndex == 1 || lineIndex == 3) {
         printf("|%*s|", CARD_CONTENT_WIDTH, "");
     } else if (lineIndex == 2) {
