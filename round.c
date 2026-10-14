@@ -1591,6 +1591,14 @@ void resolveRound(Game *game) {
                     baseLoss *= 2;
                 }
 
+                {
+                    long long lossPower = dealerPowerLossMultiplier(
+                        game->run.dealerId, game->run.floor);
+                    if (lossPower != 100) {
+                        baseLoss = baseLoss * lossPower / 100;
+                    }
+                }
+
                 if (baseLoss > INT_MAX) {
                     baseLoss = INT_MAX;
                 }
@@ -1747,6 +1755,14 @@ void resolveRound(Game *game) {
 
                 if (twistActive(game, TWIST_BLOOD_PACT)) {
                     baseLoss *= 2;
+                }
+
+                {
+                    long long lossPower = dealerPowerLossMultiplier(
+                        game->run.dealerId, game->run.floor);
+                    if (lossPower != 100) {
+                        baseLoss = baseLoss * lossPower / 100;
+                    }
                 }
 
                 if (baseLoss > INT_MAX) {
