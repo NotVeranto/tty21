@@ -1,6 +1,10 @@
 #ifndef TWISTS_H
 #define TWISTS_H
 
+#include "dealers.h"
+
+typedef struct Game Game;
+
 typedef enum {
     TWIST_NONE = 0,
     TWIST_LUCKY_DRAW,
@@ -36,6 +40,7 @@ typedef struct {
 } TwistInfo;
 
 const TwistInfo *getTwistInfo(TwistId id);
-TwistId selectTwistForFloor(int floor, TwistId previousTwist);
+TwistId selectTwistForFloor(const Game *game);
+int twistIsForcedHostile(const Game *game);
 
 #endif
