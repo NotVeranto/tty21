@@ -1,5 +1,6 @@
 #include "twists.h"
 #include "rng.h"
+#include "game.h"
 
 static const TwistInfo TWIST_INFO[] = {
     {TWIST_NONE, "None", "No floor modifier.", TWIST_CAT_NEUTRAL},
@@ -137,24 +138,28 @@ const TwistInfo *getTwistInfo(TwistId id) {
     return &TWIST_INFO[id];
 }
 
-TwistId selectTwistForFloor(int floor, TwistId previousTwist) {
+int twistIsForcedHostile(const Game *game) {
+    return game->run.floor >= 10 &&
+           (game->run.floor - 10) % 3 == 0 &&
+           !dealerIsBoss(game->run.dealerId);
+}
+
+TwistId selectTwistForFloor(const Game *game) {
+    int floor = game->run.floor;
+    TwistId previousTwist = game->run.previousTwistId;
     int roll;
     TwistCategory category;
 
-    if (floor <= 3) {
-        return TWIST_NONE;
+    if (floor <= 3) return TWIST_NONE;
+    if (twistIsForcedHostile(game)) {
+        return selectTwistFromCategory(TWIST_CAT_HOSTILE, previousTwist);
     }
 
     roll = rngRange(0, 99);
-
     if (floor <= 7) {
-        if (roll < 50) {
-            category = TWIST_CAT_FAVORABLE;
-        } else if (roll < 80) {
-            category = TWIST_CAT_NEUTRAL;
-        } else {
-            category = TWIST_CAT_HOSTILE;
-        }
+        if (roll < 50) category = TWIST_CAT_FAVORABLE;
+        else if (roll < 80) category = TWIST_CAT_NEUTRAL;
+        else category = TWIST_CAT_HOSTILE;
     } else if (roll < 30) {
         category = TWIST_CAT_FAVORABLE;
     } else if (roll < 50) {
@@ -162,6 +167,5 @@ TwistId selectTwistForFloor(int floor, TwistId previousTwist) {
     } else {
         category = TWIST_CAT_HOSTILE;
     }
-
     return selectTwistFromCategory(category, previousTwist);
 }
