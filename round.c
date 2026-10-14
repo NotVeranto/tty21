@@ -426,12 +426,22 @@ static int readBet(Game *game) {
 }
 
 static int canDouble(const Game *game) {
+    if (game->run.floor >= 10 &&
+        game->run.dealerId == DEALER_VOID) {
+        return 0;
+    }
+
     return game->player.hands[game->player.activeHand].count == 2 &&
            (long long)game->player.chips >=
                (long long)game->player.bets[game->player.activeHand] * 2;
 }
 
 static int canSplit(const Game *game) {
+    if (game->run.floor >= 10 &&
+        game->run.dealerId == DEALER_TWIN) {
+        return 0;
+    }
+
     return game->player.hands[game->player.activeHand].count == 2 &&
            game->player.hands[game->player.activeHand].cards[0].rank ==
                game->player.hands[game->player.activeHand].cards[1].rank &&
@@ -533,6 +543,18 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
     int value;
 
     if (action == ACTION_HIT) {
+        if (game->run.floor >= 10 &&
+            game->run.dealerId == DEALER_DEVIL) {
+            int toll = 3;
+
+            if (toll > game->player.chips) {
+                toll = game->player.chips;
+            }
+
+            game->player.chips -= toll;
+            logPush(game, "Devil's toll: -3 chips.", MSG_LOSS);
+        }
+
         drawCard(game, &game->player.hands[game->player.activeHand], 1);
 
         if (dealerMirrorsOnHit(game->run.dealerId)) {
@@ -566,8 +588,13 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
 
         renderTable(game, game->state == STATE_PLAYER_TURN);
     } else if (action == ACTION_STAND) {
-        if (twistActive(game, TWIST_STICKY_HANDS) &&
-            calculatePlayerHandValue(game) < 15) {
+        int standLocked =
+            (twistActive(game, TWIST_STICKY_HANDS) ||
+             (game->run.floor >= 10 &&
+              game->run.dealerId == DEALER_BUTCHER)) &&
+            calculatePlayerHandValue(game) < 15;
+
+        if (standLocked) {
             logPush(game,
                     "Sticky Hands: cannot stand below 15.",
                     MSG_DEFAULT);
@@ -1094,6 +1121,18 @@ void dealerTurn(Game *game) {
             }
         }
 
+        if (game->run.floor >= 10) {
+            if (game->run.dealerId == DEALER_CLOCKMAKER) {
+                if (targetValue < 19) {
+                    targetValue = 19;
+                }
+            } else if (game->run.dealerId == DEALER_ORACLE) {
+                if (targetValue < 18) {
+                    targetValue = 18;
+                }
+            }
+        }
+
         for (dealerHandIndex = 0;
              dealerHandIndex < game->dealer.handCount;
              dealerHandIndex++) {
@@ -1228,6 +1267,8 @@ void resolveRound(Game *game) {
     int greedAwarded;
     int handWon;
     int currentFatigue;
+    int bjRatioNumerator;
+    int bjRatioDenominator;
     long long payoutValue;
     long long basePayout;
     long long baseLoss;
@@ -1377,6 +1418,14 @@ void resolveRound(Game *game) {
                     baseLoss *= 2;
                 }
 
+                {
+                    long long lossPower = dealerPowerLossMultiplier(
+                        game->run.dealerId, game->run.floor);
+                    if (lossPower != 100) {
+                        baseLoss = baseLoss * lossPower / 100;
+                    }
+                }
+
                 if (baseLoss > INT_MAX) {
                     baseLoss = INT_MAX;
                 }
@@ -1436,9 +1485,19 @@ void resolveRound(Game *game) {
                     }
                 }
             } else if (playerBlackjack && !dealerBlackjack) {
-                basePayout = ((long long)splitBet *
-                              dealerBlackjackNumerator(game->run.dealerId)) /
-                             dealerBlackjackDenominator(game->run.dealerId);
+                bjRatioNumerator = dealerBlackjackNumerator(
+                    game->run.dealerId);
+                bjRatioDenominator = dealerBlackjackDenominator(
+                    game->run.dealerId);
+
+                if (game->run.floor >= 10 &&
+                    game->run.dealerId == DEALER_REAPER) {
+                    bjRatioNumerator = 1;
+                    bjRatioDenominator = 1;
+                }
+
+                basePayout = ((long long)splitBet * bjRatioNumerator) /
+                             bjRatioDenominator;
 
                 if (twistActive(game, TWIST_DESPERATION) &&
                     game->player.usedDouble) {
