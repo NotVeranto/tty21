@@ -24,6 +24,8 @@ Implemented:
 - Cursed cards (3% of drawn cards): Bleed (-1 chip per round), Frost (-2 to hand value), Echo (10% chance of an extra card on stand).
 - Boss floors every 5 floors: two combined dealer rules, one-time marks reward on victory.
 - Quadratic minimum bets, late-floor bet caps, and an enraged dealer from floor 10 after three rounds.
+- Deep-floor dealer power rules from floor 10, including increased losses, restricted actions, and a chip toll on hits.
+- Forced hostile twists every third floor from floor 10, except boss floors.
 - Tighter roguelike economy: advance fees, 10 chips converted to 2 marks, and reduced floor-advance and boss marks rewards.
 
 Planned:
@@ -89,6 +91,7 @@ Betting:
 - [x] Classic blackjack mode.
 - [x] Difficulty expansion A: quadratic minimum bets, late-floor bet caps, and dealer enrage.
 - [x] Difficulty expansion B: tighter economy, advance fees, chip-to-mark conversion, and reduced marks rewards.
+- [x] Difficulty expansion C: deep-floor dealer power rules and forced hostile twists.
 - [ ] Save and load (XDG).
 - [ ] Polish and animations.
 - [ ] Man page.
