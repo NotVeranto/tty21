@@ -31,6 +31,8 @@ const DealerInfo *getDealerInfo(DealerId id);
 int dealerIsBoss(DealerId id);
 DealerId selectDealerForFloor(int floor, DealerId previousDealer);
 
+const char *dealerPowerRule2(DealerId id, int floor);
+int dealerPowerLossMultiplier(DealerId id, int floor);
 int dealerTargetValue(DealerId id);
 int dealerLossMultiplierPercent(DealerId id);
 int dealerBlackjackNumerator(DealerId id);
