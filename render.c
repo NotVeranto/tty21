@@ -1,4 +1,5 @@
 #include "render.h"
+#include "dealers.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -651,6 +652,9 @@ static void renderLog(const Game *game,
 void renderTable(const Game *game, int hideDealerCard) {
     const DealerInfo *dealerInfo;
     const TwistInfo *twistInfo;
+    const char *rule1;
+    const char *rule2;
+    const char *power;
     const char *hintText;
     const char *phaseText;
     int terminalWidth;
@@ -692,6 +696,12 @@ void renderTable(const Game *game, int hideDealerCard) {
     }
 
     dealerInfo = getDealerInfo(game->run.dealerId);
+    rule1 = dealerInfo->rule1;
+    rule2 = dealerInfo->rule2;
+    power = dealerPowerRule2(game->run.dealerId, game->run.floor);
+    if (rule2 == NULL && power != NULL) {
+        rule2 = power;
+    }
     bossActive = dealerIsBoss(game->run.dealerId);
     twistInfo = getTwistInfo(game->run.twistId);
     tableWidth = getDynamicTableWidth(game);
@@ -1030,18 +1040,23 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_RULE, tablePadding);
         printf(SCR_ERASE_EOL);
 
-        if (dealerInfo->rule1 != NULL) {
-            if (dealerInfo->rule2 == NULL) {
+        if (rule1 != NULL || rule2 != NULL) {
+            if (rule2 == NULL) {
                 snprintf(rulesText,
                          sizeof(rulesText),
                          "Rule: %s",
-                         dealerInfo->rule1);
+                         rule1);
+            } else if (rule1 == NULL) {
+                snprintf(rulesText,
+                         sizeof(rulesText),
+                         "Rule: %s",
+                         rule2);
             } else {
                 snprintf(rulesText,
                          sizeof(rulesText),
                          "Rules: %s | %s",
-                         dealerInfo->rule1,
-                         dealerInfo->rule2);
+                         rule1,
+                         rule2);
             }
 
             printf("%s%s%s", scrDim(), rulesText, scrReset());
