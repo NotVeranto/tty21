@@ -81,8 +81,7 @@ static void dispatchFloorMenuAction(Game *game,
                game->run.floor >= 4 &&
                game->run.twistRerolled == 0 &&
                game->run.marks >= 30) {
-        game->run.twistId = selectTwistForFloor(game->run.floor,
-                                                TWIST_NONE);
+        game->run.twistId = selectTwistForFloor(game);
         game->run.twistRerolled = 1;
         game->run.marks -= 30;
         logPush(game, "Twist rerolled.", MSG_INFO);
