@@ -25,7 +25,7 @@ Implemented:
 - Boss floors every 5 floors: two combined dealer rules, one-time marks reward on victory.
 - Quadratic minimum bets, late-floor bet caps, and an enraged dealer from floor 10 after three rounds.
 - Deep-floor dealer power rules from floor 10, including stronger losses and restricted actions.
-- Forced hostile twists on non-boss floors 10, 13, 16, and every third floor thereafter.
+- Forced hostile twists starting at floor 10 and every third floor thereafter, except on boss floors.
 - Tighter roguelike economy: advance fees, 10 chips converted to 2 marks, and reduced floor-advance and boss marks rewards.
 
 Planned:
