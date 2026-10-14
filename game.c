@@ -162,14 +162,19 @@ void advanceFloor(Game *game) {
 
         attempts = 0;
 
-        do {
-            game->run.twistId = selectTwistForFloor(game->run.floor,
-                                                game->run.previousTwistId);
-            attempts++;
-        } while (game->player.perkOwned[PERK_SIXTH_SENSE] &&
-                 game->run.floor >= 4 &&
-                 getTwistInfo(game->run.twistId)->category == TWIST_CAT_HOSTILE &&
-                 attempts < 10);
+        game->run.twistId = selectTwistForFloor(game);
+
+        if (!twistIsForcedHostile(game)) {
+            attempts = 0;
+            while (game->player.perkOwned[PERK_SIXTH_SENSE] &&
+                   game->run.floor >= 4 &&
+                   getTwistInfo(game->run.twistId)->category ==
+                       TWIST_CAT_HOSTILE &&
+                   attempts < 10) {
+                game->run.twistId = selectTwistForFloor(game);
+                attempts++;
+            }
+        }
     }
 
     game->freePeekReady = 0;
