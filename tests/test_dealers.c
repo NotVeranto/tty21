@@ -75,6 +75,36 @@ TEST(dealer_boss_info_has_names_and_two_rules) {
     ASSERT_TRUE(info->rule1 != NULL && info->rule2 != NULL);
 }
 
+TEST(dealer_power_rule2_floor_gating) {
+    DealerId id;
+    for (id = DEALER_CROUPIER; id <= DEALER_TWIN; id = (DealerId)(id + 1)) {
+        ASSERT_TRUE(dealerPowerRule2(id, 1) == NULL);
+        ASSERT_TRUE(dealerPowerRule2(id, 9) == NULL);
+    }
+}
+
+TEST(dealer_power_rule2_deep_floor_coverage) {
+    DealerId id;
+    ASSERT_TRUE(dealerPowerRule2(DEALER_CROUPIER, 10) == NULL);
+    for (id = DEALER_ACCOUNTANT; id <= DEALER_TWIN; id = (DealerId)(id + 1))
+        ASSERT_TRUE(dealerPowerRule2(id, 10) != NULL);
+    for (id = DEALER_BOSS_PIT; id < DEALER_COUNT; id = (DealerId)(id + 1))
+        ASSERT_TRUE(dealerPowerRule2(id, 10) == NULL);
+}
+
+TEST(dealer_power_loss_multipliers) {
+    DealerId id;
+    for (id = DEALER_CROUPIER; id < DEALER_COUNT; id = (DealerId)(id + 1))
+        ASSERT_EQ_INT(100, dealerPowerLossMultiplier(id, 9));
+    ASSERT_EQ_INT(125, dealerPowerLossMultiplier(DEALER_ACCOUNTANT, 10));
+    ASSERT_EQ_INT(150, dealerPowerLossMultiplier(DEALER_SAINT, 10));
+    ASSERT_EQ_INT(200, dealerPowerLossMultiplier(DEALER_MIRROR, 10));
+    for (id = DEALER_CROUPIER; id < DEALER_COUNT; id = (DealerId)(id + 1)) {
+        if (id != DEALER_ACCOUNTANT && id != DEALER_SAINT && id != DEALER_MIRROR)
+            ASSERT_EQ_INT(100, dealerPowerLossMultiplier(id, 10));
+    }
+}
+
 TEST(dealer_target_values) {
     ASSERT_EQ_INT(18, dealerTargetValue(DEALER_CLOCKMAKER));
     ASSERT_EQ_INT(18, dealerTargetValue(DEALER_BOSS_PRIME));
@@ -161,6 +191,9 @@ void run_dealers_tests(void) {
     RUN_TEST(dealer_random_floor_avoids_previous_dealer);
     RUN_TEST(dealer_boss_flags_are_exact);
     RUN_TEST(dealer_boss_info_has_names_and_two_rules);
+    RUN_TEST(dealer_power_rule2_floor_gating);
+    RUN_TEST(dealer_power_rule2_deep_floor_coverage);
+    RUN_TEST(dealer_power_loss_multipliers);
     RUN_TEST(dealer_target_values);
     RUN_TEST(dealer_loss_multipliers);
     RUN_TEST(dealer_blackjack_payout_ratios);
