@@ -34,6 +34,7 @@ void initGame(Game *game, GameMode mode) {
     game->peekActive = 0;
     game->fastMode = 0;
     game->fatigueTier = 0;
+    game->dealerEnraged = 0;
     game->winStreak = 0;
     game->lossStreak = 0;
     game->loanAmount = 0;
@@ -127,6 +128,7 @@ void advanceFloor(Game *game) {
     game->run.roundsOnFloor = 0;
     game->run.extraTwistCount = 0;
     game->fatigueTier = 0;
+    game->dealerEnraged = 0;
     game->run.dealerId = selectDealerForFloor(game->run.floor,
                                           game->run.previousDealerId);
 

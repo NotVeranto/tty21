@@ -22,16 +22,10 @@ int getMinBet(const Game *game, int floor, GameMode mode) {
 
     if (mode == MODE_CLASSIC) {
         base = 1;
-    } else if (floor <= 1) {
-        base = 1;
-    } else if (floor <= 3) {
-        base = 5;
-    } else if (floor <= 6) {
-        base = 10;
-    } else if (floor <= 9) {
-        base = 25;
     } else {
-        base = 50;
+        int halfFloor = floor / 2;
+
+        base = 1 + halfFloor * halfFloor;
     }
 
     if (twistActive(game, TWIST_GREED)) {

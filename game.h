@@ -69,6 +69,7 @@ struct Game {
     int peekActive;
     int fastMode;
     int fatigueTier;
+    int dealerEnraged;
     int winStreak;
     int lossStreak;
     int loanAmount;        /* chips owed, 0 if no loan */

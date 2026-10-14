@@ -264,17 +264,33 @@ static int readBet(Game *game) {
     size_t delimiterPosition;
     size_t rawLength;
     int minBet;
+    int maxBet;
     int validBet;
     KeyEvent event;
 
     minBet = getMinBet(game, game->run.floor, game->mode);
+    maxBet = game->player.chips;
+
+    if (game->mode == MODE_ROGUELIKE) {
+        int cap = game->player.chips;
+
+        if (game->run.floor >= 12) {
+            cap = game->player.chips / 3;
+        } else if (game->run.floor >= 8) {
+            cap = game->player.chips / 2;
+        }
+
+        if (cap >= minBet) {
+            maxBet = cap;
+        }
+    }
 
     if (game->player.chips < minBet) {
         snprintf(prompt,
                  sizeof(prompt),
                  "Minimum bet is %d. You have %d chips. Run over.",
                  minBet,
-                 game->player.chips);
+                 maxBet);
         renderMessage(prompt, ROW_RESULT, MSG_DEFAULT);
         game->state = STATE_QUIT;
         return -1;
@@ -289,7 +305,7 @@ static int readBet(Game *game) {
                      sizeof(prompt),
                      "Enter bet (%d-%d): %s",
                      minBet,
-                     game->player.chips,
+                     maxBet,
                      rawInput);
             renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
 
@@ -319,14 +335,14 @@ static int readBet(Game *game) {
 
                     if (*endPointer == '\0' &&
                         betValue >= minBet &&
-                        betValue <= game->player.chips) {
+                        betValue <= maxBet) {
                         validBet = 1;
                     } else {
                         snprintf(message,
                                  sizeof(message),
                                  "Invalid bet. Enter an integer between %d and %d.",
                                  minBet,
-                                 game->player.chips);
+                                 maxBet);
                         renderMessage(message,
                                       ROW_RESULT,
                                       MSG_DEFAULT);
@@ -347,7 +363,7 @@ static int readBet(Game *game) {
                  sizeof(prompt),
                  "Enter bet (%d-%d): ",
                  minBet,
-                 game->player.chips);
+                 maxBet);
 
         validBet = 0;
 
@@ -375,7 +391,7 @@ static int readBet(Game *game) {
                          sizeof(message),
                          "Invalid bet. Enter an integer between %d and %d.",
                          minBet,
-                         game->player.chips);
+                         maxBet);
                 renderMessage(message, ROW_RESULT, MSG_DEFAULT);
                 continue;
             }
@@ -393,14 +409,14 @@ static int readBet(Game *game) {
             if (input[0] != '\0' &&
                 *endPointer == '\0' &&
                 betValue >= minBet &&
-                betValue <= game->player.chips) {
+                betValue <= maxBet) {
                 validBet = 1;
             } else {
                 snprintf(message,
                          sizeof(message),
                          "Invalid bet. Enter an integer between %d and %d.",
                          minBet,
-                         game->player.chips);
+                         maxBet);
                 renderMessage(message, ROW_RESULT, MSG_DEFAULT);
             }
         }
@@ -1060,6 +1076,22 @@ void dealerTurn(Game *game) {
         if (twistActive(game, TWIST_DEALER_TO_18) &&
             targetValue < 18) {
             targetValue = 18;
+        }
+
+        if (game->mode == MODE_ROGUELIKE &&
+            game->run.floor >= 10 &&
+            game->run.roundsOnFloor >= 3) {
+            if (!game->dealerEnraged) {
+                logPush(game,
+                        "Dealer is enraged. Draws one higher.",
+                        MSG_LOSS);
+                game->dealerEnraged = 1;
+            }
+
+            targetValue++;
+            if (targetValue > 21) {
+                targetValue = 21;
+            }
         }
 
         for (dealerHandIndex = 0;
