@@ -92,17 +92,16 @@ void advanceFloor(Game *game) {
         return;
     }
 
-    bonus = 0;
+    bonus = (game->player.chips - 50) / 25;
 
-    if (game->player.chips > 100) {
-        bonus = (game->player.chips - 100) / 20;
-
-        if (bonus > 20) {
-            bonus = 20;
-        }
+    if (bonus < 0) {
+        bonus = 0;
+    }
+    if (bonus > 5) {
+        bonus = 5;
     }
 
-    earned = 10 + game->run.floor * 3 + bonus;
+    earned = 4 + game->run.floor + bonus;
     game->run.marks += earned;
     game->run.previousDealerId = game->run.dealerId;
     game->run.previousTwistId = game->run.twistId;

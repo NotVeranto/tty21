@@ -1802,7 +1802,7 @@ void resolveRound(Game *game) {
         int reward;
         char bossMsg[96];
 
-        rewardValue = 20LL + (long long)game->run.floor * 5LL;
+        rewardValue = 10LL + (long long)game->run.floor * 2LL;
         if (rewardValue > INT_MAX) {
             rewardValue = INT_MAX;
         }

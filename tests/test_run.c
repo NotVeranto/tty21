@@ -54,9 +54,9 @@ TEST(run_roguelike_minimum_bet_by_floor) {
 
     test_init_game_for_min_bet(&game);
 
-    ASSERT_EQ_INT(1, getMinBet(&game, 1, MODE_ROGUELIKE));
-    ASSERT_EQ_INT(2, getMinBet(&game, 3, MODE_ROGUELIKE));
-    ASSERT_EQ_INT(5, getMinBet(&game, 5, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(2, getMinBet(&game, 1, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(4, getMinBet(&game, 3, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(10, getMinBet(&game, 5, MODE_ROGUELIKE));
 }
 
 TEST(run_roguelike_quadratic_minimum_bet_late_floors) {
@@ -64,8 +64,16 @@ TEST(run_roguelike_quadratic_minimum_bet_late_floors) {
 
     test_init_game_for_min_bet(&game);
 
-    ASSERT_EQ_INT(26, getMinBet(&game, 10, MODE_ROGUELIKE));
-    ASSERT_EQ_INT(50, getMinBet(&game, 15, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(52, getMinBet(&game, 10, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(100, getMinBet(&game, 15, MODE_ROGUELIKE));
+}
+
+TEST(run_roguelike_minimum_bet_floor_two) {
+    Game game;
+
+    test_init_game_for_min_bet(&game);
+
+    ASSERT_EQ_INT(4, getMinBet(&game, 2, MODE_ROGUELIKE));
 }
 
 TEST(run_greed_doubles_minimum_bet) {
@@ -74,7 +82,7 @@ TEST(run_greed_doubles_minimum_bet) {
     test_init_game_for_min_bet(&game);
     game.run.twistId = TWIST_GREED;
 
-    ASSERT_EQ_INT(10, getMinBet(&game, 5, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(20, getMinBet(&game, 5, MODE_ROGUELIKE));
 }
 
 TEST(run_blocked_greed_does_not_double_minimum_bet) {
@@ -84,7 +92,7 @@ TEST(run_blocked_greed_does_not_double_minimum_bet) {
     game.run.twistId = TWIST_GREED;
     game.run.twistBlocked = 1;
 
-    ASSERT_EQ_INT(5, getMinBet(&game, 5, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(10, getMinBet(&game, 5, MODE_ROGUELIKE));
 }
 
 TEST(run_minimum_bet_multiplier_is_applied) {
@@ -93,14 +101,15 @@ TEST(run_minimum_bet_multiplier_is_applied) {
     test_init_game_for_min_bet(&game);
     game.minBetMultiplier = 2;
 
-    ASSERT_EQ_INT(2, getMinBet(&game, 1, MODE_ROGUELIKE));
-    ASSERT_EQ_INT(10, getMinBet(&game, 5, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(4, getMinBet(&game, 1, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(20, getMinBet(&game, 5, MODE_ROGUELIKE));
 }
 
 void run_run_tests(void) {
     RUN_TEST(run_classic_minimum_bet_is_always_one);
     RUN_TEST(run_roguelike_minimum_bet_by_floor);
     RUN_TEST(run_roguelike_quadratic_minimum_bet_late_floors);
+    RUN_TEST(run_roguelike_minimum_bet_floor_two);
     RUN_TEST(run_greed_doubles_minimum_bet);
     RUN_TEST(run_blocked_greed_does_not_double_minimum_bet);
     RUN_TEST(run_minimum_bet_multiplier_is_applied);

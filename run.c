@@ -25,7 +25,7 @@ int getMinBet(const Game *game, int floor, GameMode mode) {
     } else {
         int halfFloor = floor / 2;
 
-        base = 1 + halfFloor * halfFloor;
+        base = 2 * (1 + halfFloor * halfFloor);
     }
 
     if (twistActive(game, TWIST_GREED)) {

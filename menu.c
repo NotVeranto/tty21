@@ -23,11 +23,27 @@ static int allPerksOwned(const Game *game) {
 static void dispatchFloorMenuAction(Game *game,
                                     char actionCharacter,
                                     int currentMinBet,
-                                    int nextMinBet) {
+                                    int nextMinBet,
+                                    int advanceFee) {
     if ((actionCharacter == 'c' || actionCharacter == 'C') &&
         game->player.chips >= currentMinBet) {
         game->state = STATE_BET;
     } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
+               game->mode == MODE_ROGUELIKE &&
+               game->player.chips >= nextMinBet &&
+               game->player.chips >= advanceFee) {
+        char feeMsg[64];
+
+        game->player.chips -= advanceFee;
+        snprintf(feeMsg, sizeof(feeMsg),
+                 "Advance cost: -%d chips.", advanceFee);
+        logPush(game, feeMsg, MSG_LOSS);
+        advanceFloor(game);
+        if (game->state != STATE_QUIT) {
+            game->state = STATE_BET;
+        }
+    } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
+               game->mode == MODE_CLASSIC &&
                game->player.chips >= nextMinBet) {
         advanceFloor(game);
         if (game->state != STATE_QUIT) {
@@ -35,6 +51,18 @@ static void dispatchFloorMenuAction(Game *game,
         }
     } else if (actionCharacter == 's' || actionCharacter == 'S') {
         game->state = STATE_SHOP;
+    } else if ((actionCharacter == 'm' || actionCharacter == 'M') &&
+               game->mode == MODE_ROGUELIKE &&
+               game->player.chips >= 10) {
+        char convertMsg[96];
+
+        game->player.chips -= 10;
+        game->run.marks += 2;
+
+        /* Flat conversion rate: 10 chips always buys 2 marks. */
+        snprintf(convertMsg, sizeof(convertMsg),
+                 "Converted 10 chips to 2 marks.");
+        logPush(game, convertMsg, MSG_INFO);
     } else if ((actionCharacter == 'l' || actionCharacter == 'L') &&
                game->loanAmount == 0 &&
                game->player.chips < nextMinBet) {
@@ -90,10 +118,11 @@ static void dispatchFloorMenuAction(Game *game,
 }
 
 void floorMenu(Game *game) {
-    MenuItem menuItems[8];
+    MenuItem menuItems[10];
     char continueLabel[128];
     char advanceLabel[128];
     char shopLabel[128];
+    char convertLabel[128];
     char loanLabel[128];
     char rerollLabel[128];
     char blockLabel[128];
@@ -102,6 +131,7 @@ void floorMenu(Game *game) {
     char input[64];
     KeyEvent event;
     int nextMinBet;
+    int advanceFee;
     int disabledMask;
     int selectedIndex;
     int actionCharacter;
@@ -109,6 +139,7 @@ void floorMenu(Game *game) {
     int currentMinBet;
     int inputCharacter;
     int menuIndex;
+    int menuScanIndex;
     int rawMode;
     int itemCount;
     int loanAvailable;
@@ -124,10 +155,11 @@ void floorMenu(Game *game) {
     }
 
     nextMinBet = getMinBet(game, game->run.floor + 1, game->mode);
+    advanceFee = game->mode == MODE_ROGUELIKE ? 2 * nextMinBet : 0;
     selectedIndex = 0;
 
     while (game->state == STATE_MENU) {
-        disabledMask = game->player.chips < nextMinBet ? 1 << 1 : 0;
+        disabledMask = 0;
 
         snprintf(continueLabel,
                  sizeof(continueLabel),
@@ -135,14 +167,27 @@ void floorMenu(Game *game) {
                  game->run.floor,
                  game->run.roundsOnFloor,
                  fatiguePercent(game->run.roundsOnFloor));
-        snprintf(advanceLabel,
-                 sizeof(advanceLabel),
-                 "Advance to floor %d (earn marks, reset fatigue)",
-                 game->run.floor + 1);
+        if (game->mode == MODE_ROGUELIKE) {
+            if (game->player.chips >= advanceFee) {
+                snprintf(advanceLabel, sizeof(advanceLabel),
+                         "Advance to floor %d (cost %d chips)",
+                         game->run.floor + 1, advanceFee);
+            } else {
+                snprintf(advanceLabel, sizeof(advanceLabel),
+                         "Advance to floor %d (need %d chips)",
+                         game->run.floor + 1, advanceFee);
+            }
+        } else {
+            snprintf(advanceLabel, sizeof(advanceLabel),
+                     "Advance to floor %d (earn marks, reset fatigue)",
+                     game->run.floor + 1);
+        }
         snprintf(shopLabel,
                  sizeof(shopLabel),
                  "Shop (%d marks)",
                  game->run.marks);
+        snprintf(convertLabel, sizeof(convertLabel),
+                 "Convert 10 chips to 2 marks");
         snprintf(loanLabel,
                  sizeof(loanLabel),
                  "Take a loan (50 chips, repay 75 by floor %d)",
@@ -173,6 +218,12 @@ void floorMenu(Game *game) {
         menuItems[itemCount].hotkey = 's';
         menuItems[itemCount].label = shopLabel;
         itemCount++;
+
+        if (game->mode == MODE_ROGUELIKE) {
+            menuItems[itemCount].hotkey = 'm';
+            menuItems[itemCount].label = convertLabel;
+            itemCount++;
+        }
 
         loanAvailable = game->loanAmount == 0 &&
                         game->player.chips < nextMinBet;
@@ -222,6 +273,20 @@ void floorMenu(Game *game) {
         menuItems[itemCount].label = "Quit run";
         itemCount++;
 
+        for (menuScanIndex = 0;
+             menuScanIndex < itemCount;
+             menuScanIndex++) {
+            if (menuItems[menuScanIndex].hotkey == 'a' &&
+                (game->player.chips < nextMinBet ||
+                 game->player.chips < advanceFee)) {
+                disabledMask |= 1 << menuScanIndex;
+            }
+            if (menuItems[menuScanIndex].hotkey == 'm' &&
+                game->player.chips < 10) {
+                disabledMask |= 1 << menuScanIndex;
+            }
+        }
+
         if (selectedIndex >= itemCount) {
             selectedIndex = itemCount - 1;
         }
@@ -255,7 +320,8 @@ void floorMenu(Game *game) {
                 dispatchFloorMenuAction(game,
                                         actionCharacter,
                                         currentMinBet,
-                                        nextMinBet);
+                                        nextMinBet,
+                                        advanceFee);
             } else if (event.type == KEY_CHAR) {
                 for (menuIndex = 0; menuIndex < itemCount; menuIndex++) {
                     if (event.ch == menuItems[menuIndex].hotkey ||
@@ -266,7 +332,8 @@ void floorMenu(Game *game) {
                             game,
                             menuItems[menuIndex].hotkey,
                             currentMinBet,
-                            nextMinBet);
+                            nextMinBet,
+                            advanceFee);
                         break;
                     }
                 }
@@ -306,7 +373,8 @@ void floorMenu(Game *game) {
                                 game,
                                 menuItems[menuIndex].hotkey,
                                 currentMinBet,
-                                nextMinBet);
+                                nextMinBet,
+                                advanceFee);
                             break;
                         }
                     }
