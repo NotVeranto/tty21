@@ -165,7 +165,7 @@ void advanceFloor(Game *game) {
         game->run.twistId = selectTwistForFloor(game);
 
         if (!twistIsForcedHostile(game)) {
-            attempts = 0;
+            attempts = 1;
             while (game->player.perkOwned[PERK_SIXTH_SENSE] &&
                    game->run.floor >= 4 &&
                    getTwistInfo(game->run.twistId)->category ==
