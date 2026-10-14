@@ -101,6 +101,45 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
     return candidates[randomIndex];
 }
 
+/* Returns the floor-dependent second power rule for a dealer. */
+const char *dealerPowerRule2(DealerId id, int floor) {
+    if (floor < 10) {
+        return NULL;
+    }
+
+    switch (id) {
+        case DEALER_CROUPIER:   return NULL;
+        case DEALER_ACCOUNTANT: return "Losses cost 125%.";
+        case DEALER_CLOCKMAKER: return "Dealer draws to 19.";
+        case DEALER_BUTCHER:    return "You cannot stand below 15.";
+        case DEALER_MIRROR:     return "Every loss costs 2x.";
+        case DEALER_REAPER:     return "Your blackjack pays 1:1.";
+        case DEALER_VOID:       return "You cannot double.";
+        case DEALER_ORACLE:     return "Dealer draws to 18.";
+        case DEALER_DEVIL:      return "Every hit costs 3 chips.";
+        case DEALER_SAINT:      return "Losses cost 150%.";
+        case DEALER_TWIN:       return "You cannot split.";
+        default:                return NULL;
+    }
+}
+
+/* Returns the additional loss multiplier for a dealer's power rule. */
+int dealerPowerLossMultiplier(DealerId id, int floor) {
+    if (floor < 10) {
+        return 100;
+    }
+    if (id == DEALER_ACCOUNTANT) {
+        return 125;
+    }
+    if (id == DEALER_SAINT) {
+        return 150;
+    }
+    if (id == DEALER_MIRROR) {
+        return 200;
+    }
+    return 100;
+}
+
 /* Returns the dealer's standing target value. */
 int dealerTargetValue(DealerId id) {
     return id == DEALER_CLOCKMAKER || id == DEALER_BOSS_PRIME ? 18 : 17;
