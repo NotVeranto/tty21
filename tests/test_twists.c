@@ -1,13 +1,15 @@
 #include "test.h"
 #include "twists.h"
+#include "game.h"
 #include "rng.h"
 
 #include <string.h>
 
 TEST(twist_early_floors_have_none) {
-    ASSERT_EQ_INT(TWIST_NONE, selectTwistForFloor(1, TWIST_NONE));
-    ASSERT_EQ_INT(TWIST_NONE, selectTwistForFloor(2, TWIST_NONE));
-    ASSERT_EQ_INT(TWIST_NONE, selectTwistForFloor(3, TWIST_NONE));
+    Game game = {0};
+    game.run.floor = 1; ASSERT_EQ_INT(TWIST_NONE, selectTwistForFloor(&game));
+    game.run.floor = 2; ASSERT_EQ_INT(TWIST_NONE, selectTwistForFloor(&game));
+    game.run.floor = 3; ASSERT_EQ_INT(TWIST_NONE, selectTwistForFloor(&game));
 }
 
 TEST(twist_floor_four_has_valid_category) {
@@ -15,7 +17,10 @@ TEST(twist_floor_four_has_valid_category) {
     TwistId id;
 
     rngInit(201U);
-    id = selectTwistForFloor(4, TWIST_NONE);
+    {
+        Game game = {0}; game.run.floor = 4; game.run.previousTwistId = TWIST_NONE;
+        id = selectTwistForFloor(&game);
+    }
     ASSERT_TRUE(id > TWIST_NONE && id < TWIST_COUNT);
 
     info = getTwistInfo(id);
@@ -28,7 +33,10 @@ TEST(twist_floor_eight_has_valid_category) {
     TwistId id;
 
     rngInit(208U);
-    id = selectTwistForFloor(8, TWIST_NONE);
+    {
+        Game game = {0}; game.run.floor = 8; game.run.previousTwistId = TWIST_NONE;
+        id = selectTwistForFloor(&game);
+    }
     ASSERT_TRUE(id > TWIST_NONE && id < TWIST_COUNT);
 
     info = getTwistInfo(id);
@@ -48,7 +56,10 @@ TEST(twist_selection_avoids_previous_and_varies) {
     distinct = 0;
 
     for (sampleIndex = 0; sampleIndex < 100; sampleIndex++) {
-        id = selectTwistForFloor(4, previous);
+        {
+            Game game = {0}; game.run.floor = 4; game.run.previousTwistId = previous;
+            id = selectTwistForFloor(&game);
+        }
         ASSERT_TRUE(id > TWIST_NONE && id < TWIST_COUNT);
         ASSERT_TRUE(id != previous);
 
@@ -59,6 +70,30 @@ TEST(twist_selection_avoids_previous_and_varies) {
     }
 
     ASSERT_TRUE(distinct > 1);
+}
+
+TEST(twist_forced_hostile_schedule) {
+    Game game = {0};
+    game.run.dealerId = DEALER_ACCOUNTANT; game.run.floor = 10;
+    ASSERT_EQ_INT(1, twistIsForcedHostile(&game));
+    ASSERT_EQ_INT(TWIST_CAT_HOSTILE, getTwistInfo(selectTwistForFloor(&game))->category);
+    game.run.floor = 11; ASSERT_EQ_INT(0, twistIsForcedHostile(&game));
+    game.run.floor = 12; ASSERT_EQ_INT(0, twistIsForcedHostile(&game));
+    game.run.floor = 13; ASSERT_EQ_INT(1, twistIsForcedHostile(&game));
+    game.run.floor = 16; ASSERT_EQ_INT(1, twistIsForcedHostile(&game));
+}
+
+TEST(twist_boss_floors_are_not_forced_hostile) {
+    Game game = {0}; game.run.dealerId = DEALER_BOSS_PRIME;
+    game.run.floor = 10; ASSERT_EQ_INT(0, twistIsForcedHostile(&game));
+    game.run.floor = 13; ASSERT_EQ_INT(0, twistIsForcedHostile(&game));
+}
+
+TEST(twist_sixth_sense_does_not_cancel_forced_hostility) {
+    Game game = {0}; game.run.floor = 10; game.run.dealerId = DEALER_ACCOUNTANT;
+    game.player.perkOwned[PERK_SIXTH_SENSE] = 1;
+    ASSERT_EQ_INT(1, twistIsForcedHostile(&game));
+    ASSERT_EQ_INT(TWIST_CAT_HOSTILE, getTwistInfo(selectTwistForFloor(&game))->category);
 }
 
 TEST(twist_none_has_expected_name) {
@@ -93,6 +128,9 @@ void run_twists_tests(void) {
     RUN_TEST(twist_floor_four_has_valid_category);
     RUN_TEST(twist_floor_eight_has_valid_category);
     RUN_TEST(twist_selection_avoids_previous_and_varies);
+    RUN_TEST(twist_forced_hostile_schedule);
+    RUN_TEST(twist_boss_floors_are_not_forced_hostile);
+    RUN_TEST(twist_sixth_sense_does_not_cancel_forced_hostility);
     RUN_TEST(twist_none_has_expected_name);
     RUN_TEST(twist_invalid_ids_fall_back_to_none);
     RUN_TEST(twist_spot_check_categories);
