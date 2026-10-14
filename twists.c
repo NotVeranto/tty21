@@ -1,4 +1,5 @@
 #include "twists.h"
+#include "game.h"
 #include "rng.h"
 
 static const TwistInfo TWIST_INFO[] = {
@@ -137,12 +138,31 @@ const TwistInfo *getTwistInfo(TwistId id) {
     return &TWIST_INFO[id];
 }
 
-TwistId selectTwistForFloor(int floor, TwistId previousTwist) {
+int twistIsForcedHostile(const Game *game) {
+    int floor = game->run.floor;
+
+    return floor >= 10 &&
+           (floor - 10) % 3 == 0 &&
+           !dealerIsBoss(game->run.dealerId);
+}
+
+TwistId selectTwistForFloor(const Game *game) {
+    int floor = game->run.floor;
+    TwistId previousTwist = game->run.previousTwistId;
+    int forceHostile = 0;
     int roll;
     TwistCategory category;
 
     if (floor <= 3) {
         return TWIST_NONE;
+    }
+
+    if (twistIsForcedHostile(game)) {
+        forceHostile = 1;
+    }
+
+    if (forceHostile) {
+        return selectTwistFromCategory(TWIST_CAT_HOSTILE, previousTwist);
     }
 
     roll = rngRange(0, 99);
