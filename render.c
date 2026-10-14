@@ -1030,21 +1030,24 @@ void renderTable(const Game *game, int hideDealerCard) {
         moveToTableRow(ROW_RULE, tablePadding);
         printf(SCR_ERASE_EOL);
 
-        if (dealerInfo->rule1 != NULL) {
-            if (dealerInfo->rule2 == NULL) {
+        {
+            const char *rule1 = dealerInfo->rule1;
+            const char *rule2 = dealerInfo->rule2;
+            const char *power = dealerPowerRule2(game->run.dealerId, game->run.floor);
+            if (rule2 == NULL && power != NULL) rule2 = power;
+            if (rule1 != NULL || rule2 != NULL) {
+            if (rule2 == NULL) {
                 snprintf(rulesText,
                          sizeof(rulesText),
                          "Rule: %s",
-                         dealerInfo->rule1);
+                         rule1);
+            } else if (rule1 == NULL) {
+                snprintf(rulesText, sizeof(rulesText), "Rule: %s", rule2);
             } else {
-                snprintf(rulesText,
-                         sizeof(rulesText),
-                         "Rules: %s | %s",
-                         dealerInfo->rule1,
-                         dealerInfo->rule2);
+                snprintf(rulesText, sizeof(rulesText), "Rules: %s | %s", rule1, rule2);
             }
-
             printf("%s%s%s", scrDim(), rulesText, scrReset());
+            }
         }
 
         moveToTableRow(ROW_TWIST, tablePadding);
