@@ -435,7 +435,7 @@ void runShop(Game *game) {
             status = game->player.perkOwned[perkIndex] ? "OWNED" : "BUY";
             snprintf(labels[perkIndex],
                      sizeof(labels[perkIndex]),
-                     "%-15s  %3d souls   %s",
+                     "%-15s  %3d marks   %s",
                      perkName((PerkId)perkIndex),
                      perkCost((PerkId)perkIndex),
                      status);
