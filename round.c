@@ -932,6 +932,7 @@ static void askEvenMoney(Game *game) {
 
     bet = game->player.bets[0];
     game->player.chips += bet;
+    game->player.insuranceBet = 0;
     game->player.evenMoneyTaken = 1;
     game->state = STATE_RESULT;
     snprintf(message, sizeof(message),
@@ -1041,8 +1042,24 @@ void startRound(Game *game) {
     upcardRank = game->dealer.hands[0].cards[0].rank;
     upcardIsAce = upcardRank == ACE;
     upcardIsTen = upcardRank >= TEN;
-    dealerBJ = 0;
 
+    playerValue = calculatePlayerHandValue(game);
+    playerBJ = game->player.hands[0].count == 2 &&
+               playerValue == 21 &&
+               !game->player.usedSplit;
+
+    if (upcardIsAce) {
+        if (playerBJ) {
+            askEvenMoney(game);
+            if (game->state == STATE_RESULT) {
+                return;
+            }
+        } else {
+            askInsurance(game);
+        }
+    }
+
+    dealerBJ = 0;
     if ((upcardIsAce || upcardIsTen) &&
         game->dealer.hands[0].count == 2) {
         int dealerVal;
@@ -1055,26 +1072,22 @@ void startRound(Game *game) {
     }
 
     if (dealerBJ) {
+        if (game->player.insuranceBet > 0) {
+            int insurancePayout;
+            char insuranceMessage[64];
+
+            insurancePayout = game->player.insuranceBet * 2;
+            game->player.chips += insurancePayout;
+            snprintf(insuranceMessage, sizeof(insuranceMessage),
+                     "Insurance pays: +%d chips.",
+                     insurancePayout);
+            logPush(game, insuranceMessage, MSG_WIN);
+        }
+        game->player.insuranceBet = 0;
         game->peekActive = 1;
         logPush(game, "Dealer peeks. Blackjack.", MSG_LOSS);
         game->state = STATE_RESULT;
         return;
-    }
-
-    playerValue = calculatePlayerHandValue(game);
-    playerBJ = game->player.hands[0].count == 2 &&
-               playerValue == 21 &&
-               !game->player.usedSplit;
-
-    if (upcardIsAce && playerBJ) {
-        askEvenMoney(game);
-        if (game->state == STATE_RESULT) {
-            return;
-        }
-    }
-
-    if (upcardIsAce) {
-        askInsurance(game);
     }
 
     if (dealerForcesDouble(game->run.dealerId)) {
