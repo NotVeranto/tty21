@@ -8,19 +8,6 @@
 #include <stdio.h>
 #include <string.h>
 
-static int allPerksOwned(const Game *game) {
-    int perkIndex;
-
-    for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
-        if (perkIsSold((PerkId)perkIndex) &&
-            !game->player.perkOwned[perkIndex]) {
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
 static void dispatchFloorMenuAction(Game *game,
                                     char actionCharacter,
                                     int currentMinBet,
@@ -50,103 +37,20 @@ static void dispatchFloorMenuAction(Game *game,
         if (game->state != STATE_QUIT) {
             game->state = STATE_BET;
         }
-    } else if (actionCharacter == 's' || actionCharacter == 'S') {
+    } else if ((actionCharacter == 's' || actionCharacter == 'S') &&
+               game->mode == MODE_ROGUELIKE) {
         game->state = STATE_SHOP;
-    } else if ((actionCharacter == 'm' || actionCharacter == 'M') &&
-               game->mode == MODE_ROGUELIKE &&
-               game->player.chips >= 10) {
-        char convertMsg[96];
-
-        game->player.chips -= 10;
-        game->run.marks += 2;
-
-        /* Flat conversion rate: 10 chips always buys 2 marks. */
-        snprintf(convertMsg, sizeof(convertMsg),
-                 "Converted 10 chips to 2 marks.");
-        logPush(game, convertMsg, MSG_INFO);
-    } else if ((actionCharacter == 'n' || actionCharacter == 'N') &&
-               game->mode == MODE_ROGUELIKE &&
-               game->safetyNetArmed == 0 &&
-               game->player.chips >= 50) {
-        game->player.chips -= 50;
-        game->safetyNetArmed = 1;
-        logPush(game,
-                "Safety net armed. Next wipe leaves 20 chips.",
-                MSG_INFO);
-    } else if ((actionCharacter == 't' || actionCharacter == 'T') &&
-               game->mode == MODE_ROGUELIKE &&
-               game->player.chips >= 10) {
-        game->player.chips -= 10;
-        game->tippedThisRound = 1;
-        logPush(game,
-                "Dealer tipped. Hole card visible next round.",
-                MSG_INFO);
-    } else if ((actionCharacter == 'l' || actionCharacter == 'L') &&
-               game->loanAmount == 0 &&
-               game->player.chips < nextMinBet) {
-        char message[128];
-
-        game->player.chips += 50;
-        game->loanAmount = 75;
-        game->loanDueFloor = game->run.floor + 3;
-        snprintf(message,
-                 sizeof(message),
-                 "Loan taken: +50 chips, repay 75 by floor %d.",
-                 game->loanDueFloor);
-        logPush(game, message, MSG_INFO);
-    } else if ((actionCharacter == 'r' || actionCharacter == 'R') &&
-               game->mode == MODE_ROGUELIKE &&
-               game->run.floor >= 4 &&
-               game->run.twistRerolled == 0 &&
-               game->run.marks >= 30) {
-        game->run.twistId = selectTwistForFloor(game);
-        game->run.twistRerolled = 1;
-        game->run.marks -= 30;
-        logPush(game, "Twist rerolled.", MSG_INFO);
-    } else if ((actionCharacter == 'b' || actionCharacter == 'B') &&
-               game->mode == MODE_ROGUELIKE &&
-               game->run.floor >= 4 &&
-               game->run.twistBlocked == 0 &&
-               game->run.twistId != TWIST_NONE &&
-               game->run.marks >= 40) {
-        game->run.twistBlocked = 1;
-        game->run.marks -= 40;
-        logPush(game, "Twist blocked this floor.", MSG_INFO);
-    } else if ((actionCharacter == 'k' || actionCharacter == 'K') &&
-               game->mode == MODE_ROGUELIKE &&
-               game->run.floor >= 4 &&
-               game->player.chips >= nextMinBet &&
-               game->run.marks >= 60) {
-        game->run.marks -= 60;
-        advanceFloor(game);
-        if (game->state != STATE_QUIT) {
-            game->state = STATE_BET;
-            logPush(game, "Floor skipped.", MSG_INFO);
-        }
-    } else if ((actionCharacter == 'p' || actionCharacter == 'P') &&
-               game->extraPerkSlots == 0 &&
-               game->run.marks >= 100) {
-        game->run.marks -= 100;
-        game->extraPerkSlots = 1;
-        logPush(game, "Extra perk slot unlocked.", MSG_WIN);
     } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
         game->state = STATE_QUIT;
     }
 }
 
+
 void floorMenu(Game *game) {
-    MenuItem menuItems[12];
+    MenuItem menuItems[4];
     char continueLabel[128];
     char advanceLabel[128];
     char shopLabel[128];
-    char convertLabel[128];
-    char loanLabel[128];
-    char rerollLabel[128];
-    char blockLabel[128];
-    char skipLabel[128];
-    char perkSlotLabel[128];
-    char safetyNetLabel[128];
-    char tipLabel[128];
     char input[64];
     KeyEvent event;
     int nextMinBet;
@@ -161,7 +65,6 @@ void floorMenu(Game *game) {
     int menuScanIndex;
     int rawMode;
     int itemCount;
-    int loanAvailable;
 
     currentMinBet = getMinBet(game, game->run.floor, game->mode);
 
@@ -205,31 +108,6 @@ void floorMenu(Game *game) {
                  sizeof(shopLabel),
                  "Shop (%d marks)",
                  game->run.marks);
-        snprintf(convertLabel, sizeof(convertLabel),
-                 "Convert 10 chips to 2 marks");
-        snprintf(loanLabel,
-                 sizeof(loanLabel),
-                 "Take a loan (50 chips, repay 75 by floor %d)",
-                 game->run.floor + 3);
-        snprintf(rerollLabel,
-                 sizeof(rerollLabel),
-                 "Reroll twist (30 marks)");
-        snprintf(blockLabel,
-                 sizeof(blockLabel),
-                 "Block twist (40 marks)");
-        snprintf(skipLabel,
-                 sizeof(skipLabel),
-                 "Skip floor (60 marks)");
-        snprintf(perkSlotLabel,
-                 sizeof(perkSlotLabel),
-                 "Buy extra perk slot (100 marks)");
-        snprintf(safetyNetLabel,
-                 sizeof(safetyNetLabel),
-                 "Buy safety net (50 chips, survive one wipe)");
-        snprintf(tipLabel,
-                 sizeof(tipLabel),
-                 "Tip dealer (10 chips, see hole next round)");
-
         itemCount = 0;
 
         menuItems[itemCount].hotkey = 'c';
@@ -244,66 +122,6 @@ void floorMenu(Game *game) {
         menuItems[itemCount].label = shopLabel;
         itemCount++;
 
-        if (game->mode == MODE_ROGUELIKE) {
-            menuItems[itemCount].hotkey = 'm';
-            menuItems[itemCount].label = convertLabel;
-            itemCount++;
-        }
-
-        loanAvailable = game->loanAmount == 0 &&
-                        game->player.chips < nextMinBet;
-
-        if (loanAvailable) {
-            menuItems[itemCount].hotkey = 'l';
-            menuItems[itemCount].label = loanLabel;
-            itemCount++;
-        }
-
-        if (game->mode == MODE_ROGUELIKE &&
-            game->run.floor >= 4 &&
-            game->run.twistRerolled == 0 &&
-            game->run.marks >= 30) {
-            menuItems[itemCount].hotkey = 'r';
-            menuItems[itemCount].label = rerollLabel;
-            itemCount++;
-        }
-
-        if (game->mode == MODE_ROGUELIKE &&
-            game->run.floor >= 4 &&
-            game->run.twistBlocked == 0 &&
-            game->run.twistId != TWIST_NONE &&
-            game->run.marks >= 40) {
-            menuItems[itemCount].hotkey = 'b';
-            menuItems[itemCount].label = blockLabel;
-            itemCount++;
-        }
-
-        if (game->mode == MODE_ROGUELIKE &&
-            game->run.floor >= 4 &&
-            game->player.chips >= nextMinBet &&
-            game->run.marks >= 60) {
-            menuItems[itemCount].hotkey = 'k';
-            menuItems[itemCount].label = skipLabel;
-            itemCount++;
-        }
-
-        if (game->extraPerkSlots == 0 &&
-            game->run.marks >= 100) {
-            menuItems[itemCount].hotkey = 'p';
-            menuItems[itemCount].label = perkSlotLabel;
-            itemCount++;
-        }
-
-        if (game->mode == MODE_ROGUELIKE) {
-            menuItems[itemCount].hotkey = 'n';
-            menuItems[itemCount].label = safetyNetLabel;
-            itemCount++;
-
-            menuItems[itemCount].hotkey = 't';
-            menuItems[itemCount].label = tipLabel;
-            itemCount++;
-        }
-
         menuItems[itemCount].hotkey = 'q';
         menuItems[itemCount].label = "Quit run";
         itemCount++;
@@ -316,20 +134,8 @@ void floorMenu(Game *game) {
                  game->player.chips < advanceFee)) {
                 disabledMask |= 1 << menuScanIndex;
             }
-            if (menuItems[menuScanIndex].hotkey == 'm' &&
-                game->player.chips < 10) {
-                disabledMask |= 1 << menuScanIndex;
-            }
-            if (menuItems[menuScanIndex].hotkey == 'n' &&
-                (game->safetyNetArmed != 0 ||
-                 game->player.chips < 50)) {
-                disabledMask |= 1 << menuScanIndex;
-            }
-            if (menuItems[menuScanIndex].hotkey == 't' &&
-                game->player.chips < 10) {
-                disabledMask |= 1 << menuScanIndex;
-            }
         }
+
 
         if (selectedIndex >= itemCount) {
             selectedIndex = itemCount - 1;
@@ -463,19 +269,30 @@ static void purchasePerk(Game *game, int perkIndex) {
 
 void runShop(Game *game) {
     char input[64];
-    char labels[PERK_COUNT][128];
-    MenuItem items[PERK_COUNT];
-    PerkId soldPerks[PERK_COUNT];
+    char labels[24][128];
+    const char *descriptions[24];
+    MenuItem items[24];
+    PerkId soldPerks[12];
+    PerkId itemPerks[24];
     KeyEvent event;
     int actionCharacter;
     int inputCharacter;
     int perkIndex;
     int soldCount;
+    int itemCount;
     int selectedIndex;
-    int ownedMask;
+    int disabledMask;
     int rawMode;
     int characterIndex;
     int menuIndex;
+    int itemIndex;
+    int nextMinBet;
+    char message[128];
+
+    if (game->mode != MODE_ROGUELIKE) {
+        game->state = STATE_MENU;
+        return;
+    }
 
     soldCount = 0;
     for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
@@ -487,118 +304,215 @@ void runShop(Game *game) {
     selectedIndex = 0;
 
     while (game->state == STATE_SHOP) {
+        itemCount = 0;
+        disabledMask = 0;
+        nextMinBet = getMinBet(game, game->run.floor + 1, game->mode);
+
         for (perkIndex = 0; perkIndex < soldCount; perkIndex++) {
-            const char *status;
             PerkId perkId;
 
             perkId = soldPerks[perkIndex];
-            status = game->player.perkOwned[perkId] ? "OWNED" : "BUY";
-            snprintf(labels[perkIndex],
-                     sizeof(labels[perkIndex]),
+            snprintf(labels[itemCount],
+                     sizeof(labels[itemCount]),
                      "%-15s  %3d marks   %s",
                      perkName(perkId),
                      perkCost(perkId),
-                     status);
-
-            if (perkIndex < 9) {
-                items[perkIndex].hotkey = (char)('1' + perkIndex);
-            } else {
-                items[perkIndex].hotkey = (char)('A' + perkIndex - 9);
+                     game->player.perkOwned[perkId] ? "OWNED" : "BUY");
+            items[itemCount].hotkey = perkIndex < 9
+                ? (char)('1' + perkIndex)
+                : (char)('A' + perkIndex - 9);
+            items[itemCount].label = labels[itemCount];
+            itemPerks[itemCount] = perkId;
+            descriptions[itemCount] = perkDescription(perkId);
+            if (game->player.perkOwned[perkId] ||
+                game->run.marks < perkCost(perkId)) {
+                disabledMask |= 1 << itemCount;
             }
-            items[perkIndex].label = labels[perkIndex];
+            itemCount++;
         }
 
-        ownedMask = 0;
-        for (perkIndex = 0; perkIndex < soldCount; perkIndex++) {
-            if (game->player.perkOwned[soldPerks[perkIndex]]) {
-                ownedMask |= 1 << perkIndex;
-            }
+#define ADD_SHOP_ITEM(key, labelText, descriptionText, disabled) \
+        do { \
+            items[itemCount].hotkey = (key); \
+            snprintf(labels[itemCount], sizeof(labels[itemCount]), "%s", (labelText)); \
+            items[itemCount].label = labels[itemCount]; \
+            descriptions[itemCount] = (descriptionText); \
+            itemPerks[itemCount] = (PerkId)-1; \
+            if (disabled) disabledMask |= 1 << itemCount; \
+            itemCount++; \
+        } while (0)
+
+        ADD_SHOP_ITEM('v', "Convert 10 chips to 2 marks",
+                      "Trade 10 chips for 2 marks.",
+                      game->player.chips < 10);
+        if (game->safetyNetArmed == 0) {
+            ADD_SHOP_ITEM('n', "Buy safety net (50 chips)",
+                          "Next wipe leaves you with 20 chips.",
+                          game->player.chips < 50);
+        }
+        ADD_SHOP_ITEM('t', "Tip dealer (10 chips)",
+                      "Hole card visible next round.",
+                      game->player.chips < 10);
+        if (game->loanAmount == 0) {
+            ADD_SHOP_ITEM('l', "Take a loan (+50 chips, repay 75)",
+                          "Repay on the due floor or the run ends.",
+                          game->player.chips >= nextMinBet);
+        }
+        if (game->run.floor >= 4 && game->run.twistRerolled == 0) {
+            ADD_SHOP_ITEM('r', "Reroll twist (30 marks)",
+                          "Roll a new twist for the current floor.",
+                          game->run.marks < 30);
+        }
+        if (game->run.floor >= 4 && game->run.twistBlocked == 0 &&
+            game->run.twistId != TWIST_NONE) {
+            ADD_SHOP_ITEM('b', "Block twist (40 marks)",
+                          "Neutralize the current twist.",
+                          game->run.marks < 40);
+        }
+        if (game->extraPerkSlots == 0) {
+            ADD_SHOP_ITEM('p', "Buy extra perk slot (100 marks)",
+                          "Allows one additional perk to be equipped.",
+                          game->run.marks < 100);
+        }
+#undef ADD_SHOP_ITEM
+
+        if (selectedIndex >= itemCount) {
+            selectedIndex = itemCount - 1;
         }
 
-        renderShop(game, items, soldPerks, soldCount, selectedIndex);
+        renderShop(game, items, descriptions, itemCount,
+                   disabledMask, selectedIndex);
         rawMode = inputIsRaw();
 
         if (rawMode) {
             event = readKey();
-
             if (event.type == KEY_UP) {
-                selectedIndex = moveSelection(selectedIndex, soldCount,
-                                              ownedMask, -1);
+                selectedIndex = moveSelection(selectedIndex, itemCount,
+                                              disabledMask, -1);
+                continue;
             } else if (event.type == KEY_DOWN) {
-                selectedIndex = moveSelection(selectedIndex, soldCount,
-                                              ownedMask, 1);
-            } else if (event.type == KEY_LEFT ||
-                       event.type == KEY_RIGHT) {
+                selectedIndex = moveSelection(selectedIndex, itemCount,
+                                              disabledMask, 1);
+                continue;
             } else if (event.type == KEY_ENTER) {
-                if (!allPerksOwned(game)) {
-                    purchasePerk(game, soldPerks[selectedIndex]);
-                }
+                actionCharacter = items[selectedIndex].hotkey;
             } else if (event.type == KEY_CHAR) {
                 actionCharacter = event.ch;
-
-                if (actionCharacter == 'q' ||
-                    actionCharacter == 'Q') {
-                    game->state = STATE_MENU;
-                } else {
-                    menuIndex = -1;
-                    for (perkIndex = 0; perkIndex < soldCount; perkIndex++) {
-                        if (actionCharacter == items[perkIndex].hotkey) {
-                            menuIndex = perkIndex;
-                            break;
-                        }
-                    }
-
-                    if (menuIndex >= 0) {
-                        selectedIndex = menuIndex;
-                        purchasePerk(game, soldPerks[menuIndex]);
-                    }
-                }
-            } else if (event.type == KEY_ESC ||
-                       event.type == KEY_EOF) {
+            } else if (event.type == KEY_ESC || event.type == KEY_EOF) {
                 game->state = STATE_MENU;
+                continue;
+            } else {
+                continue;
             }
         } else {
             actionCharacter = -1;
-
             if (fgets(input, sizeof(input), stdin) == NULL) {
                 game->state = STATE_MENU;
-            } else {
-                if (strchr(input, '\n') == NULL) {
-                    while ((inputCharacter = getchar()) != '\n' &&
-                           inputCharacter != EOF) {
-                    }
-                }
-
-                characterIndex = 0;
-                while (input[characterIndex] != '\0') {
-                    if (!isspace((unsigned char)input[characterIndex])) {
-                        actionCharacter = input[characterIndex];
-                        break;
-                    }
-                    characterIndex++;
-                }
-
-                if (actionCharacter == -1 ||
-                    actionCharacter == 27) {
-                    game->state = STATE_MENU;
-                } else if (actionCharacter == 'q' ||
-                           actionCharacter == 'Q') {
-                    game->state = STATE_MENU;
-                } else {
-                    menuIndex = -1;
-                    for (perkIndex = 0; perkIndex < soldCount; perkIndex++) {
-                        if (actionCharacter == items[perkIndex].hotkey) {
-                            menuIndex = perkIndex;
-                            break;
-                        }
-                    }
-
-                    if (menuIndex >= 0) {
-                        selectedIndex = menuIndex;
-                        purchasePerk(game, soldPerks[menuIndex]);
-                    }
+                continue;
+            }
+            if (strchr(input, '\n') == NULL) {
+                while ((inputCharacter = getchar()) != '\n' &&
+                       inputCharacter != EOF) {
                 }
             }
+            characterIndex = 0;
+            while (input[characterIndex] != '\0') {
+                if (!isspace((unsigned char)input[characterIndex])) {
+                    actionCharacter = input[characterIndex];
+                    break;
+                }
+                characterIndex++;
+            }
+            if (actionCharacter == -1 || actionCharacter == 27) {
+                game->state = STATE_MENU;
+                continue;
+            }
+        }
+
+        if (actionCharacter == 'q' || actionCharacter == 'Q') {
+            game->state = STATE_MENU;
+            continue;
+        }
+
+        menuIndex = -1;
+        /* Prefer exact uppercase perk shortcuts over case-insensitive service keys. */
+        for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+            if (actionCharacter == items[itemIndex].hotkey) {
+                menuIndex = itemIndex;
+                break;
+            }
+        }
+        if (menuIndex < 0) {
+            for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+                if (items[itemIndex].hotkey >= 'a' &&
+                    items[itemIndex].hotkey <= 'z' &&
+                    tolower((unsigned char)actionCharacter) ==
+                    items[itemIndex].hotkey) {
+                    menuIndex = itemIndex;
+                    break;
+                }
+            }
+        }
+
+        if (menuIndex < 0) {
+            continue;
+        }
+        selectedIndex = menuIndex;
+        if ((disabledMask & (1 << menuIndex)) != 0) {
+            logPush(game, "Item unavailable.", MSG_DEFAULT);
+            continue;
+        }
+
+        if (itemPerks[menuIndex] >= 0) {
+            purchasePerk(game, (int)itemPerks[menuIndex]);
+            continue;
+        }
+
+        switch (items[menuIndex].hotkey) {
+            case 'v':
+                game->player.chips -= 10;
+                game->run.marks += 2;
+                logPush(game, "Converted 10 chips to 2 marks.", MSG_INFO);
+                break;
+            case 'n':
+                game->player.chips -= 50;
+                game->safetyNetArmed = 1;
+                logPush(game,
+                        "Safety net armed. Next wipe leaves 20 chips.",
+                        MSG_INFO);
+                break;
+            case 't':
+                game->player.chips -= 10;
+                game->tippedThisRound = 1;
+                logPush(game,
+                        "Dealer tipped. Hole card visible next round.",
+                        MSG_INFO);
+                break;
+            case 'l':
+                game->player.chips += 50;
+                game->loanAmount = 75;
+                game->loanDueFloor = game->run.floor + 3;
+                snprintf(message, sizeof(message),
+                         "Loan taken: +50 chips, repay 75 by floor %d.",
+                         game->loanDueFloor);
+                logPush(game, message, MSG_INFO);
+                break;
+            case 'r':
+                game->run.twistId = selectTwistForFloor(game);
+                game->run.twistRerolled = 1;
+                game->run.marks -= 30;
+                logPush(game, "Twist rerolled.", MSG_INFO);
+                break;
+            case 'b':
+                game->run.twistBlocked = 1;
+                game->run.marks -= 40;
+                logPush(game, "Twist blocked this floor.", MSG_INFO);
+                break;
+            case 'p':
+                game->run.marks -= 100;
+                game->extraPerkSlots = 1;
+                logPush(game, "Extra perk slot unlocked.", MSG_WIN);
+                break;
         }
     }
 }
