@@ -1520,7 +1520,7 @@ void renderShop(const Game *game,
         printf(SCR_CURSOR, ROW_SHOP_TITLE, titlePadding + 1);
         printf("%sSHOP%s", scrBold(), scrReset());
 
-        moveToTableRow(ROW_SHOP_SOULS, shopPadding);
+        moveToTableRow(ROW_SHOP_MARKS, shopPadding);
         printf("Marks: %d", game->run.marks);
 
         moveToTableRow(ROW_SHOP_CHIPS, shopPadding);
