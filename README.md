@@ -69,8 +69,7 @@ Betting:
 
 - `c` — Continue on current floor
 - `a` — Advance to the next floor
-- `s` — Open the shop
-- `m` — Convert 10 chips to 2 marks (roguelike only)
+- `s` — Open the shop (perks, services, twist tools; roguelike only)
 - `q` — Quit the run
 
 ## Project status
