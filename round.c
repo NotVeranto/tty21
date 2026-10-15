@@ -149,6 +149,7 @@ static void drawCard(Game *game, Hand *hand, int allowCurse) {
     game->deck.top++;
 
     if (allowCurse &&
+        game->mode == MODE_ROGUELIKE &&
         hand->count > previousCount &&
         rngRange(0, 99) < 3) {
         curseId = (CurseId)rngRange(1, 3);
@@ -866,8 +867,15 @@ void startRound(Game *game) {
     game->player.usedDouble = 0;
 
     game->roundNumber++;
-    game->run.roundsOnFloor++;
-    applyAntiFarmPressure(game);
+
+    if (game->mode == MODE_ROGUELIKE) {
+        game->run.roundsOnFloor++;
+        applyAntiFarmPressure(game);
+    }
+
+    if (game->player.perkOwned[PERK_MARKED_CARD]) {
+        game->player.perkCharges[PERK_MARKED_CARD] = 1;
+    }
 
     drawCard(game, &game->player.hands[0], 1);
     drawCard(game, &game->dealer.hands[0], 0);
@@ -1319,19 +1327,23 @@ void resolveRound(Game *game) {
     payoutTotal = 0;
     lossTotal = 0;
     greedAwarded = 0;
-    currentFatigue = fatiguePercent(game->run.roundsOnFloor);
+    if (game->mode == MODE_ROGUELIKE) {
+        currentFatigue = fatiguePercent(game->run.roundsOnFloor);
 
-    if (game->fatigueTier == 0) {
-        game->fatigueTier = currentFatigue;
-    } else if (currentFatigue < game->fatigueTier) {
-        char fatigueMessage[64];
+        if (game->fatigueTier == 0) {
+            game->fatigueTier = currentFatigue;
+        } else if (currentFatigue < game->fatigueTier) {
+            char fatigueMessage[64];
 
-        snprintf(fatigueMessage,
-                 sizeof(fatigueMessage),
-                 "Payout reduced to %d%% (floor fatigue).",
-                 currentFatigue);
-        logPush(game, fatigueMessage, MSG_LOSS);
-        game->fatigueTier = currentFatigue;
+            snprintf(fatigueMessage,
+                     sizeof(fatigueMessage),
+                     "Payout reduced to %d%% (floor fatigue).",
+                     currentFatigue);
+            logPush(game, fatigueMessage, MSG_LOSS);
+            game->fatigueTier = currentFatigue;
+        }
+    } else {
+        currentFatigue = 100;
     }
 
     resultMessage[0] = '\0';
@@ -1500,7 +1512,8 @@ void resolveRound(Game *game) {
 
                 payoutValue = basePayout;
 
-                if (game->winStreak >= 3) {
+                if (game->mode == MODE_ROGUELIKE &&
+                    game->winStreak >= 3) {
                     /* Apply the streak bonus before floor fatigue. */
                     payoutValue *= 2;
                 }
@@ -1688,7 +1701,8 @@ void resolveRound(Game *game) {
 
                 payoutValue = basePayout;
 
-                if (game->winStreak >= 3) {
+                if (game->mode == MODE_ROGUELIKE &&
+                    game->winStreak >= 3) {
                     /* Apply the streak bonus before floor fatigue. */
                     payoutValue *= 2;
                 }
@@ -1826,18 +1840,20 @@ void resolveRound(Game *game) {
         resultStyle = MSG_PUSH;
     }
 
-    if (resultStyle == MSG_WIN) {
-        game->winStreak++;
-        game->lossStreak = 0;
+    if (game->mode == MODE_ROGUELIKE) {
+        if (resultStyle == MSG_WIN) {
+            game->winStreak++;
+            game->lossStreak = 0;
 
-        if (game->winStreak == 3) {
-            logPush(game,
-                    "Streak 3! Wins now pay double.",
-                    MSG_WIN);
+            if (game->winStreak == 3) {
+                logPush(game,
+                        "Streak 3! Wins now pay double.",
+                        MSG_WIN);
+            }
+        } else if (resultStyle == MSG_LOSS) {
+            game->lossStreak++;
+            game->winStreak = 0;
         }
-    } else if (resultStyle == MSG_LOSS) {
-        game->lossStreak++;
-        game->winStreak = 0;
     }
 
     if (resultStyle == MSG_WIN &&
@@ -1872,7 +1888,8 @@ void resolveRound(Game *game) {
 
     logPush(game, resultMessage, resultStyle);
 
-    if (game->lossStreak >= 5) {
+    if (game->mode == MODE_ROGUELIKE &&
+        game->lossStreak >= 5) {
         logPush(game,
                 "Five losses in a row. The pit boss ends your run.",
                 MSG_LOSS);
@@ -1880,8 +1897,6 @@ void resolveRound(Game *game) {
     }
 
     renderTable(game, 0);
-
-    game->player.perkCharges[PERK_MARKED_CARD] = 0;
 
     if (game->state == STATE_QUIT ||
         game->player.chips == 0) {

@@ -298,6 +298,7 @@ void floorMenu(Game *game) {
                    disabledMask,
                    selectedIndex,
                    ROW_MENU_START);
+        renderMenuLogRefresh(game);
 
         if (rawMode) {
             event = readKey();
@@ -321,6 +322,7 @@ void floorMenu(Game *game) {
                                         currentMinBet,
                                         nextMinBet,
                                         advanceFee);
+                renderMenuLogRefresh(game);
             } else if (event.type == KEY_CHAR) {
                 for (menuIndex = 0; menuIndex < itemCount; menuIndex++) {
                     if (event.ch == menuItems[menuIndex].hotkey ||
@@ -333,6 +335,7 @@ void floorMenu(Game *game) {
                             currentMinBet,
                             nextMinBet,
                             advanceFee);
+                        renderMenuLogRefresh(game);
                         break;
                     }
                 }
@@ -374,6 +377,7 @@ void floorMenu(Game *game) {
                                 currentMinBet,
                                 nextMinBet,
                                 advanceFee);
+                            renderMenuLogRefresh(game);
                             break;
                         }
                     }

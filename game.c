@@ -153,10 +153,6 @@ void advanceFloor(Game *game) {
         game->player.perkCharges[PERK_DEALERS_FAVOR] = 1;
     }
 
-    if (game->player.perkOwned[PERK_MARKED_CARD]) {
-        game->player.perkCharges[PERK_MARKED_CARD] = 1;
-    }
-
     {
         int attempts;
 

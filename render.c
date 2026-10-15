@@ -1206,6 +1206,22 @@ void renderTable(const Game *game, int hideDealerCard) {
     }
 }
 
+void renderMenuLogRefresh(const Game *game) {
+    int terminalWidth;
+    int terminalHeight;
+
+    if (!isatty(STDOUT_FILENO)) {
+        return;
+    }
+
+    if (!renderTerminalSizeOk(&terminalWidth,
+                              &terminalHeight)) {
+        return;
+    }
+
+    renderLog(game, tablePadding, terminalWidth);
+}
+
 // Prints the fallback game state for non-full-screen output.
 void renderGameStateFallback(const Game *game, int hideDealerCard)
 {

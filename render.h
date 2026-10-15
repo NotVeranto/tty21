@@ -56,6 +56,7 @@ void renderActionBar(const ActionId *actions,
                      int row);
 void renderHelpOverlay(const Game *game);
 void renderMessage(const char *msg, int row, MessageStyle style);
+void renderMenuLogRefresh(const Game *game);
 void renderMenu(const char *title,
                 const MenuItem *items,
                 int itemCount,
