@@ -1744,6 +1744,9 @@ static void printHelpColumnLine(int row,
 void renderHelpOverlay(const Game *game) {
     const DealerInfo *dealerInfo;
     const TwistInfo *twistInfo;
+    const char *helpRule1;
+    const char *helpRule2;
+    const char *helpPower;
     int terminalWidth;
     int terminalHeight;
     int leftColumn;
@@ -1766,6 +1769,13 @@ void renderHelpOverlay(const Game *game) {
     if (isatty(STDOUT_FILENO) &&
         terminalHeight >= 20) {
         dealerInfo = getDealerInfo(game->run.dealerId);
+        helpRule1 = dealerInfo->rule1;
+        helpRule2 = dealerInfo->rule2;
+        helpPower = dealerPowerRule2(game->run.dealerId,
+                                     game->run.floor);
+        if (helpRule2 == NULL && helpPower != NULL) {
+            helpRule2 = helpPower;
+        }
         showBox = terminalWidth >= 70;
         helpTitle = "TTY21 - HELP";
 
@@ -1829,11 +1839,11 @@ void renderHelpOverlay(const Game *game) {
                dealerInfo->name);
         contentRow++;
 
-        if (dealerInfo->rule1 != NULL) {
+        if (helpRule1 != NULL) {
             snprintf(line,
                      sizeof(line),
                      "  %s",
-                     dealerInfo->rule1);
+                     helpRule1);
             printHelpColumnLine(contentRow,
                                 leftColumn,
                                 columnWidth,
@@ -1841,11 +1851,11 @@ void renderHelpOverlay(const Game *game) {
             contentRow++;
         }
 
-        if (dealerInfo->rule2 != NULL) {
+        if (helpRule2 != NULL) {
             snprintf(line,
                      sizeof(line),
                      "  %s",
-                     dealerInfo->rule2);
+                     helpRule2);
             printHelpColumnLine(contentRow,
                                 leftColumn,
                                 columnWidth,
@@ -1968,18 +1978,25 @@ void renderHelpOverlay(const Game *game) {
 
     if (!isatty(STDOUT_FILENO)) {
         dealerInfo = getDealerInfo(game->run.dealerId);
+        helpRule1 = dealerInfo->rule1;
+        helpRule2 = dealerInfo->rule2;
+        helpPower = dealerPowerRule2(game->run.dealerId,
+                                     game->run.floor);
+        if (helpRule2 == NULL && helpPower != NULL) {
+            helpRule2 = helpPower;
+        }
         printf("TTY21 - HELP\n");
         printf("============\n\n");
         printf("Dealer: %s%s\n",
                dealerIsBoss(game->run.dealerId) ? "BOSS " : "",
                dealerInfo->name);
 
-        if (dealerInfo->rule1 != NULL) {
-            printf("  %s\n", dealerInfo->rule1);
+        if (helpRule1 != NULL) {
+            printf("  %s\n", helpRule1);
         }
 
-        if (dealerInfo->rule2 != NULL) {
-            printf("  %s\n", dealerInfo->rule2);
+        if (helpRule2 != NULL) {
+            printf("  %s\n", helpRule2);
         }
 
         if (game->mode == MODE_ROGUELIKE) {
