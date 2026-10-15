@@ -13,6 +13,7 @@ marks earned from victories can be spent on perks.
 
 Implemented:
 - Classic blackjack: Hit, Stand, Double Down, Split.
+- Canonical dealer peek, insurance, and even money.
 - Classic blackjack mode (no roguelike layer).
 - Roguelike progression: floors, marks, advance menu.
 - Full-screen ASCII table with ANSI styling.
@@ -64,6 +65,7 @@ In-game (during the player's turn):
 
 Betting:
 - Type a number and press Enter.
+- Insurance and even money prompts appear after the initial deal when applicable.
 
 ### Between rounds
 
