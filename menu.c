@@ -369,11 +369,6 @@ void runShop(Game *game) {
                           "Neutralize the current twist.",
                           game->run.marks < 40);
         }
-        if (game->extraPerkSlots == 0) {
-            ADD_SHOP_ITEM('p', "Buy extra perk slot (100 marks)",
-                          "Allows one additional perk to be equipped.",
-                          game->run.marks < 100);
-        }
 #undef ADD_SHOP_ITEM
 
         if (selectedIndex >= itemCount) {
@@ -507,11 +502,6 @@ void runShop(Game *game) {
                 game->run.twistBlocked = 1;
                 game->run.marks -= 40;
                 logPush(game, "Twist blocked this floor.", MSG_INFO);
-                break;
-            case 'p':
-                game->run.marks -= 100;
-                game->extraPerkSlots = 1;
-                logPush(game, "Extra perk slot unlocked.", MSG_WIN);
                 break;
         }
     }
