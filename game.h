@@ -32,7 +32,7 @@ typedef struct {
     int usedSplit;   /* set if the player used split this round */
     int usedDouble;  /* set if the player used double this round */
     int insuranceBet; /* 0 if no insurance was placed */
-    int evenMoneyTaken;
+    int evenMoneyTaken; /* prevents duplicate settlement after even money */
 } Player;
 
 /* handCount is 1 for every dealer except Twin (Stage 9.5c-2). */
