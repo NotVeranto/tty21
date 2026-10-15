@@ -19,9 +19,9 @@
 #define DEALER_CARD_ROW 8
 #define PLAYER_LABEL_ROW 16
 #define PLAYER_CARD_ROW 18
-#define SHOP_ITEM_START_ROW 13
-#define SHOP_DESCRIPTION_ROW 30
-#define SHOP_HINT_ROW 31
+#define SHOP_ITEM_START_ROW 12
+#define SHOP_DESCRIPTION_ROW 31
+#define SHOP_HINT_ROW 32
 
 static const char *CARD_RANKS[] = {
     "", "A", "2", "3", "4", "5", "6",
@@ -1519,21 +1519,21 @@ void renderMenu(const char *title,
     }
 }
 
-// Renders the between-floor perk shop.
+// Renders the roguelike shop with a list of available purchases and services.
 void renderShop(const Game *game,
                 const MenuItem *items,
-                const PerkId *perkIds,
-                int perkCount,
+                const char **descriptions,
+                int itemCount,
+                int disabledMask,
                 int selectedIndex) {
     int terminalWidth;
     int terminalHeight;
     int tableWidth;
     int shopPadding;
     int titlePadding;
+    int itemIndex;
     int itemRow;
-    int perkIndex;
-    int isOwned;
-    int canAfford;
+    int isDisabled;
     int rowWidth;
     int menuAreaWidth;
     int menuAreaPadding;
@@ -1541,147 +1541,91 @@ void renderShop(const Game *game,
 
     initColors();
     getTerminalSize(&terminalWidth, &terminalHeight);
-
     if (isatty(STDOUT_FILENO) &&
-        !renderTerminalSizeOk(&terminalWidth,
-                              &terminalHeight)) {
+        !renderTerminalSizeOk(&terminalWidth, &terminalHeight)) {
         renderTooSmallScreen(terminalWidth, terminalHeight);
         return;
     }
 
     tableWidth = getDynamicTableWidth(game);
-
     if (isatty(STDOUT_FILENO) &&
         terminalWidth >= MIN_TERMINAL_WIDTH &&
         terminalHeight >= MIN_TERMINAL_HEIGHT) {
         renderHideCursor();
         shopPadding = (terminalWidth - tableWidth) / 2;
-
-        if (shopPadding < 0) {
-            shopPadding = 0;
-        }
-
+        if (shopPadding < 0) shopPadding = 0;
         titlePadding = shopPadding +
-                        (tableWidth - (int)strlen("SHOP")) / 2;
+                       (tableWidth - (int)strlen("SHOP")) / 2;
 
         printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
         printf(SCR_CURSOR, ROW_SHOP_TITLE, titlePadding + 1);
         printf("%sSHOP%s", scrBold(), scrReset());
-
         moveToTableRow(ROW_SHOP_MARKS, shopPadding);
         printf("Marks: %d", game->run.marks);
-
         moveToTableRow(ROW_SHOP_CHIPS, shopPadding);
         printf("Chips: %d", game->player.chips);
 
-        for (perkIndex = 0; perkIndex < perkCount; perkIndex++) {
-            itemRow = SHOP_ITEM_START_ROW + perkIndex;
-            isOwned = game->player.perkOwned[perkIds[perkIndex]];
-            canAfford = game->run.marks >= perkCost(perkIds[perkIndex]);
-
-            rowWidth = 2 + 3 + 2 +
-                       (int)strlen(items[perkIndex].label);
+        for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+            itemRow = SHOP_ITEM_START_ROW + itemIndex;
+            isDisabled = (disabledMask & (1 << itemIndex)) != 0;
+            rowWidth = 2 + 3 + 2 + (int)strlen(items[itemIndex].label);
             menuAreaWidth = tableWidth;
             menuAreaPadding = shopPadding;
-
             if (menuAreaWidth < rowWidth) {
                 menuAreaWidth = terminalWidth;
                 menuAreaPadding = 0;
             }
-
-            rowPadding = menuAreaPadding +
-                         (menuAreaWidth - rowWidth) / 2;
-
-            if (rowPadding < 0) {
-                rowPadding = 0;
-            }
+            rowPadding = menuAreaPadding + (menuAreaWidth - rowWidth) / 2;
+            if (rowPadding < 0) rowPadding = 0;
 
             printf(SCR_CURSOR, itemRow, rowPadding + 1);
             printf(SCR_ERASE_EOL);
-
-            if (isOwned || !canAfford) {
-                printf("%s", scrDim());
-            } else if (perkIndex == selectedIndex) {
-                printf("%s", scrBold());
-            }
-
-            if (perkIndex == selectedIndex) {
-                printf("> ");
+            if (isDisabled) {
+                printf("%s  [%c]  %s%s",
+                       scrDim(), items[itemIndex].hotkey,
+                       items[itemIndex].label, scrReset());
             } else {
-                printf("  ");
-            }
-
-            printf("%s[%c]%s  ",
-                   scrDim(),
-                   items[perkIndex].hotkey,
-                   scrReset());
-
-            if (isOwned || !canAfford) {
-                printf("%s%s%s",
-                       scrDim(),
-                       items[perkIndex].label,
-                       scrReset());
-            } else if (perkIndex == selectedIndex) {
-                printf("%s%s%s",
-                       scrBold(),
-                       items[perkIndex].label,
-                       scrReset());
-            } else {
-                printf("%s", items[perkIndex].label);
+                if (itemIndex == selectedIndex) printf("%s> ", scrBold());
+                else printf("  ");
+                printf("%s[%c]%s  ", scrDim(),
+                       items[itemIndex].hotkey, scrReset());
+                if (itemIndex == selectedIndex) {
+                    printf("%s%s%s", scrBold(), items[itemIndex].label, scrReset());
+                } else {
+                    printf("%s", items[itemIndex].label);
+                }
             }
         }
 
         moveToTableRow(SHOP_DESCRIPTION_ROW, shopPadding);
-        printf(SCR_ERASE_EOL);
-        printf("%s%s%s",
-               scrDim(),
-               perkDescription(perkIds[selectedIndex]),
-               scrReset());
-
+        if (selectedIndex >= 0 && selectedIndex < itemCount &&
+            descriptions[selectedIndex] != NULL) {
+            printf(SCR_ERASE_EOL);
+            printf("%s%s%s", scrDim(), descriptions[selectedIndex], scrReset());
+        } else {
+            printf(SCR_ERASE_EOL);
+        }
         moveToTableRow(SHOP_HINT_ROW, shopPadding);
         printf(SCR_ERASE_EOL);
-        printf("%sKeys: 1-9/A-G buy   Q close%s",
-               scrDim(),
-               scrReset());
+        printf("%sKeys: 1-9/A-C perks; V convert; N net; T tip; L loan; R/B twists; P slot; Q close%s",
+               scrDim(), scrReset());
         renderLog(game, shopPadding, terminalWidth);
         fflush(stdout);
     } else {
         printf("SHOP\n");
-        printf("Marks: %d | Chips: %d\n\n",
-               game->run.marks,
-               game->player.chips);
-
-        for (perkIndex = 0; perkIndex < perkCount; perkIndex++) {
-            isOwned = game->player.perkOwned[perkIds[perkIndex]];
-            canAfford = game->run.marks >= perkCost(perkIds[perkIndex]);
-
-            if (perkIndex == selectedIndex) {
-                printf("> ");
-            } else {
-                printf("  ");
+        printf("Marks: %d | Chips: %d\n\n", game->run.marks, game->player.chips);
+        for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+            isDisabled = (disabledMask & (1 << itemIndex)) != 0;
+            printf("%s[%c]  %s%s\n",
+                   itemIndex == selectedIndex ? "> " : "  ",
+                   items[itemIndex].hotkey,
+                   items[itemIndex].label,
+                   isDisabled ? " (disabled)" : "");
+            if (itemIndex == selectedIndex && descriptions[itemIndex] != NULL) {
+                printf("    %s\n", descriptions[itemIndex]);
             }
-
-            if (isOwned || !canAfford) {
-                printf("%s[%c]  %s%s\n",
-                       scrDim(),
-                       items[perkIndex].hotkey,
-                       items[perkIndex].label,
-                       scrReset());
-            } else {
-                printf("[%c]  %s\n",
-                       items[perkIndex].hotkey,
-                       items[perkIndex].label);
-            }
-
-            printf("%s%s%s\n",
-                   scrDim(),
-                   perkDescription(perkIds[perkIndex]),
-                   scrReset());
         }
-
-        printf("%sKeys: 1-9/A-G buy   Q close%s\n",
-               scrDim(),
-               scrReset());
+        printf("Keys: 1-9/A-C perks; V convert; N net; T tip; L loan; R/B twists; P slot; Q close\n");
         fflush(stdout);
     }
 }
