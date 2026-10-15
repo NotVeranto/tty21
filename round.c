@@ -848,9 +848,105 @@ int calculatePlayerHandValueForIndex(const Game *game,
     return totalValue;
 }
 
+static int readYesNoPrompt(const char *prompt) {
+    while (1) {
+        int answer;
+
+        renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
+
+        if (inputIsRaw()) {
+            KeyEvent event;
+
+            event = readKey();
+            if (event.type == KEY_ESC || event.type == KEY_EOF) {
+                return 0;
+            }
+            if (event.type != KEY_CHAR) {
+                continue;
+            }
+            answer = (unsigned char)event.ch;
+        } else {
+            answer = getchar();
+
+            if (answer == EOF) {
+                return 0;
+            }
+
+            if (answer != '\n' && answer != '\r') {
+                while (1) {
+                    int character;
+
+                    character = getchar();
+                    if (character == '\n' || character == EOF) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (answer == 'y' || answer == 'Y') {
+            return 1;
+        }
+        if (answer == 'n' || answer == 'N') {
+            return 0;
+        }
+    }
+}
+
+static void askInsurance(Game *game) {
+    int cost;
+    char prompt[80];
+    char message[80];
+
+    cost = game->player.bets[0] / 2;
+    if (cost < 1) {
+        cost = 1;
+    }
+
+    if (game->player.chips < cost) {
+        return;
+    }
+
+    snprintf(prompt, sizeof(prompt),
+             "Insurance? [y/n] (cost %d chips)", cost);
+
+    if (readYesNoPrompt(prompt)) {
+        game->player.chips -= cost;
+        game->player.insuranceBet = cost;
+        snprintf(message, sizeof(message),
+                 "Insurance placed: %d chips.", cost);
+        logPush(game, message, MSG_INFO);
+    } else {
+        game->player.insuranceBet = 0;
+    }
+}
+
+static void askEvenMoney(Game *game) {
+    const char *prompt = "Take even money? [y/n] (pays 1:1)";
+    char message[80];
+    int bet;
+
+    if (!readYesNoPrompt(prompt)) {
+        return;
+    }
+
+    bet = game->player.bets[0];
+    game->player.chips += bet;
+    game->player.evenMoneyTaken = 1;
+    game->state = STATE_RESULT;
+    snprintf(message, sizeof(message),
+             "Even money taken: +%d chips.", bet);
+    logPush(game, message, MSG_WIN);
+}
+
 void startRound(Game *game) {
     int playerValue;
     int betAmount;
+    int upcardRank;
+    int upcardIsAce;
+    int upcardIsTen;
+    int dealerBJ;
+    int playerBJ;
 
     game->peekActive = 0;
 
@@ -889,6 +985,8 @@ void startRound(Game *game) {
     game->player.bets[game->player.activeHand] = betAmount;
     game->player.usedSplit = 0;
     game->player.usedDouble = 0;
+    game->player.insuranceBet = 0;
+    game->player.evenMoneyTaken = 0;
 
     game->roundNumber++;
 
@@ -940,6 +1038,45 @@ void startRound(Game *game) {
         logPush(game, betMsg, MSG_ACTION);
     }
 
+    upcardRank = game->dealer.hands[0].cards[0].rank;
+    upcardIsAce = upcardRank == ACE;
+    upcardIsTen = upcardRank >= TEN;
+    dealerBJ = 0;
+
+    if ((upcardIsAce || upcardIsTen) &&
+        game->dealer.hands[0].count == 2) {
+        int dealerVal;
+
+        dealerVal = calculateDealerHandValue(
+            game,
+            &game->dealer.hands[0],
+            game->run.dealerId);
+        dealerBJ = dealerVal == 21;
+    }
+
+    if (dealerBJ) {
+        game->peekActive = 1;
+        logPush(game, "Dealer peeks. Blackjack.", MSG_LOSS);
+        game->state = STATE_RESULT;
+        return;
+    }
+
+    playerValue = calculatePlayerHandValue(game);
+    playerBJ = game->player.hands[0].count == 2 &&
+               playerValue == 21 &&
+               !game->player.usedSplit;
+
+    if (upcardIsAce && playerBJ) {
+        askEvenMoney(game);
+        if (game->state == STATE_RESULT) {
+            return;
+        }
+    }
+
+    if (upcardIsAce) {
+        askInsurance(game);
+    }
+
     if (dealerForcesDouble(game->run.dealerId)) {
         if (game->player.hands[0].count == 2 &&
             (long long)game->player.chips >=
@@ -957,8 +1094,6 @@ void startRound(Game *game) {
             return;
         }
     }
-
-    playerValue = calculatePlayerHandValue(game);
 
     if (playerValue >= 21) {
         game->state = STATE_RESULT;
@@ -1391,6 +1526,15 @@ void resolveRound(Game *game) {
         handLossTotal = 0;
         anyDealerBlackjack = 0;
 
+        if (game->player.evenMoneyTaken) {
+            payoutTotal += handBet;
+            handPayoutTotal = handBet;
+            handWon = 1;
+            snprintf(resultMessage, sizeof(resultMessage),
+                     "Even money taken: +%d chips.", handBet);
+            continue;
+        }
+
         for (dealerHandIndex = 0;
              dealerHandIndex < dealerHandCount;
              dealerHandIndex++) {
@@ -1629,6 +1773,19 @@ void resolveRound(Game *game) {
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
+
+                if (game->player.insuranceBet > 0) {
+                    int insurancePayout;
+                    char insuranceMessage[64];
+
+                    insurancePayout = game->player.insuranceBet * 2;
+                    game->player.chips += insurancePayout;
+                    snprintf(insuranceMessage, sizeof(insuranceMessage),
+                             "Insurance pays: +%d chips.",
+                             insurancePayout);
+                    logPush(game, insuranceMessage, MSG_WIN);
+                    game->player.insuranceBet = 0;
+                }
                 game->winStreak = 0;
 
                 if (dealerHandCount == 1) {
@@ -1813,7 +1970,7 @@ void resolveRound(Game *game) {
             }
         }
 
-        if (dealerHandCount > 1) {
+        if (dealerHandCount > 1 && !game->player.evenMoneyTaken) {
             if (handValue > 21) {
                 messageLength = snprintf(handMessage,
                                          sizeof(handMessage),
@@ -1949,6 +2106,8 @@ void resolveRound(Game *game) {
     }
 
     game->tippedThisRound = 0;
+    game->player.insuranceBet = 0;
+    game->player.evenMoneyTaken = 0;
 
     renderTable(game, 0);
 
