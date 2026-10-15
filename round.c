@@ -888,11 +888,6 @@ void startRound(Game *game) {
         }
     }
 
-    if (game->player.perkOwned[PERK_MARKED_CARD] &&
-        game->player.perkCharges[PERK_MARKED_CARD] > 0) {
-        game->player.perkCharges[PERK_MARKED_CARD] = 0;
-    }
-
     if (twistActive(game, TWIST_LUCKY_DRAW)) {
         redrawFirstPlayerCard(game, 1);
     } else if (twistActive(game, TWIST_COLD_DECK)) {
@@ -1885,6 +1880,8 @@ void resolveRound(Game *game) {
     }
 
     renderTable(game, 0);
+
+    game->player.perkCharges[PERK_MARKED_CARD] = 0;
 
     if (game->state == STATE_QUIT ||
         game->player.chips == 0) {
