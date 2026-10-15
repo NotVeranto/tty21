@@ -27,7 +27,7 @@
 #define ROW_FINAL 46
 
 #define ROW_SHOP_TITLE 10
-#define ROW_SHOP_SOULS 11
+#define ROW_SHOP_MARKS 11
 #define ROW_SHOP_CHIPS 12
 #define ROW_SHOP_HINT 24
 
