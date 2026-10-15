@@ -64,6 +64,23 @@ static void dispatchFloorMenuAction(Game *game,
         snprintf(convertMsg, sizeof(convertMsg),
                  "Converted 10 chips to 2 marks.");
         logPush(game, convertMsg, MSG_INFO);
+    } else if ((actionCharacter == 'n' || actionCharacter == 'N') &&
+               game->mode == MODE_ROGUELIKE &&
+               game->safetyNetArmed == 0 &&
+               game->player.chips >= 50) {
+        game->player.chips -= 50;
+        game->safetyNetArmed = 1;
+        logPush(game,
+                "Safety net armed. Next wipe leaves 20 chips.",
+                MSG_INFO);
+    } else if ((actionCharacter == 't' || actionCharacter == 'T') &&
+               game->mode == MODE_ROGUELIKE &&
+               game->player.chips >= 10) {
+        game->player.chips -= 10;
+        game->tippedThisRound = 1;
+        logPush(game,
+                "Dealer tipped. Hole card visible next round.",
+                MSG_INFO);
     } else if ((actionCharacter == 'l' || actionCharacter == 'L') &&
                game->loanAmount == 0 &&
                game->player.chips < nextMinBet) {
@@ -118,7 +135,7 @@ static void dispatchFloorMenuAction(Game *game,
 }
 
 void floorMenu(Game *game) {
-    MenuItem menuItems[10];
+    MenuItem menuItems[12];
     char continueLabel[128];
     char advanceLabel[128];
     char shopLabel[128];
@@ -128,6 +145,8 @@ void floorMenu(Game *game) {
     char blockLabel[128];
     char skipLabel[128];
     char perkSlotLabel[128];
+    char safetyNetLabel[128];
+    char tipLabel[128];
     char input[64];
     KeyEvent event;
     int nextMinBet;
@@ -204,6 +223,12 @@ void floorMenu(Game *game) {
         snprintf(perkSlotLabel,
                  sizeof(perkSlotLabel),
                  "Buy extra perk slot (100 marks)");
+        snprintf(safetyNetLabel,
+                 sizeof(safetyNetLabel),
+                 "Buy safety net (50 chips, survive one wipe)");
+        snprintf(tipLabel,
+                 sizeof(tipLabel),
+                 "Tip dealer (10 chips, see hole next round)");
 
         itemCount = 0;
 
@@ -269,6 +294,16 @@ void floorMenu(Game *game) {
             itemCount++;
         }
 
+        if (game->mode == MODE_ROGUELIKE) {
+            menuItems[itemCount].hotkey = 'n';
+            menuItems[itemCount].label = safetyNetLabel;
+            itemCount++;
+
+            menuItems[itemCount].hotkey = 't';
+            menuItems[itemCount].label = tipLabel;
+            itemCount++;
+        }
+
         menuItems[itemCount].hotkey = 'q';
         menuItems[itemCount].label = "Quit run";
         itemCount++;
@@ -282,6 +317,15 @@ void floorMenu(Game *game) {
                 disabledMask |= 1 << menuScanIndex;
             }
             if (menuItems[menuScanIndex].hotkey == 'm' &&
+                game->player.chips < 10) {
+                disabledMask |= 1 << menuScanIndex;
+            }
+            if (menuItems[menuScanIndex].hotkey == 'n' &&
+                (game->safetyNetArmed != 0 ||
+                 game->player.chips < 50)) {
+                disabledMask |= 1 << menuScanIndex;
+            }
+            if (menuItems[menuScanIndex].hotkey == 't' &&
                 game->player.chips < 10) {
                 disabledMask |= 1 << menuScanIndex;
             }

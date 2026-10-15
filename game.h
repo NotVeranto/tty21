@@ -78,6 +78,8 @@ struct Game {
     int freePeekReady;
     int minBetMultiplier;
     GameLog log;
+    int safetyNetArmed; /* 1 if a safety net is active */
+    int tippedThisRound;
 };
 
 void initGame(Game *game, GameMode mode);

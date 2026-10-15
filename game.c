@@ -42,6 +42,8 @@ void initGame(Game *game, GameMode mode) {
     game->extraPerkSlots = 0;
     game->freePeekReady = 0;
     game->minBetMultiplier = 1;
+    game->safetyNetArmed = 0;
+    game->tippedThisRound = 0;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
@@ -124,6 +126,7 @@ void advanceFloor(Game *game) {
     game->run.twistRerolled = 0;
     game->run.bossRewarded = 0;
     game->run.twistBlocked = 0;
+    game->safetyNetArmed = 0;
     game->run.roundsOnFloor = 0;
     game->run.extraTwistCount = 0;
     game->fatigueTier = 0;

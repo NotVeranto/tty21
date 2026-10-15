@@ -920,6 +920,11 @@ void startRound(Game *game) {
         }
     }
 
+    if (game->tippedThisRound) {
+        game->peekActive = 1;
+        game->tippedThisRound = 0;
+    }
+
     if (twistActive(game, TWIST_LUCKY_DRAW)) {
         redrawFirstPlayerCard(game, 1);
     } else if (twistActive(game, TWIST_COLD_DECK)) {
@@ -1920,6 +1925,15 @@ void resolveRound(Game *game) {
         game->state = STATE_QUIT;
     }
 
+    if (game->safetyNetArmed &&
+        game->player.chips == 0) {
+        game->player.chips = 20;
+        game->safetyNetArmed = 0;
+        logPush(game,
+                "Safety net triggered. 20 chips remain.",
+                MSG_WIN);
+    }
+
     if (game->player.chips == 0 &&
         game->player.perkOwned[PERK_EXTRA_LIFE] &&
         game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
@@ -1933,6 +1947,8 @@ void resolveRound(Game *game) {
                 "Extra Life! Run continues with 1 chip.",
                 MSG_WIN);
     }
+
+    game->tippedThisRound = 0;
 
     renderTable(game, 0);
 

@@ -1094,7 +1094,13 @@ void renderTable(const Game *game, int hideDealerCard) {
             if (!showPrimary &&
                 !showBlockedPrimary &&
                 !showExtras) {
-                printf(SCR_ERASE_EOL);
+                if (game->safetyNetArmed) {
+                    printf("%sSAFETY NET%s",
+                           scrDim(),
+                           scrReset());
+                } else {
+                    printf(SCR_ERASE_EOL);
+                }
             } else if ((showPrimary || showBlockedPrimary) &&
                        !showExtras) {
                 snprintf(twistsLine,
@@ -1103,8 +1109,9 @@ void renderTable(const Game *game, int hideDealerCard) {
                          twistInfo->name,
                          showBlockedPrimary ? " (blocked)" : "",
                          twistInfo->description);
-                printf("%s%s%s",
+                printf("%s%s%s%s",
                        scrDim(),
+                       game->safetyNetArmed ? "SAFETY NET  |  " : "",
                        twistsLine,
                        scrReset());
             } else {
@@ -1148,9 +1155,14 @@ void renderTable(const Game *game, int hideDealerCard) {
                 }
 
                 if (hasTwistName) {
-                    printf("%s%s%s",
+                    printf("%s%s%s%s",
                            scrDim(),
+                           game->safetyNetArmed ? "SAFETY NET  |  " : "",
                            twistsLine,
+                           scrReset());
+                } else if (game->safetyNetArmed) {
+                    printf("%sSAFETY NET%s",
+                           scrDim(),
                            scrReset());
                 } else {
                     printf(SCR_ERASE_EOL);
