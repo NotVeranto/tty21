@@ -12,7 +12,8 @@ static int allPerksOwned(const Game *game) {
     int perkIndex;
 
     for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
-        if (!game->player.perkOwned[perkIndex]) {
+        if (perkIsSold((PerkId)perkIndex) &&
+            !game->player.perkOwned[perkIndex]) {
             return 0;
         }
     }
@@ -420,28 +421,39 @@ void runShop(Game *game) {
     char input[64];
     char labels[PERK_COUNT][128];
     MenuItem items[PERK_COUNT];
+    PerkId soldPerks[PERK_COUNT];
     KeyEvent event;
     int actionCharacter;
     int inputCharacter;
     int perkIndex;
+    int soldCount;
     int selectedIndex;
     int ownedMask;
     int rawMode;
     int characterIndex;
     int menuIndex;
 
+    soldCount = 0;
+    for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+        if (perkIsSold((PerkId)perkIndex)) {
+            soldPerks[soldCount++] = (PerkId)perkIndex;
+        }
+    }
+
     selectedIndex = 0;
 
     while (game->state == STATE_SHOP) {
-        for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+        for (perkIndex = 0; perkIndex < soldCount; perkIndex++) {
             const char *status;
+            PerkId perkId;
 
-            status = game->player.perkOwned[perkIndex] ? "OWNED" : "BUY";
+            perkId = soldPerks[perkIndex];
+            status = game->player.perkOwned[perkId] ? "OWNED" : "BUY";
             snprintf(labels[perkIndex],
                      sizeof(labels[perkIndex]),
                      "%-15s  %3d marks   %s",
-                     perkName((PerkId)perkIndex),
-                     perkCost((PerkId)perkIndex),
+                     perkName(perkId),
+                     perkCost(perkId),
                      status);
 
             if (perkIndex < 9) {
@@ -453,35 +465,29 @@ void runShop(Game *game) {
         }
 
         ownedMask = 0;
-
-        for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
-            if (game->player.perkOwned[perkIndex]) {
+        for (perkIndex = 0; perkIndex < soldCount; perkIndex++) {
+            if (game->player.perkOwned[soldPerks[perkIndex]]) {
                 ownedMask |= 1 << perkIndex;
             }
         }
 
-        renderShop(game, items, selectedIndex);
-
+        renderShop(game, items, soldPerks, soldCount, selectedIndex);
         rawMode = inputIsRaw();
 
         if (rawMode) {
             event = readKey();
 
             if (event.type == KEY_UP) {
-                selectedIndex = moveSelection(selectedIndex,
-                                              PERK_COUNT,
-                                              ownedMask,
-                                              -1);
+                selectedIndex = moveSelection(selectedIndex, soldCount,
+                                              ownedMask, -1);
             } else if (event.type == KEY_DOWN) {
-                selectedIndex = moveSelection(selectedIndex,
-                                              PERK_COUNT,
-                                              ownedMask,
-                                              1);
+                selectedIndex = moveSelection(selectedIndex, soldCount,
+                                              ownedMask, 1);
             } else if (event.type == KEY_LEFT ||
                        event.type == KEY_RIGHT) {
             } else if (event.type == KEY_ENTER) {
                 if (!allPerksOwned(game)) {
-                    purchasePerk(game, selectedIndex);
+                    purchasePerk(game, soldPerks[selectedIndex]);
                 }
             } else if (event.type == KEY_CHAR) {
                 actionCharacter = event.ch;
@@ -491,8 +497,7 @@ void runShop(Game *game) {
                     game->state = STATE_MENU;
                 } else {
                     menuIndex = -1;
-
-                    for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+                    for (perkIndex = 0; perkIndex < soldCount; perkIndex++) {
                         if (actionCharacter == items[perkIndex].hotkey) {
                             menuIndex = perkIndex;
                             break;
@@ -501,7 +506,7 @@ void runShop(Game *game) {
 
                     if (menuIndex >= 0) {
                         selectedIndex = menuIndex;
-                        purchasePerk(game, selectedIndex);
+                        purchasePerk(game, soldPerks[menuIndex]);
                     }
                 }
             } else if (event.type == KEY_ESC ||
@@ -521,13 +526,11 @@ void runShop(Game *game) {
                 }
 
                 characterIndex = 0;
-
                 while (input[characterIndex] != '\0') {
                     if (!isspace((unsigned char)input[characterIndex])) {
                         actionCharacter = input[characterIndex];
                         break;
                     }
-
                     characterIndex++;
                 }
 
@@ -539,10 +542,7 @@ void runShop(Game *game) {
                     game->state = STATE_MENU;
                 } else {
                     menuIndex = -1;
-
-                    for (perkIndex = 0;
-                         perkIndex < PERK_COUNT;
-                         perkIndex++) {
+                    for (perkIndex = 0; perkIndex < soldCount; perkIndex++) {
                         if (actionCharacter == items[perkIndex].hotkey) {
                             menuIndex = perkIndex;
                             break;
@@ -551,7 +551,7 @@ void runShop(Game *game) {
 
                     if (menuIndex >= 0) {
                         selectedIndex = menuIndex;
-                        purchasePerk(game, selectedIndex);
+                        purchasePerk(game, soldPerks[menuIndex]);
                     }
                 }
             }

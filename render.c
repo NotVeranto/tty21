@@ -648,37 +648,18 @@ static void renderLog(const Game *game,
 }
 
 // Clears and redraws the complete table on fixed rows.
-void renderTable(const Game *game, int hideDealerCard) {
+static void drawStatusLine(const Game *game,
+                              int terminalWidth,
+                              int padding) {
     const DealerInfo *dealerInfo;
-    const TwistInfo *twistInfo;
-    const char *hintText;
-    const char *phaseText;
-    int terminalWidth;
-    int terminalHeight;
-    int tableWidth;
-    int dealerCardHidden;
-    int separatorIndex;
     int prefixLength;
     int suffixLength;
     int availableNameWidth;
     int effectiveStatusWidth;
     int displayHandIndex;
-    int displayHandValue;
-    int dealerValue;
-    int bossActive;
-    int i;
-    int len;
     char dealerName[64];
     char statusText[256];
-    char rulesText[256];
-    char twistsLine[256];
-    char oracleText[256];
-    char roundText[64];
-    char dealerTotal[32];
-    char playerTotal[32];
     char loanText[64];
-
-    initColors();
 
     loanText[0] = '\0';
 
@@ -692,107 +673,13 @@ void renderTable(const Game *game, int hideDealerCard) {
     }
 
     dealerInfo = getDealerInfo(game->run.dealerId);
-    bossActive = dealerIsBoss(game->run.dealerId);
-    twistInfo = getTwistInfo(game->run.twistId);
-    tableWidth = getDynamicTableWidth(game);
-    dealerCardHidden = hideDealerCard &&
-                       !game->peekActive &&
-                       !twistActive(game, TWIST_SNIPER);
-
     displayHandIndex = game->player.activeHand;
-
     if (displayHandIndex >= game->player.handCount) {
         displayHandIndex = game->player.handCount - 1;
     }
-
     if (displayHandIndex < 0) {
         displayHandIndex = 0;
     }
-
-    getTerminalSize(&terminalWidth, &terminalHeight);
-
-    if (isatty(STDOUT_FILENO) &&
-        !renderTerminalSizeOk(&terminalWidth,
-                              &terminalHeight)) {
-        renderTooSmallScreen(terminalWidth, terminalHeight);
-        return;
-    }
-
-    if (isatty(STDOUT_FILENO) &&
-        terminalWidth >= tableWidth + 2) {
-        renderHideCursor();
-        tablePadding = (terminalWidth - tableWidth) / 2;
-
-        phaseText = "";
-
-        switch (game->state) {
-            case STATE_BET:
-                phaseText = "[ BET ]";
-                break;
-            case STATE_PLAYER_TURN:
-                phaseText = "[ PLAYER TURN ]";
-                break;
-            case STATE_DEALER_TURN:
-                phaseText = "[ DEALER TURN ]";
-                break;
-            case STATE_RESULT:
-                phaseText = "[ RESULT ]";
-                break;
-            default:
-                break;
-        }
-
-        if (phaseText[0] == '\0') {
-            snprintf(roundText,
-                     sizeof(roundText),
-                     "Round: %d",
-                     game->roundNumber);
-        } else {
-            snprintf(roundText,
-                     sizeof(roundText),
-                     "Round: %d    %s",
-                     game->roundNumber,
-                     phaseText);
-        }
-
-        if (dealerCardHidden || dealerHidesTotal(game->run.dealerId)) {
-            if (game->dealer.handCount == 1) {
-                snprintf(dealerTotal, sizeof(dealerTotal), "Total: ??");
-            } else {
-                snprintf(dealerTotal,
-                         sizeof(dealerTotal),
-                         "Total: ?? / ??");
-            }
-        } else if (game->dealer.handCount == 1) {
-            dealerValue = calculateDealerHandValue(
-                         game,
-                         &game->dealer.hands[0],
-                         game->run.dealerId);
-            snprintf(dealerTotal,
-                     sizeof(dealerTotal),
-                     "Total: %d",
-                     dealerValue);
-        } else {
-            snprintf(dealerTotal,
-                     sizeof(dealerTotal),
-                     "Total: %d / %d",
-                     calculateDealerHandValue(
-                         game,
-                         &game->dealer.hands[0],
-                         game->run.dealerId),
-                     calculateDealerHandValue(
-                         game,
-                         &game->dealer.hands[1],
-                         game->run.dealerId));
-        }
-
-        displayHandValue =
-            calculatePlayerHandValueForIndex(game, displayHandIndex);
-
-        snprintf(playerTotal,
-                 sizeof(playerTotal),
-                 "Total: %d",
-                 displayHandValue);
 
         if (game->mode == MODE_CLASSIC) {
             if (game->player.handCount == 1) {
@@ -960,6 +847,139 @@ void renderTable(const Game *game, int hideDealerCard) {
             }
         }
 
+    moveToTableRow(ROW_STATUS, padding);
+    printf("%s", statusText);
+    printf(SCR_ERASE_EOL);
+}
+
+void renderTable(const Game *game, int hideDealerCard) {
+    const DealerInfo *dealerInfo;
+    const TwistInfo *twistInfo;
+    const char *hintText;
+    const char *phaseText;
+    int terminalWidth;
+    int terminalHeight;
+    int tableWidth;
+    int dealerCardHidden;
+    int separatorIndex;
+    int displayHandIndex;
+    int displayHandValue;
+    int dealerValue;
+    int bossActive;
+    int i;
+    int len;
+    char rulesText[256];
+    char twistsLine[256];
+    char oracleText[256];
+    char roundText[64];
+    char dealerTotal[32];
+    char playerTotal[32];
+
+    initColors();
+
+    dealerInfo = getDealerInfo(game->run.dealerId);
+    bossActive = dealerIsBoss(game->run.dealerId);
+    twistInfo = getTwistInfo(game->run.twistId);
+    tableWidth = getDynamicTableWidth(game);
+    dealerCardHidden = hideDealerCard &&
+                       !game->peekActive &&
+                       !twistActive(game, TWIST_SNIPER);
+
+    displayHandIndex = game->player.activeHand;
+
+    if (displayHandIndex >= game->player.handCount) {
+        displayHandIndex = game->player.handCount - 1;
+    }
+
+    if (displayHandIndex < 0) {
+        displayHandIndex = 0;
+    }
+
+    getTerminalSize(&terminalWidth, &terminalHeight);
+
+    if (isatty(STDOUT_FILENO) &&
+        !renderTerminalSizeOk(&terminalWidth,
+                              &terminalHeight)) {
+        renderTooSmallScreen(terminalWidth, terminalHeight);
+        return;
+    }
+
+    if (isatty(STDOUT_FILENO) &&
+        terminalWidth >= tableWidth + 2) {
+        renderHideCursor();
+        tablePadding = (terminalWidth - tableWidth) / 2;
+
+        phaseText = "";
+
+        switch (game->state) {
+            case STATE_BET:
+                phaseText = "[ BET ]";
+                break;
+            case STATE_PLAYER_TURN:
+                phaseText = "[ PLAYER TURN ]";
+                break;
+            case STATE_DEALER_TURN:
+                phaseText = "[ DEALER TURN ]";
+                break;
+            case STATE_RESULT:
+                phaseText = "[ RESULT ]";
+                break;
+            default:
+                break;
+        }
+
+        if (phaseText[0] == '\0') {
+            snprintf(roundText,
+                     sizeof(roundText),
+                     "Round: %d",
+                     game->roundNumber);
+        } else {
+            snprintf(roundText,
+                     sizeof(roundText),
+                     "Round: %d    %s",
+                     game->roundNumber,
+                     phaseText);
+        }
+
+        if (dealerCardHidden || dealerHidesTotal(game->run.dealerId)) {
+            if (game->dealer.handCount == 1) {
+                snprintf(dealerTotal, sizeof(dealerTotal), "Total: ??");
+            } else {
+                snprintf(dealerTotal,
+                         sizeof(dealerTotal),
+                         "Total: ?? / ??");
+            }
+        } else if (game->dealer.handCount == 1) {
+            dealerValue = calculateDealerHandValue(
+                         game,
+                         &game->dealer.hands[0],
+                         game->run.dealerId);
+            snprintf(dealerTotal,
+                     sizeof(dealerTotal),
+                     "Total: %d",
+                     dealerValue);
+        } else {
+            snprintf(dealerTotal,
+                     sizeof(dealerTotal),
+                     "Total: %d / %d",
+                     calculateDealerHandValue(
+                         game,
+                         &game->dealer.hands[0],
+                         game->run.dealerId),
+                     calculateDealerHandValue(
+                         game,
+                         &game->dealer.hands[1],
+                         game->run.dealerId));
+        }
+
+        displayHandValue =
+            calculatePlayerHandValueForIndex(game, displayHandIndex);
+
+        snprintf(playerTotal,
+                 sizeof(playerTotal),
+                 "Total: %d",
+                 displayHandValue);
+
         printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
 
         const char *modeText =
@@ -1005,10 +1025,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                         tableWidth);
         drawPlayerHands(game, tablePadding);
 
-        // Status and input help use full terminal width; dealer context stays table-aligned.
-        moveToTableRow(ROW_STATUS, tablePadding);
-        printf("%s", statusText);
-        printf(SCR_ERASE_EOL);
+        drawStatusLine(game, terminalWidth, tablePadding);
 
         if (game->state == STATE_BET) {
             hintText = "Type a bet and press Enter.";
@@ -1219,6 +1236,7 @@ void renderMenuLogRefresh(const Game *game) {
         return;
     }
 
+    drawStatusLine(game, terminalWidth, tablePadding);
     renderLog(game, tablePadding, terminalWidth);
 }
 
@@ -1492,6 +1510,8 @@ void renderMenu(const char *title,
 // Renders the between-floor perk shop.
 void renderShop(const Game *game,
                 const MenuItem *items,
+                const PerkId *perkIds,
+                int perkCount,
                 int selectedIndex) {
     int terminalWidth;
     int terminalHeight;
@@ -1542,10 +1562,10 @@ void renderShop(const Game *game,
         moveToTableRow(ROW_SHOP_CHIPS, shopPadding);
         printf("Chips: %d", game->player.chips);
 
-        for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+        for (perkIndex = 0; perkIndex < perkCount; perkIndex++) {
             itemRow = SHOP_ITEM_START_ROW + perkIndex;
-            isOwned = game->player.perkOwned[perkIndex];
-            canAfford = game->run.marks >= perkCost((PerkId)perkIndex);
+            isOwned = game->player.perkOwned[perkIds[perkIndex]];
+            canAfford = game->run.marks >= perkCost(perkIds[perkIndex]);
 
             rowWidth = 2 + 3 + 2 +
                        (int)strlen(items[perkIndex].label);
@@ -1603,7 +1623,7 @@ void renderShop(const Game *game,
         printf(SCR_ERASE_EOL);
         printf("%s%s%s",
                scrDim(),
-               perkDescription((PerkId)selectedIndex),
+               perkDescription(perkIds[selectedIndex]),
                scrReset());
 
         moveToTableRow(SHOP_HINT_ROW, shopPadding);
@@ -1619,9 +1639,9 @@ void renderShop(const Game *game,
                game->run.marks,
                game->player.chips);
 
-        for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
-            isOwned = game->player.perkOwned[perkIndex];
-            canAfford = game->run.marks >= perkCost((PerkId)perkIndex);
+        for (perkIndex = 0; perkIndex < perkCount; perkIndex++) {
+            isOwned = game->player.perkOwned[perkIds[perkIndex]];
+            canAfford = game->run.marks >= perkCost(perkIds[perkIndex]);
 
             if (perkIndex == selectedIndex) {
                 printf("> ");
@@ -1643,7 +1663,7 @@ void renderShop(const Game *game,
 
             printf("%s%s%s\n",
                    scrDim(),
-                   perkDescription((PerkId)perkIndex),
+                   perkDescription(perkIds[perkIndex]),
                    scrReset());
         }
 

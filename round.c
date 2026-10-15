@@ -267,10 +267,12 @@ static int readBet(Game *game) {
     int minBet;
     int maxBet;
     int validBet;
+    int betDivisor;
     KeyEvent event;
 
     minBet = getMinBet(game, game->run.floor, game->mode);
     maxBet = game->player.chips;
+    betDivisor = dealerHandsCount(game->run.dealerId);
 
     if (game->mode == MODE_ROGUELIKE) {
         int cap = game->player.chips;
@@ -337,7 +339,18 @@ static int readBet(Game *game) {
                     if (*endPointer == '\0' &&
                         betValue >= minBet &&
                         betValue <= maxBet) {
-                        validBet = 1;
+                        if (betDivisor > 1 && betValue % betDivisor != 0) {
+                            snprintf(message,
+                                     sizeof(message),
+                                     "Invalid bet. Enter a multiple of %d between %d and %d.",
+                                     betDivisor,
+                                     minBet,
+                                     maxBet);
+                            renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+                            validBet = 0;
+                        } else {
+                            validBet = 1;
+                        }
                     } else {
                         snprintf(message,
                                  sizeof(message),
@@ -411,7 +424,18 @@ static int readBet(Game *game) {
                 *endPointer == '\0' &&
                 betValue >= minBet &&
                 betValue <= maxBet) {
-                validBet = 1;
+                if (betDivisor > 1 && betValue % betDivisor != 0) {
+                    snprintf(message,
+                             sizeof(message),
+                             "Invalid bet. Enter a multiple of %d between %d and %d.",
+                             betDivisor,
+                             minBet,
+                             maxBet);
+                    renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+                    validBet = 0;
+                } else {
+                    validBet = 1;
+                }
             } else {
                 snprintf(message,
                          sizeof(message),
@@ -1894,6 +1918,20 @@ void resolveRound(Game *game) {
                 "Five losses in a row. The pit boss ends your run.",
                 MSG_LOSS);
         game->state = STATE_QUIT;
+    }
+
+    if (game->player.chips == 0 &&
+        game->player.perkOwned[PERK_EXTRA_LIFE] &&
+        game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
+        game->player.chips = 1;
+        game->player.perkCharges[PERK_EXTRA_LIFE] = 0;
+        if (game->state == STATE_QUIT) {
+            game->state = game->mode == MODE_CLASSIC ?
+                          STATE_BET : STATE_MENU;
+        }
+        logPush(game,
+                "Extra Life! Run continues with 1 chip.",
+                MSG_WIN);
     }
 
     renderTable(game, 0);

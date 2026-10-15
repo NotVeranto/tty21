@@ -211,8 +211,8 @@ void advanceFloor(Game *game) {
     }
 
     if (game->player.perkOwned[PERK_BANKROLL]) {
-        game->player.chips += 10;
-        logPush(game, "Bankroll: +10 chips.", MSG_WIN);
+        game->player.chips += 5;
+        logPush(game, "Bankroll: +5 chips.", MSG_WIN);
     }
 
     {

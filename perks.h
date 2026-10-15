@@ -28,6 +28,7 @@ typedef struct {
     int cost;
 } PerkInfo;
 
+int perkIsSold(PerkId id);
 const PerkInfo *getPerkInfo(PerkId id);
 int perkCost(PerkId id);
 const char *perkName(PerkId id);

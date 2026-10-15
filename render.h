@@ -49,6 +49,8 @@ void renderHideCursor(void);
 void renderShowCursor(void);
 void renderShop(const Game *game,
                 const MenuItem *items,
+                const PerkId *perkIds,
+                int perkCount,
                 int selectedIndex);
 void renderActionBar(const ActionId *actions,
                      int actionCount,
