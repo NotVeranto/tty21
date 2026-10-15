@@ -574,15 +574,16 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
 
         renderTable(game, game->state == STATE_PLAYER_TURN);
     } else if (action == ACTION_STAND) {
-        int standLocked =
-            (twistActive(game, TWIST_STICKY_HANDS) ||
-             (game->run.floor >= 10 &&
-              game->run.dealerId == DEALER_BUTCHER)) &&
-            calculatePlayerHandValue(game) < 15;
-
-        if (standLocked) {
+        if (twistActive(game, TWIST_STICKY_HANDS) &&
+            calculatePlayerHandValue(game) < 15) {
             logPush(game,
                     "Sticky Hands: cannot stand below 15.",
+                    MSG_DEFAULT);
+        } else if (game->run.floor >= 10 &&
+                   game->run.dealerId == DEALER_BUTCHER &&
+                   calculatePlayerHandValue(game) < 15) {
+            logPush(game,
+                    "Butcher: cannot stand below 15.",
                     MSG_DEFAULT);
         } else if (game->player.hands[game->player.activeHand].count > 0) {
             int hasEcho;
