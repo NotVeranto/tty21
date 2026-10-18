@@ -7,6 +7,7 @@ void startRound(Game *game);
 void playerTurn(Game *game);
 void dealerTurn(Game *game);
 void resolveRound(Game *game);
+void creditChips(Game *game, int amount);
 int calculatePlayerHandValue(const Game *game);
 int calculatePlayerHandValueForIndex(const Game *game,
                                      int handIndex);
