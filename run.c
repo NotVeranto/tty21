@@ -14,6 +14,8 @@ void initRun(Run *run) {
     run->twistBlocked = 0;
     run->twistRerolled = 0;
     run->bossRewarded = 0;
+    run->shopPerkCount = 0;
+    run->shopPerksRerolled = 0;
 }
 
 // Returns the minimum bet for a floor.
