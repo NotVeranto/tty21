@@ -16,6 +16,27 @@
 #define DECK_RESHUFFLE_MARGIN 15
 #define FIRST_CARD_RETRY_LIMIT 50
 
+void creditChips(Game *game, int amount) {
+    long long total;
+    if (amount <= 0 || game->player.chips >= INT_MAX) return;
+    total = (long long)game->player.chips + amount;
+    game->player.chips = total > INT_MAX ? INT_MAX : (int)total;
+}
+
+static void settleInsurance(Game *game) {
+    long long value;
+    int payout;
+    char message[64];
+    if (game->player.insuranceBet <= 0) return;
+    value = (long long)game->player.insuranceBet * 3;
+    payout = value > INT_MAX - game->player.chips
+        ? INT_MAX - game->player.chips : (int)value;
+    creditChips(game, payout);
+    snprintf(message, sizeof(message), "Insurance pays: +%d chips.", payout);
+    logPush(game, message, MSG_WIN);
+    game->player.insuranceBet = 0;
+}
+
 int twistActive(const Game *game, TwistId id) {
     int i;
 
@@ -138,6 +159,7 @@ static void drawCard(Game *game, Hand *hand, int allowCurse) {
     CurseId curseId;
     char message[64];
 
+    if (hand->count >= MAX_HAND_SIZE) return;
     if (game->deck.top >= DECK_SIZE) {
         initDeck(&game->deck);
         shuffleDeck(&game->deck);
@@ -464,7 +486,7 @@ static int canSplit(const Game *game) {
                game->player.hands[game->player.activeHand].cards[1].rank &&
            game->player.handCount < MAX_PLAYER_HANDS &&
            (long long)game->player.chips >=
-               (long long)game->player.bets[game->player.activeHand] &&
+               2LL * (long long)game->player.bets[game->player.activeHand] &&
            !game->player.isSplitAce[game->player.activeHand];
 }
 
@@ -534,7 +556,8 @@ static int buildPlayerActions(const Game *game, ActionId *actions) {
     int actionCount;
 
     actionCount = 0;
-    actions[actionCount++] = ACTION_HIT;
+    if (game->player.hands[game->player.activeHand].count < MAX_HAND_SIZE)
+        actions[actionCount++] = ACTION_HIT;
     actions[actionCount++] = ACTION_STAND;
 
     if (canDouble(game)) {
@@ -560,11 +583,21 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
     int value;
 
     if (action == ACTION_HIT) {
+        if (game->player.hands[game->player.activeHand].count >= MAX_HAND_SIZE) {
+            logPush(game, "Hand is full.", MSG_DEFAULT);
+            renderTable(game, game->state == STATE_PLAYER_TURN);
+            return;
+        }
         if (game->run.floor >= 10 && game->run.dealerId == DEALER_DEVIL) {
             int toll = 3;
             if (toll > game->player.chips) toll = game->player.chips;
             game->player.chips -= toll;
-            logPush(game, "Devil's toll: -3 chips.", MSG_LOSS);
+            {
+                char tollMessage[64];
+                snprintf(tollMessage, sizeof(tollMessage),
+                         "Devil's toll: -%d chips.", toll);
+                logPush(game, tollMessage, MSG_LOSS);
+            }
         }
         drawCard(game, &game->player.hands[game->player.activeHand], 1);
 
@@ -645,7 +678,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                     } else {
                         advanceActiveHand(game);
                     }
-                } else if (value == 21) {
+                } else {
                     advanceActiveHand(game);
                 }
             } else {
@@ -923,24 +956,20 @@ static void askInsurance(Game *game) {
 
 static void askEvenMoney(Game *game) {
     const char *prompt = "Take even money? [y/n] (pays 1:1)";
-    char message[80];
     int bet;
-
-    if (!readYesNoPrompt(prompt)) {
-        return;
-    }
-
+    if (!readYesNoPrompt(prompt)) return;
     bet = game->player.bets[0];
-    game->player.chips += bet;
+    creditChips(game, bet);
     game->player.insuranceBet = 0;
     game->player.evenMoneyTaken = 1;
     game->state = STATE_RESULT;
-    snprintf(message, sizeof(message),
-             "Even money taken: +%d chips.", bet);
-    logPush(game, message, MSG_WIN);
 }
 
 void startRound(Game *game) {
+    /*
+     * Stage 16a peek/insurance/even-money paths have no unit tests yet.
+     * Stage 16.6 will add coverage; validate these paths manually meanwhile.
+     */
     int playerValue;
     int betAmount;
     int upcardRank;
@@ -1049,7 +1078,7 @@ void startRound(Game *game) {
                !game->player.usedSplit;
 
     if (upcardIsAce) {
-        if (playerBJ) {
+        if (playerBJ && dealerHandsCount(game->run.dealerId) == 1) {
             askEvenMoney(game);
             if (game->state == STATE_RESULT) {
                 return;
@@ -1072,20 +1101,12 @@ void startRound(Game *game) {
     }
 
     if (dealerBJ) {
-        if (game->player.insuranceBet > 0) {
-            int insurancePayout;
-            char insuranceMessage[64];
-
-            insurancePayout = game->player.insuranceBet * 2;
-            game->player.chips += insurancePayout;
-            snprintf(insuranceMessage, sizeof(insuranceMessage),
-                     "Insurance pays: +%d chips.",
-                     insurancePayout);
-            logPush(game, insuranceMessage, MSG_WIN);
-        }
-        game->player.insuranceBet = 0;
+        settleInsurance(game);
         game->peekActive = 1;
-        logPush(game, "Dealer peeks. Blackjack.", MSG_LOSS);
+        if (playerBJ)
+            logPush(game, "Dealer peeks. Both have blackjack.", MSG_PUSH);
+        else
+            logPush(game, "Dealer peeks. Blackjack.", MSG_LOSS);
         game->state = STATE_RESULT;
         return;
     }
@@ -1681,10 +1702,6 @@ void resolveRound(Game *game) {
                     basePayout *= 2;
                 }
 
-                if (twistActive(game, TWIST_HALF_PAYOUT)) {
-                    basePayout /= 2;
-                }
-
                 if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
                     game->player.usedDouble &&
                     !game->player.usedSplit) {
@@ -1713,7 +1730,7 @@ void resolveRound(Game *game) {
                     payout = (int)payoutValue;
                 }
 
-                game->player.chips += payout;
+                creditChips(game, payout);
                 payoutTotal += payout;
                 handPayoutTotal += payout;
                 handWon = 1;
@@ -1787,18 +1804,6 @@ void resolveRound(Game *game) {
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
 
-                if (game->player.insuranceBet > 0) {
-                    int insurancePayout;
-                    char insuranceMessage[64];
-
-                    insurancePayout = game->player.insuranceBet * 2;
-                    game->player.chips += insurancePayout;
-                    snprintf(insuranceMessage, sizeof(insuranceMessage),
-                             "Insurance pays: +%d chips.",
-                             insurancePayout);
-                    logPush(game, insuranceMessage, MSG_WIN);
-                    game->player.insuranceBet = 0;
-                }
                 game->winStreak = 0;
 
                 if (dealerHandCount == 1) {
@@ -1915,7 +1920,7 @@ void resolveRound(Game *game) {
                     payout = (int)payoutValue;
                 }
 
-                game->player.chips += payout;
+                creditChips(game, payout);
                 payoutTotal += payout;
                 handPayoutTotal += payout;
                 handWon = 1;
@@ -2109,13 +2114,19 @@ void resolveRound(Game *game) {
         game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
         game->player.chips = 1;
         game->player.perkCharges[PERK_EXTRA_LIFE] = 0;
-        if (game->state == STATE_QUIT) {
-            game->state = game->mode == MODE_CLASSIC ?
-                          STATE_BET : STATE_MENU;
-        }
-        logPush(game,
-                "Extra Life! Run continues with 1 chip.",
-                MSG_WIN);
+        if (game->state == STATE_QUIT)
+            game->state = game->mode == MODE_CLASSIC ? STATE_BET : STATE_MENU;
+        logPush(game, "Extra Life! Run continues with 1 chip.", MSG_WIN);
+    }
+    if (game->player.chips > 0 &&
+        game->player.chips < getMinBet(game, game->run.floor, game->mode) &&
+        game->player.perkOwned[PERK_EXTRA_LIFE] &&
+        game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
+        game->player.chips = getMinBet(game, game->run.floor, game->mode);
+        game->player.perkCharges[PERK_EXTRA_LIFE] = 0;
+        if (game->state == STATE_QUIT)
+            game->state = game->mode == MODE_CLASSIC ? STATE_BET : STATE_MENU;
+        logPush(game, "Extra Life! Chips restored to the minimum bet.", MSG_WIN);
     }
 
     game->tippedThisRound = 0;
