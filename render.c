@@ -685,15 +685,13 @@ static void drawStatusLine(const Game *game,
             if (game->player.handCount == 1) {
                 snprintf(statusText,
                          sizeof(statusText),
-                         "Dealer: %s    Chips: %d    Bet: %d",
-                         dealerInfo->name,
+                         "Chips: %d    Bet: %d",
                          game->player.chips,
                          game->player.bets[displayHandIndex]);
             } else {
                 snprintf(statusText,
                          sizeof(statusText),
-                         "Dealer: %s    Chips: %d    Bet: %d (hand %d/%d)",
-                         dealerInfo->name,
+                         "Chips: %d    Bet: %d (hand %d/%d)",
                          game->player.chips,
                          game->player.bets[displayHandIndex],
                          displayHandIndex + 1,
@@ -726,32 +724,20 @@ static void drawStatusLine(const Game *game,
         effectiveStatusWidth = terminalWidth - tablePadding;
 
         if ((int)strlen(statusText) > effectiveStatusWidth) {
-            snprintf(dealerName,
-                     sizeof(dealerName),
-                     "%s",
-                     dealerInfo->name);
             if (game->mode == MODE_CLASSIC) {
-                snprintf(statusText,
-                         sizeof(statusText),
-                         "Dealer: ");
-                prefixLength = (int)strlen(statusText);
-
-                if (game->player.handCount == 1) {
-                    snprintf(statusText,
-                             sizeof(statusText),
-                             "    Chips: %d    Bet: %d",
-                             game->player.chips,
-                             game->player.bets[displayHandIndex]);
+                if (effectiveStatusWidth >= 3) {
+                    statusText[effectiveStatusWidth - 3] = '.';
+                    statusText[effectiveStatusWidth - 2] = '.';
+                    statusText[effectiveStatusWidth - 1] = '.';
+                    statusText[effectiveStatusWidth] = '\0';
                 } else {
-                    snprintf(statusText,
-                             sizeof(statusText),
-                             "    Chips: %d    Bet: %d (hand %d/%d)",
-                             game->player.chips,
-                             game->player.bets[displayHandIndex],
-                             displayHandIndex + 1,
-                             game->player.handCount);
+                    statusText[0] = '\0';
                 }
             } else {
+                snprintf(dealerName,
+                         sizeof(dealerName),
+                         "%s",
+                         dealerInfo->name);
                 snprintf(statusText,
                          sizeof(statusText),
                          "Floor: %d    Dealer: ",
@@ -777,72 +763,55 @@ static void drawStatusLine(const Game *game,
                              game->player.handCount,
                              loanText);
                 }
-            }
 
-            suffixLength = (int)strlen(statusText);
-            availableNameWidth = effectiveStatusWidth - prefixLength - suffixLength;
+                suffixLength = (int)strlen(statusText);
+                availableNameWidth = effectiveStatusWidth -
+                                     prefixLength - suffixLength;
 
-            if (availableNameWidth >= 2 &&
-                (int)strlen(dealerName) > availableNameWidth) {
-                dealerName[availableNameWidth - 2] = '.';
-                dealerName[availableNameWidth - 1] = '.';
-                dealerName[availableNameWidth] = '\0';
-            }
+                if (availableNameWidth >= 2 &&
+                    (int)strlen(dealerName) > availableNameWidth) {
+                    dealerName[availableNameWidth - 2] = '.';
+                    dealerName[availableNameWidth - 1] = '.';
+                    dealerName[availableNameWidth] = '\0';
+                }
 
-            if (availableNameWidth < 2) {
-                dealerName[0] = '.';
-                dealerName[1] = '.';
-                dealerName[2] = '\0';
-            }
+                if (availableNameWidth < 2) {
+                    dealerName[0] = '.';
+                    dealerName[1] = '.';
+                    dealerName[2] = '\0';
+                }
 
-            if (game->mode == MODE_CLASSIC) {
                 if (game->player.handCount == 1) {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "Dealer: %s    Chips: %d    Bet: %d",
+                             "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d",
+                             game->run.floor,
                              dealerName,
+                             game->run.marks,
                              game->player.chips,
                              game->player.bets[displayHandIndex]);
                 } else {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "Dealer: %s    Chips: %d    Bet: %d (hand %d/%d)",
+                             "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
+                             game->run.floor,
                              dealerName,
+                             game->run.marks,
                              game->player.chips,
                              game->player.bets[displayHandIndex],
                              displayHandIndex + 1,
                              game->player.handCount);
                 }
-            } else if (game->player.handCount == 1) {
-                snprintf(statusText,
-                         sizeof(statusText),
-                         "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d",
-                         game->run.floor,
-                         dealerName,
-                         game->run.marks,
-                         game->player.chips,
-                         game->player.bets[displayHandIndex]);
-            } else {
-                snprintf(statusText,
-                         sizeof(statusText),
-                         "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
-                         game->run.floor,
-                         dealerName,
-                         game->run.marks,
-                         game->player.chips,
-                         game->player.bets[displayHandIndex],
-                         displayHandIndex + 1,
-                         game->player.handCount);
-            }
 
-            if ((int)strlen(statusText) > effectiveStatusWidth) {
-                if (effectiveStatusWidth >= 3) {
-                    statusText[effectiveStatusWidth - 3] = '.';
-                    statusText[effectiveStatusWidth - 2] = '.';
-                    statusText[effectiveStatusWidth - 1] = '.';
-                    statusText[effectiveStatusWidth] = '\0';
-                } else {
-                    statusText[0] = '\0';
+                if ((int)strlen(statusText) > effectiveStatusWidth) {
+                    if (effectiveStatusWidth >= 3) {
+                        statusText[effectiveStatusWidth - 3] = '.';
+                        statusText[effectiveStatusWidth - 2] = '.';
+                        statusText[effectiveStatusWidth - 1] = '.';
+                        statusText[effectiveStatusWidth] = '\0';
+                    } else {
+                        statusText[0] = '\0';
+                    }
                 }
             }
         }
