@@ -7,8 +7,8 @@
 
 static unsigned int rngSeed;
 
-void rngInit(unsigned int seed) {
-    if (seed == 0) {
+void rngInit(unsigned int seed, int seedIsValid) {
+    if (!seedIsValid) {
         seed = (unsigned int)time(NULL);
     }
 
