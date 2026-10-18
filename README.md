@@ -20,7 +20,7 @@ Implemented:
 - Raw terminal input via termios.
 - Twists: 16 floor rule modifiers with anti-farm pressure.
 - Deterministic runs via --seed.
-- Perks and between-floor shop (12 sellable perks; 16 in catalogue, 4 in development).
+- Perks and between-floor shop (rotating pool of 3 perks per floor, 12 in pool).
 - Dealer turn step-through with optional --fast mode.
 - Cursed cards (3% of drawn cards): Bleed (-1 chip per round), Frost (-2 to hand value), Echo (10% chance of an extra card on stand).
 - Boss floors every 5 floors: two combined dealer rules, one-time marks reward on victory.
@@ -72,6 +72,7 @@ Betting:
 - `c` — Continue on current floor
 - `a` — Advance to the next floor (advance fee plus the next floor's minimum bet must both be covered)
 - `s` — Open the shop (perks, services, twist tools; roguelike only)
+- Shop shows a rotating pool of 3 perks per floor. Services and twist tools are always available. Reroll costs 10 marks, once per floor.
 - `q` — Quit the run
 
 ## Project status
