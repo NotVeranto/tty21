@@ -18,11 +18,13 @@ Implemented:
 - Roguelike progression: floors, marks, advance menu.
 - Full-screen ASCII table with ANSI styling.
 - Raw terminal input via termios.
-- Twists: 16 floor rule modifiers with anti-farm pressure.
+- Twists: 16 floor rule modifiers with anti-farm pressure. Twist banner is colored by category: green favorable, dim neutral, red hostile.
+- No Reshuffle floors show a live deck countdown. Floor 10+ shows a 'running hot' hint when low cards are depleted.
 - Deterministic runs via --seed.
 - Perks and between-floor shop (rotating pool of 3 perks per floor, 13 in pool).
 - Dealer turn step-through with optional --fast mode.
-- Cursed cards (3% of drawn cards): Bleed (-1 chip per round), Frost (-2 to hand value), Echo (10% chance of an extra card on stand).
+- Dealer taunts on losses.
+- Cursed cards (3% of drawn cards): Bleed (-1 chip per round), Frost (-2 to hand value), Echo (10% chance of an extra card on stand). Cursed markers are colored on the card (Bleed red, Frost cyan, Echo yellow).
 - Boss floors every 5 floors: two combined dealer rules, one-time marks reward on victory.
 - Quadratic minimum bets, late-floor bet caps, and an enraged dealer from floor 10 after three rounds.
 - Deep-floor dealer power rules from floor 10, including increased losses, restricted actions, and a chip toll on hits.
