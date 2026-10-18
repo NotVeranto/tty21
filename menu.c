@@ -30,7 +30,7 @@ static void dispatchFloorMenuAction(Game *game,
         if (game->state != STATE_QUIT) {
             game->state = STATE_BET;
         }
-    }    } else if ((actionCharacter == 's' || actionCharacter == 'S') &&
+    } else if ((actionCharacter == 's' || actionCharacter == 'S') &&
                game->mode == MODE_ROGUELIKE) {
         game->state = STATE_SHOP;
     } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
