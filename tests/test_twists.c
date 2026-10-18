@@ -16,7 +16,7 @@ TEST(twist_floor_four_has_valid_category) {
     const TwistInfo *info;
     TwistId id;
 
-    rngInit(201U);
+    rngInit(201U, 1);
     {
         Game game = {0}; game.run.floor = 4; game.run.previousTwistId = TWIST_NONE;
         id = selectTwistForFloor(&game);
@@ -32,7 +32,7 @@ TEST(twist_floor_eight_has_valid_category) {
     const TwistInfo *info;
     TwistId id;
 
-    rngInit(208U);
+    rngInit(208U, 1);
     {
         Game game = {0}; game.run.floor = 8; game.run.previousTwistId = TWIST_NONE;
         id = selectTwistForFloor(&game);
@@ -51,7 +51,7 @@ TEST(twist_selection_avoids_previous_and_varies) {
     TwistId id;
     TwistId previous;
 
-    rngInit(204U);
+    rngInit(204U, 1);
     previous = TWIST_LUCKY_DRAW;
     distinct = 0;
 
