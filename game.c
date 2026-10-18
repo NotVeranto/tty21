@@ -44,6 +44,7 @@ void initGame(Game *game, GameMode mode) {
     game->minBetMultiplier = 1;
     game->safetyNetArmed = 0;
     game->tippedThisRound = 0;
+    game->lastPayoutBreakdown[0] = '\0';
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
