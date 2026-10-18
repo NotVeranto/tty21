@@ -1913,6 +1913,17 @@ void renderHelpOverlay(const Game *game) {
             contentRow++;
         }
 
+        if (game->lastPayoutBreakdown[0] != '\0') {
+            printf(SCR_CURSOR, contentRow + 1, leftColumn);
+            printf("%sLast round:%s", scrDim(), scrReset());
+            contentRow += 2;
+            printHelpColumnLine(contentRow,
+                                leftColumn,
+                                columnWidth,
+                                game->lastPayoutBreakdown);
+            contentRow++;
+        }
+
         bottomRow = contentRow + 1;
 
         printf(SCR_CURSOR, bottomRow, leftColumn);
@@ -2008,6 +2019,11 @@ void renderHelpOverlay(const Game *game) {
 
         if (ownedPerkCount == 0) {
             printf("  None\n");
+        }
+
+        if (game->lastPayoutBreakdown[0] != '\0') {
+            printf("\nLast round:\n  %s\n",
+                   game->lastPayoutBreakdown);
         }
 
         printf("\nFloor: %d    Marks: %d    Chips: %d    Bet: %d\n",
