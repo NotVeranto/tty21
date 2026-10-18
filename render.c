@@ -109,6 +109,16 @@ static const char *scrDim(void) {
     return colorEnabled ? "\033[2m" : "";
 }
 
+// Returns the color associated with a cursed card marker.
+static const char *curseColor(CurseId id) {
+    switch (id) {
+        case CURSED_BLEED: return scrRed();
+        case CURSED_FROST: return scrCyan();
+        case CURSED_ECHO:  return scrYellow();
+        default: return "";
+    }
+}
+
 // Reads terminal dimensions and falls back to a standard terminal size.
 static void getTerminalSize(int *width, int *height) {
     struct winsize windowSize;
@@ -353,16 +363,18 @@ static void printFaceDownLine(int lineIndex) {
 // Prints one line from a visible card.
 static void printVisibleCardLine(const Card *card, int lineIndex) {
     const char *rankName;
-    char marker = ' ';
 
     rankName = CARD_RANKS[card->rank];
 
-    if (card->cursed != CURSED_NONE) {
-        marker = '*';
-    }
-
     if (lineIndex == 0) {
-        printf("|%-2s      %c|", rankName, marker);
+        if (card->cursed != CURSED_NONE) {
+            printf("|%-2s      %s*%s|",
+                   rankName,
+                   curseColor((CurseId)card->cursed),
+                   scrReset());
+        } else {
+            printf("|%-2s       |", rankName);
+        }
     } else if (lineIndex == 1 || lineIndex == 3) {
         printf("|%*s|", CARD_CONTENT_WIDTH, "");
     } else if (lineIndex == 2) {
@@ -821,6 +833,64 @@ static void drawStatusLine(const Game *game,
     printf(SCR_ERASE_EOL);
 }
 
+// Returns the strongest category among active twists for banner coloring.
+static const char *twistBannerColor(const Game *game) {
+    TwistCategory worst = TWIST_CAT_FAVORABLE;
+    int i;
+
+    if (game->run.twistId != TWIST_NONE &&
+        !game->run.twistBlocked) {
+        TwistCategory cat =
+            getTwistInfo(game->run.twistId)->category;
+        if (cat == TWIST_CAT_HOSTILE) return scrRed();
+        if (cat == TWIST_CAT_NEUTRAL) worst = TWIST_CAT_NEUTRAL;
+    }
+
+    for (i = 0; i < game->run.extraTwistCount; i++) {
+        TwistCategory cat =
+            getTwistInfo(game->run.extraTwists[i])->category;
+        if (cat == TWIST_CAT_HOSTILE) return scrRed();
+        if (cat == TWIST_CAT_NEUTRAL) worst = TWIST_CAT_NEUTRAL;
+    }
+
+    if (worst == TWIST_CAT_NEUTRAL) return scrDim();
+    return scrGreen();
+}
+
+// Appends an Oracle item, separated from existing items by " | ".
+static void appendOracle(char *buf, size_t size, const char *text) {
+    size_t len = strlen(buf);
+
+    if (len == 0) {
+        snprintf(buf, size, "%s", text);
+    } else if (len + 3 < size) {
+        snprintf(buf + len, size - len, " | %s", text);
+    }
+}
+
+// Reports whether dealt cards are depleted of low ranks.
+static int isDeckRunningHot(const Game *game) {
+    int lowCount;
+    int highCount;
+    int i;
+
+    lowCount = 0;
+    highCount = 0;
+
+    for (i = 0; i < game->deck.top; i++) {
+        Rank r = game->deck.cards[i].rank;
+        if (r >= TWO && r <= SIX) {
+            lowCount++;
+        } else if (r >= TEN || r == ACE) {
+            highCount++;
+        }
+    }
+
+    /* Hot when lows outnumber highs by more than 1.5x.
+       Avoid floating point: lowCount * 2 > highCount * 3. */
+    return lowCount * 2 > highCount * 3;
+}
+
 void renderTable(const Game *game, int hideDealerCard) {
     const DealerInfo *dealerInfo;
     const TwistInfo *twistInfo;
@@ -1079,7 +1149,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                          showBlockedPrimary ? " (blocked)" : "",
                          twistInfo->description);
                 printf("%s%s%s%s",
-                       scrDim(),
+                       twistBannerColor(game),
                        game->safetyNetArmed ? "SAFETY NET  |  " : "",
                        twistsLine,
                        scrReset());
@@ -1125,7 +1195,7 @@ void renderTable(const Game *game, int hideDealerCard) {
 
                 if (hasTwistName) {
                     printf("%s%s%s%s",
-                           scrDim(),
+                           twistBannerColor(game),
                            game->safetyNetArmed ? "SAFETY NET  |  " : "",
                            twistsLine,
                            scrReset());
@@ -1190,6 +1260,23 @@ void renderTable(const Game *game, int hideDealerCard) {
                                 CARD_RANKS[nextCard->rank],
                                 CARD_SUITS[nextCard->suit]);
             }
+        }
+
+        if (twistActive(game, TWIST_NO_RESHUFFLE) &&
+            game->deck.top <= DECK_SIZE) {
+            char deckText[32];
+            snprintf(deckText, sizeof(deckText),
+                     "Deck: %d/%d",
+                     DECK_SIZE - game->deck.top,
+                     DECK_SIZE);
+            appendOracle(oracleText, sizeof(oracleText), deckText);
+        }
+
+        if (game->mode == MODE_ROGUELIKE &&
+            game->run.floor >= 10 &&
+            isDeckRunningHot(game)) {
+            appendOracle(oracleText, sizeof(oracleText),
+                         "running hot");
         }
 
         if (oracleText[0] != '\0') {
