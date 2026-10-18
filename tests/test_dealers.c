@@ -5,7 +5,7 @@
 #include <string.h>
 
 TEST(dealer_floor_schedule_and_boss_cycle) {
-    rngInit(301U);
+    rngInit(301U, 1);
 
     ASSERT_EQ_INT(DEALER_CROUPIER,
                   selectDealerForFloor(1, DEALER_CROUPIER));
@@ -29,7 +29,7 @@ TEST(dealer_random_floor_avoids_previous_dealer) {
     DealerId previous;
     DealerId selected;
 
-    rngInit(304U);
+    rngInit(304U, 1);
 
     for (previous = DEALER_CROUPIER;
          previous < DEALER_COUNT;
