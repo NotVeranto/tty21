@@ -341,6 +341,7 @@ static int parseSeed(const char *text, unsigned int *seed) {
 int main(int argc, char **argv) {
     Game game;
     unsigned int seed;
+    int seedProvided;
     int argumentIndex;
     int seedResult;
     const char *seedText;
@@ -350,6 +351,7 @@ int main(int argc, char **argv) {
     int fastFlag;
 
     seed = 0;
+    seedProvided = 0;
     fastFlag = 0;
     forced = 0;
     forcedMode = MODE_ROGUELIKE;
@@ -383,7 +385,7 @@ int main(int argc, char **argv) {
                 printUsage(stderr);
                 return 1;
             }
-
+            seedProvided = 1;
             continue;
         }
 
@@ -404,7 +406,7 @@ int main(int argc, char **argv) {
                 printUsage(stderr);
                 return 1;
             }
-
+            seedProvided = 1;
             continue;
         }
 
@@ -418,7 +420,7 @@ int main(int argc, char **argv) {
                 printUsage(stderr);
                 return 1;
             }
-
+            seedProvided = 1;
             continue;
         }
 
@@ -449,7 +451,7 @@ int main(int argc, char **argv) {
         mode = runStartupMenu();
     }
 
-    rngInit(seed);
+    rngInit(seed, seedProvided);
 
     initGame(&game, mode);
     game.fastMode = fastFlag;
