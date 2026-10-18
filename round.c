@@ -1464,81 +1464,92 @@ static void buildModifierList(const Game *game,
 
     out[0] = '\0';
 
+#define APPEND_MODIFIER(tokenValue) \
+    do { \
+        if (strlen(out) + 2 + strlen(tokenValue) >= outSize) { \
+            goto modifier_list_done; \
+        } \
+        appendModifierToken(out, outSize, tokenValue); \
+    } while (0)
+
     if (roundHadBlackjack && isWin) {
         numerator = dealerBlackjackNumerator(game->run.dealerId);
         denominator = dealerBlackjackDenominator(game->run.dealerId);
 
         if (numerator == 3 && denominator == 2) {
-            appendModifierToken(out, outSize, "BJ 3:2");
+            APPEND_MODIFIER("BJ 3:2");
         } else if (numerator == 1 && denominator == 1) {
-            appendModifierToken(out, outSize, "BJ 1:1");
+            APPEND_MODIFIER("BJ 1:1");
         } else {
-            appendModifierToken(out, outSize, "BJ");
+            APPEND_MODIFIER("BJ");
         }
     }
 
     if (twistActive(game, TWIST_DESPERATION) &&
         game->player.usedDouble && isWin) {
-        appendModifierToken(out, outSize, "Desp 3x");
+        APPEND_MODIFIER("Desp 3x");
     }
 
     if (twistActive(game, TWIST_HIGH_STAKES)) {
-        appendModifierToken(out, outSize, "High 2x");
+        APPEND_MODIFIER("High 2x");
     }
 
     if (twistActive(game, TWIST_BLOOD_PACT)) {
-        appendModifierToken(out, outSize, "Blood 2x");
+        APPEND_MODIFIER("Blood 2x");
     }
 
     if (twistActive(game, TWIST_HALF_PAYOUT) && isWin) {
-        appendModifierToken(out, outSize, "Half 0.5");
+        APPEND_MODIFIER("Half 0.5");
     }
 
     if (twistActive(game, TWIST_CHARITY) && !isWin) {
-        appendModifierToken(out, outSize, "Charity 0.5");
+        APPEND_MODIFIER("Charity 0.5");
     }
 
     if (twistActive(game, TWIST_BUST_INSURANCE) && !isWin) {
-        appendModifierToken(out, outSize, "BustIns 0.5");
+        APPEND_MODIFIER("BustIns 0.5");
     }
 
     if (game->mode == MODE_ROGUELIKE &&
         winStreakBefore >= 3 && isWin) {
-        appendModifierToken(out, outSize, "Streak 2x");
+        APPEND_MODIFIER("Streak 2x");
     }
 
     if (!isWin) {
         powerMultiplier = dealerPowerLossMultiplier(game->run.dealerId,
                                                      game->run.floor);
         if (powerMultiplier == 125) {
-            appendModifierToken(out, outSize, "Power x1.25");
+            APPEND_MODIFIER("Power x1.25");
         } else if (powerMultiplier == 150) {
-            appendModifierToken(out, outSize, "Power x1.5");
+            APPEND_MODIFIER("Power x1.5");
         } else if (powerMultiplier == 200) {
-            appendModifierToken(out, outSize, "Power x2.0");
+            APPEND_MODIFIER("Power x2.0");
         }
 
         if (dealerLossMultiplierPercent(game->run.dealerId) == 150) {
-            appendModifierToken(out, outSize, "Dealer 1.5");
+            APPEND_MODIFIER("Dealer 1.5");
         }
     }
 
     if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
         game->player.usedDouble &&
         !game->player.usedSplit && isWin) {
-        appendModifierToken(out, outSize, "Dip +B/2");
+        APPEND_MODIFIER("Dip +B/2");
     }
 
     if (game->player.perkOwned[PERK_COMPOUNDING] &&
         winStreakBefore > 0 && isWin) {
         compoundingBonus = winStreakBefore < 10 ? winStreakBefore : 10;
         snprintf(token, sizeof(token), "Comp +%d", compoundingBonus);
-        appendModifierToken(out, outSize, token);
+        APPEND_MODIFIER(token);
     }
 
+modifier_list_done:
     if (out[0] == '\0') {
         snprintf(out, outSize, "(none)");
     }
+
+#undef APPEND_MODIFIER
 }
 
 void resolveRound(Game *game) {
