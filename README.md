@@ -20,7 +20,7 @@ Implemented:
 - Raw terminal input via termios.
 - Twists: 16 floor rule modifiers with anti-farm pressure.
 - Deterministic runs via --seed.
-- Perks and between-floor shop (16 perks).
+- Perks and between-floor shop (12 sellable perks; 16 in catalogue, 4 in development).
 - Dealer turn step-through with optional --fast mode.
 - Cursed cards (3% of drawn cards): Bleed (-1 chip per round), Frost (-2 to hand value), Echo (10% chance of an extra card on stand).
 - Boss floors every 5 floors: two combined dealer rules, one-time marks reward on victory.
@@ -57,7 +57,7 @@ In-game (during the player's turn):
 - `s` — stand
 - `d` — double down (first two cards only)
 - `p` — split (two cards of the same rank)
-- `k` — peek at dealer hole card (requires Peek perk)
+- `k` — peek at dealer hole card (requires the Peek perk or a free-peek floor event)
 - `q` — quit the current run
 - `?` — show help overlay (active twists, dealer rule, owned perks, current limits)
 - Arrow keys + Enter — navigate and confirm menus and player actions
@@ -70,7 +70,7 @@ Betting:
 ### Between rounds
 
 - `c` — Continue on current floor
-- `a` — Advance to the next floor
+- `a` — Advance to the next floor (advance fee plus the next floor's minimum bet must both be covered)
 - `s` — Open the shop (perks, services, twist tools; roguelike only)
 - `q` — Quit the run
 
@@ -102,6 +102,7 @@ Betting:
 
 - Signal handlers call tcsetattr; not strictly async-signal-safe.
 - Second Wind does not rescue a busted doubled hand.
+- Even money is not offered against Twin dealers.
 
 ## License
 
