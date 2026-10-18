@@ -18,8 +18,8 @@ static void dispatchFloorMenuAction(Game *game,
         game->state = STATE_BET;
     } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
                game->mode == MODE_ROGUELIKE &&
-               game->player.chips >= nextMinBet &&
-               game->player.chips >= advanceFee) {
+               (long long)game->player.chips >=
+                   (long long)nextMinBet + advanceFee) {
         char feeMsg[64];
 
         game->player.chips -= advanceFee;
@@ -30,14 +30,7 @@ static void dispatchFloorMenuAction(Game *game,
         if (game->state != STATE_QUIT) {
             game->state = STATE_BET;
         }
-    } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
-               game->mode == MODE_CLASSIC &&
-               game->player.chips >= nextMinBet) {
-        advanceFloor(game);
-        if (game->state != STATE_QUIT) {
-            game->state = STATE_BET;
-        }
-    } else if ((actionCharacter == 's' || actionCharacter == 'S') &&
+    }    } else if ((actionCharacter == 's' || actionCharacter == 'S') &&
                game->mode == MODE_ROGUELIKE) {
         game->state = STATE_SHOP;
     } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
@@ -90,14 +83,16 @@ void floorMenu(Game *game) {
                  game->run.roundsOnFloor,
                  fatiguePercent(game->run.roundsOnFloor));
         if (game->mode == MODE_ROGUELIKE) {
-            if (game->player.chips >= advanceFee) {
+            if ((long long)game->player.chips >=
+                (long long)advanceFee + nextMinBet) {
                 snprintf(advanceLabel, sizeof(advanceLabel),
-                         "Advance to floor %d (cost %d chips)",
-                         game->run.floor + 1, advanceFee);
+                         "Advance to floor %d (fee %d + min bet %d)",
+                         game->run.floor + 1, advanceFee, nextMinBet);
             } else {
                 snprintf(advanceLabel, sizeof(advanceLabel),
-                         "Advance to floor %d (need %d chips)",
-                         game->run.floor + 1, advanceFee);
+                         "Advance to floor %d (need %d total: fee %d + bet %d)",
+                         game->run.floor + 1, advanceFee + nextMinBet,
+                         advanceFee, nextMinBet);
             }
         } else {
             snprintf(advanceLabel, sizeof(advanceLabel),
@@ -130,8 +125,8 @@ void floorMenu(Game *game) {
              menuScanIndex < itemCount;
              menuScanIndex++) {
             if (menuItems[menuScanIndex].hotkey == 'a' &&
-                (game->player.chips < nextMinBet ||
-                 game->player.chips < advanceFee)) {
+                (long long)game->player.chips <
+                    (long long)nextMinBet + advanceFee) {
                 disabledMask |= 1 << menuScanIndex;
             }
         }
@@ -287,6 +282,7 @@ void runShop(Game *game) {
     int menuIndex;
     int itemIndex;
     int nextMinBet;
+    int currentMinBet;
     char message[128];
 
     if (game->mode != MODE_ROGUELIKE) {
@@ -307,6 +303,7 @@ void runShop(Game *game) {
         itemCount = 0;
         disabledMask = 0;
         nextMinBet = getMinBet(game, game->run.floor + 1, game->mode);
+        currentMinBet = getMinBet(game, game->run.floor, game->mode);
 
         for (perkIndex = 0; perkIndex < soldCount; perkIndex++) {
             PerkId perkId;
@@ -344,15 +341,18 @@ void runShop(Game *game) {
 
         ADD_SHOP_ITEM('v', "Convert 10 chips to 2 marks",
                       "Trade 10 chips for 2 marks.",
-                      game->player.chips < 10);
+                      game->player.chips < 10 ||
+                      (long long)game->player.chips - 10 < currentMinBet);
         if (game->safetyNetArmed == 0) {
             ADD_SHOP_ITEM('n', "Buy safety net (50 chips)",
                           "Next wipe leaves you with 20 chips.",
-                          game->player.chips < 50);
+                          game->player.chips < 50 ||
+                          (long long)game->player.chips - 50 < currentMinBet);
         }
         ADD_SHOP_ITEM('t', "Tip dealer (10 chips)",
                       "Hole card visible next round.",
-                      game->player.chips < 10);
+                      game->player.chips < 10 ||
+                      (long long)game->player.chips - 10 < currentMinBet);
         if (game->loanAmount == 0) {
             ADD_SHOP_ITEM('l', "Take a loan (+50 chips, repay 75)",
                           "Repay on the due floor or the run ends.",
@@ -484,7 +484,7 @@ void runShop(Game *game) {
                         MSG_INFO);
                 break;
             case 'l':
-                game->player.chips += 50;
+                creditChips(game, 50);
                 game->loanAmount = 75;
                 game->loanDueFloor = game->run.floor + 3;
                 snprintf(message, sizeof(message),
