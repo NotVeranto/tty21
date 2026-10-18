@@ -82,6 +82,7 @@ struct Game {
     GameLog log;
     int safetyNetArmed; /* 1 if a safety net is active */
     int tippedThisRound;
+    char lastPayoutBreakdown[256];
 };
 
 void initGame(Game *game, GameMode mode);
