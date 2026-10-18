@@ -874,6 +874,10 @@ static int isDeckRunningHot(const Game *game) {
     int highCount;
     int i;
 
+    if (game->deck.top < 20) {
+        return 0;
+    }
+
     lowCount = 0;
     highCount = 0;
 
