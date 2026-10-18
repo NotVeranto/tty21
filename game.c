@@ -60,7 +60,44 @@ void initGame(Game *game, GameMode mode) {
             game->log.lines[lineIndex][0] = '\0';
         }
     }
+
+    if (mode == MODE_ROGUELIKE) {
+        generateShopPool(game);
+    }
 }
+
+void generateShopPool(Game *game) {
+    PerkId candidates[PERK_COUNT];
+    int candidateCount;
+    int i;
+    int j;
+
+    candidateCount = 0;
+    for (i = 0; i < PERK_COUNT; i++) {
+        if (perkIsSold((PerkId)i) &&
+            !game->player.perkOwned[i]) {
+            candidates[candidateCount++] = (PerkId)i;
+        }
+    }
+
+    for (i = candidateCount - 1; i > 0; i--) {
+        PerkId tmp;
+        j = rngRange(0, i);
+        tmp = candidates[i];
+        candidates[i] = candidates[j];
+        candidates[j] = tmp;
+    }
+
+    game->run.shopPerkCount =
+        candidateCount < SHOP_POOL_SIZE
+            ? candidateCount
+            : SHOP_POOL_SIZE;
+
+    for (i = 0; i < game->run.shopPerkCount; i++) {
+        game->run.shopPerks[i] = candidates[i];
+    }
+}
+
 void logPush(Game *game, const char *msg, MessageStyle style) {
     int i;
 
@@ -136,6 +173,8 @@ void advanceFloor(Game *game) {
     game->dealerEnraged = 0;
     game->run.dealerId = selectDealerForFloor(game->run.floor,
                                           game->run.previousDealerId);
+    game->run.shopPerksRerolled = 0;
+    generateShopPool(game);
 
     if (game->run.floor >= 5 &&
         game->run.floor % 5 == 0 &&
