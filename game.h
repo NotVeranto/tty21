@@ -86,6 +86,7 @@ struct Game {
 };
 
 void initGame(Game *game, GameMode mode);
+void generateShopPool(Game *game);
 void advanceFloor(Game *game);
 void logPush(Game *game, const char *msg, MessageStyle style);
 int runGame(Game *game);
