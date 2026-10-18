@@ -1810,9 +1810,9 @@ void resolveRound(Game *game) {
                     }
                 }
             } else if (playerBlackjack && !dealerBlackjack) {
-                roundHadBlackjack = 1;
                 int bjRatioNumerator = dealerBlackjackNumerator(game->run.dealerId);
                 int bjRatioDenominator = dealerBlackjackDenominator(game->run.dealerId);
+                roundHadBlackjack = 1;
                 if (game->run.floor >= 10 && game->run.dealerId == DEALER_REAPER) {
                     bjRatioNumerator = 1;
                     bjRatioDenominator = 1;
