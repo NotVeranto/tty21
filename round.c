@@ -2234,6 +2234,19 @@ void resolveRound(Game *game) {
     logPush(game, resultMessage, resultStyle);
 
     if (game->mode == MODE_ROGUELIKE &&
+        resultStyle == MSG_LOSS) {
+        static const char *TAUNTS[] = {
+            "The house always wins.",
+            "Better luck next time.",
+            "You'll be back."
+        };
+        int tauntIndex;
+
+        tauntIndex = (game->run.floor + game->roundNumber) % 3;
+        logPush(game, TAUNTS[tauntIndex], MSG_DEALER);
+    }
+
+    if (game->mode == MODE_ROGUELIKE &&
         game->lossStreak >= 5) {
         logPush(game,
                 "Five losses in a row. The pit boss ends your run.",
