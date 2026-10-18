@@ -1586,10 +1586,12 @@ void resolveRound(Game *game) {
     MessageStyle resultStyle;
     char resultMessage[256];
     char handMessage[64];
+    char *payoutBreakdownText;
 
     winStreakBefore = game->winStreak;
     roundHadBlackjack = 0;
     evenMoneyBefore = game->player.evenMoneyTaken;
+    payoutBreakdownText = game->lastPayoutBreakdown;
     game->lastPayoutBreakdown[0] = '\0';
 
     dealerHandCount = game->dealer.handCount;
@@ -2298,8 +2300,8 @@ void resolveRound(Game *game) {
                      "Push | bet returned");
         }
 
-        snprintf(game->lastPayoutBreakdown,
-                 sizeof(game->lastPayoutBreakdown),
+        snprintf(payoutBreakdownText,
+                 sizeof(breakdown),
                  "%s", breakdown);
     }
 
