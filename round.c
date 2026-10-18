@@ -1431,6 +1431,116 @@ static void appendResultMessage(char *buffer,
     }
 }
 
+static void appendModifierToken(char *out, size_t outSize,
+                                 const char *token) {
+    size_t length;
+
+    length = strlen(out);
+    if (length + 2 + strlen(token) >= outSize) {
+        return;
+    }
+
+    snprintf(out + length,
+             outSize - length,
+             "%s%s",
+             length > 0 ? ", " : "",
+             token);
+}
+
+static void buildModifierList(const Game *game,
+                              int winStreakBefore,
+                              int roundHadBlackjack,
+                              int isWin,
+                              char *out, size_t outSize) {
+    int numerator;
+    int denominator;
+    int powerMultiplier;
+    int compoundingBonus;
+    char token[32];
+
+    if (outSize == 0) {
+        return;
+    }
+
+    out[0] = '\0';
+
+    if (roundHadBlackjack && isWin) {
+        numerator = dealerBlackjackNumerator(game->run.dealerId);
+        denominator = dealerBlackjackDenominator(game->run.dealerId);
+
+        if (numerator == 3 && denominator == 2) {
+            appendModifierToken(out, outSize, "BJ 3:2");
+        } else if (numerator == 1 && denominator == 1) {
+            appendModifierToken(out, outSize, "BJ 1:1");
+        } else {
+            appendModifierToken(out, outSize, "BJ");
+        }
+    }
+
+    if (twistActive(game, TWIST_DESPERATION) &&
+        game->player.usedDouble && isWin) {
+        appendModifierToken(out, outSize, "Desp 3x");
+    }
+
+    if (twistActive(game, TWIST_HIGH_STAKES)) {
+        appendModifierToken(out, outSize, "High 2x");
+    }
+
+    if (twistActive(game, TWIST_BLOOD_PACT)) {
+        appendModifierToken(out, outSize, "Blood 2x");
+    }
+
+    if (twistActive(game, TWIST_HALF_PAYOUT) && isWin) {
+        appendModifierToken(out, outSize, "Half 0.5");
+    }
+
+    if (twistActive(game, TWIST_CHARITY) && !isWin) {
+        appendModifierToken(out, outSize, "Charity 0.5");
+    }
+
+    if (twistActive(game, TWIST_BUST_INSURANCE) && !isWin) {
+        appendModifierToken(out, outSize, "BustIns 0.5");
+    }
+
+    if (game->mode == MODE_ROGUELIKE &&
+        winStreakBefore >= 3 && isWin) {
+        appendModifierToken(out, outSize, "Streak 2x");
+    }
+
+    if (!isWin) {
+        powerMultiplier = dealerPowerLossMultiplier(game->run.dealerId,
+                                                     game->run.floor);
+        if (powerMultiplier == 125) {
+            appendModifierToken(out, outSize, "Power x1.25");
+        } else if (powerMultiplier == 150) {
+            appendModifierToken(out, outSize, "Power x1.5");
+        } else if (powerMultiplier == 200) {
+            appendModifierToken(out, outSize, "Power x2.0");
+        }
+
+        if (dealerLossMultiplierPercent(game->run.dealerId) == 150) {
+            appendModifierToken(out, outSize, "Dealer 1.5");
+        }
+    }
+
+    if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
+        game->player.usedDouble &&
+        !game->player.usedSplit && isWin) {
+        appendModifierToken(out, outSize, "Dip +B/2");
+    }
+
+    if (game->player.perkOwned[PERK_COMPOUNDING] &&
+        winStreakBefore > 0 && isWin) {
+        compoundingBonus = winStreakBefore < 10 ? winStreakBefore : 10;
+        snprintf(token, sizeof(token), "Comp +%d", compoundingBonus);
+        appendModifierToken(out, outSize, token);
+    }
+
+    if (out[0] == '\0') {
+        snprintf(out, outSize, "(none)");
+    }
+}
+
 void resolveRound(Game *game) {
     int dealerValue;
     int dealerBlackjack;
@@ -1452,6 +1562,9 @@ void resolveRound(Game *game) {
     int greedAwarded;
     int handWon;
     int currentFatigue;
+    int winStreakBefore;
+    int roundHadBlackjack;
+    int evenMoneyBefore;
     long long payoutValue;
     long long basePayout;
     long long baseLoss;
@@ -1462,6 +1575,11 @@ void resolveRound(Game *game) {
     MessageStyle resultStyle;
     char resultMessage[256];
     char handMessage[64];
+
+    winStreakBefore = game->winStreak;
+    roundHadBlackjack = 0;
+    evenMoneyBefore = game->player.evenMoneyTaken;
+    game->lastPayoutBreakdown[0] = '\0';
 
     dealerHandCount = game->dealer.handCount;
 
@@ -1681,6 +1799,7 @@ void resolveRound(Game *game) {
                     }
                 }
             } else if (playerBlackjack && !dealerBlackjack) {
+                roundHadBlackjack = 1;
                 int bjRatioNumerator = dealerBlackjackNumerator(game->run.dealerId);
                 int bjRatioDenominator = dealerBlackjackDenominator(game->run.dealerId);
                 if (game->run.floor >= 10 && game->run.dealerId == DEALER_REAPER) {
@@ -2135,6 +2254,43 @@ void resolveRound(Game *game) {
     game->player.evenMoneyTaken = 0;
 
     renderTable(game, 0);
+
+    {
+        char breakdown[256];
+
+        if (evenMoneyBefore) {
+            snprintf(breakdown, sizeof(breakdown),
+                     "Even money | bet %d paid 1:1",
+                     game->player.bets[0]);
+        } else if (payoutTotal > 0 && lossTotal > 0) {
+            snprintf(breakdown, sizeof(breakdown),
+                     "Won %lld, lost %lld",
+                     payoutTotal, lossTotal);
+        } else if (payoutTotal > 0) {
+            char modifiers[160];
+            buildModifierList(game, winStreakBefore,
+                              roundHadBlackjack, 1,
+                              modifiers, sizeof(modifiers));
+            snprintf(breakdown, sizeof(breakdown),
+                     "Won %lld | modifiers: %s | fatigue %d%%",
+                     payoutTotal, modifiers, currentFatigue);
+        } else if (lossTotal > 0) {
+            char modifiers[160];
+            buildModifierList(game, winStreakBefore,
+                              0, 0,
+                              modifiers, sizeof(modifiers));
+            snprintf(breakdown, sizeof(breakdown),
+                     "Lost %lld | modifiers: %s",
+                     lossTotal, modifiers);
+        } else {
+            snprintf(breakdown, sizeof(breakdown),
+                     "Push | bet returned");
+        }
+
+        snprintf(game->lastPayoutBreakdown,
+                 sizeof(game->lastPayoutBreakdown),
+                 "%s", breakdown);
+    }
 
     if (game->state == STATE_QUIT ||
         game->player.chips == 0) {
