@@ -4,7 +4,7 @@
 TEST(rng_range_zero_is_always_zero) {
     int sampleIndex;
 
-    rngInit(101U);
+    rngInit(101U, 1);
 
     for (sampleIndex = 0; sampleIndex < 100; sampleIndex++) {
         ASSERT_EQ_INT(0, rngRange(0, 0));
@@ -14,7 +14,7 @@ TEST(rng_range_zero_is_always_zero) {
 TEST(rng_range_single_value_is_inclusive) {
     int sampleIndex;
 
-    rngInit(102U);
+    rngInit(102U, 1);
 
     for (sampleIndex = 0; sampleIndex < 100; sampleIndex++) {
         ASSERT_EQ_INT(5, rngRange(5, 5));
@@ -29,7 +29,7 @@ TEST(rng_range_one_to_ten_bounds_and_diversity) {
     int maximum;
     int distinct;
 
-    rngInit(103U);
+    rngInit(103U, 1);
     minimum = 11;
     maximum = 0;
     distinct = 0;
@@ -63,7 +63,7 @@ TEST(rng_range_zero_to_ninety_nine_bounds_and_diversity) {
     int maximum;
     int distinct;
 
-    rngInit(104U);
+    rngInit(104U, 1);
     minimum = 100;
     maximum = -1;
     distinct = 0;
@@ -93,12 +93,12 @@ TEST(rng_same_seed_repeats_first_ten_draws) {
     unsigned int firstSequence[10];
     int sampleIndex;
 
-    rngInit(123456U);
+    rngInit(123456U, 1);
     for (sampleIndex = 0; sampleIndex < 10; sampleIndex++) {
         firstSequence[sampleIndex] = rngNext();
     }
 
-    rngInit(123456U);
+    rngInit(123456U, 1);
     for (sampleIndex = 0; sampleIndex < 10; sampleIndex++) {
         ASSERT_EQ_INT(firstSequence[sampleIndex], rngNext());
     }
