@@ -1017,6 +1017,7 @@ void startRound(Game *game) {
     game->player.usedDouble = 0;
     game->player.insuranceBet = 0;
     game->player.evenMoneyTaken = 0;
+    game->lastPayoutBreakdown[0] = '\0';
 
     game->roundNumber++;
 
