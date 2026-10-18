@@ -100,8 +100,9 @@ static TwistId selectTwistFromCategory(TwistCategory category,
                                          TwistId previousTwist) {
     const TwistId *twists;
     int twistCount;
-    TwistId selectedTwist;
-    int attemptCount;
+    TwistId candidates[16];
+    int candidateCount;
+    int index;
 
     if (category == TWIST_CAT_FAVORABLE) {
         twists = FAVORABLE_TWISTS;
@@ -117,17 +118,14 @@ static TwistId selectTwistFromCategory(TwistCategory category,
                            sizeof(HOSTILE_TWISTS[0]));
     }
 
-    selectedTwist = TWIST_NONE;
-
-    for (attemptCount = 0; attemptCount < 10; attemptCount++) {
-        selectedTwist = twists[rngRange(0, twistCount - 1)];
-
-        if (selectedTwist != previousTwist) {
-            return selectedTwist;
-        }
+    candidateCount = 0;
+    for (index = 0; index < twistCount; index++) {
+        if (twists[index] != previousTwist)
+            candidates[candidateCount++] = twists[index];
     }
-
-    return selectedTwist;
+    if (candidateCount == 0)
+        return twists[rngRange(0, twistCount - 1)];
+    return candidates[rngRange(0, candidateCount - 1)];
 }
 
 const TwistInfo *getTwistInfo(TwistId id) {
