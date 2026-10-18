@@ -1723,7 +1723,9 @@ void renderHelpOverlay(const Game *game) {
     int showBox;
     char line[256];
     const char *helpTitle;
+    const char *payoutBreakdownText;
 
+    payoutBreakdownText = game->lastPayoutBreakdown;
     getTerminalSize(&terminalWidth, &terminalHeight);
     initColors();
 
@@ -1913,14 +1915,14 @@ void renderHelpOverlay(const Game *game) {
             contentRow++;
         }
 
-        if (game->lastPayoutBreakdown[0] != '\0') {
+        if (payoutBreakdownText[0] != '\0') {
             printf(SCR_CURSOR, contentRow + 1, leftColumn);
             printf("%sLast round:%s", scrDim(), scrReset());
             contentRow += 2;
             printHelpColumnLine(contentRow,
                                 leftColumn,
                                 columnWidth,
-                                game->lastPayoutBreakdown);
+                                payoutBreakdownText);
             contentRow++;
         }
 
@@ -2021,9 +2023,9 @@ void renderHelpOverlay(const Game *game) {
             printf("  None\n");
         }
 
-        if (game->lastPayoutBreakdown[0] != '\0') {
+        if (payoutBreakdownText[0] != '\0') {
             printf("\nLast round:\n  %s\n",
-                   game->lastPayoutBreakdown);
+                   payoutBreakdownText);
         }
 
         printf("\nFloor: %d    Marks: %d    Chips: %d    Bet: %d\n",
