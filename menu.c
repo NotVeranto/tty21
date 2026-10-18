@@ -274,13 +274,11 @@ void runShop(Game *game) {
     char labels[24][128];
     const char *descriptions[24];
     MenuItem items[24];
-    PerkId soldPerks[12];
     PerkId itemPerks[24];
     KeyEvent event;
     int actionCharacter;
     int inputCharacter;
     int perkIndex;
-    int soldCount;
     int itemCount;
     int selectedIndex;
     int disabledMask;
@@ -297,13 +295,6 @@ void runShop(Game *game) {
         return;
     }
 
-    soldCount = 0;
-    for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
-        if (perkIsSold((PerkId)perkIndex)) {
-            soldPerks[soldCount++] = (PerkId)perkIndex;
-        }
-    }
-
     selectedIndex = 0;
 
     while (game->state == STATE_SHOP) {
@@ -312,22 +303,25 @@ void runShop(Game *game) {
         nextMinBet = getMinBet(game, game->run.floor + 1, game->mode);
         currentMinBet = getMinBet(game, game->run.floor, game->mode);
 
-        for (perkIndex = 0; perkIndex < soldCount; perkIndex++) {
+        for (perkIndex = 0;
+             perkIndex < game->run.shopPerkCount;
+             perkIndex++) {
             PerkId perkId;
+            const char *status;
 
-            perkId = soldPerks[perkIndex];
+            perkId = game->run.shopPerks[perkIndex];
+            status = game->player.perkOwned[perkId] ? "OWNED" : "BUY";
             snprintf(labels[itemCount],
                      sizeof(labels[itemCount]),
                      "%-15s  %3d marks   %s",
                      perkName(perkId),
                      perkCost(perkId),
-                     game->player.perkOwned[perkId] ? "OWNED" : "BUY");
-            items[itemCount].hotkey = perkIndex < 9
-                ? (char)('1' + perkIndex)
-                : (char)('A' + perkIndex - 9);
+                     status);
+            items[itemCount].hotkey = (char)('1' + perkIndex);
             items[itemCount].label = labels[itemCount];
             itemPerks[itemCount] = perkId;
             descriptions[itemCount] = perkDescription(perkId);
+
             if (game->player.perkOwned[perkId] ||
                 game->run.marks < perkCost(perkId)) {
                 disabledMask |= 1 << itemCount;
@@ -360,6 +354,10 @@ void runShop(Game *game) {
                       "Hole card visible next round.",
                       game->player.chips < 10 ||
                       (long long)game->player.chips - 10 < currentMinBet);
+        ADD_SHOP_ITEM('z', "Reroll shop (10 marks)",
+                      "Roll a new set of perks for this floor.",
+                      game->run.shopPerksRerolled != 0 ||
+                      game->run.marks < 10);
         if (game->loanAmount == 0) {
             ADD_SHOP_ITEM('l', "Take a loan (+50 chips, repay 75)",
                           "Repay on the due floor or the run ends.",
@@ -489,6 +487,13 @@ void runShop(Game *game) {
                 logPush(game,
                         "Dealer tipped. Hole card visible next round.",
                         MSG_INFO);
+                break;
+            case 'z':
+                game->run.marks -= 10;
+                game->run.shopPerksRerolled = 1;
+                generateShopPool(game);
+                selectedIndex = 0;
+                logPush(game, "Shop rerolled. -10 marks.", MSG_INFO);
                 break;
             case 'l':
                 creditChips(game, 50);
