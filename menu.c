@@ -138,7 +138,7 @@ void floorMenu(Game *game) {
 
         rawMode = inputIsRaw();
 
-        renderMenu("What's next?",
+        renderMenu("What's next?  (? for help)",
                    menuItems,
                    itemCount,
                    disabledMask,
@@ -170,6 +170,13 @@ void floorMenu(Game *game) {
                                         advanceFee);
                 renderMenuLogRefresh(game);
             } else if (event.type == KEY_CHAR) {
+                if (event.ch == '?') {
+                    renderHelpOverlay(game);
+                    (void)readKey();
+                    renderMenuLogRefresh(game);
+                    continue;
+                }
+
                 for (menuIndex = 0; menuIndex < itemCount; menuIndex++) {
                     if (event.ch == menuItems[menuIndex].hotkey ||
                         tolower((unsigned char)event.ch) ==
