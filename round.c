@@ -480,11 +480,19 @@ static int canDouble(const Game *game) {
 }
 
 static int canSplit(const Game *game) {
+    int handLimit;
+
     if (game->run.floor >= 10 && game->run.dealerId == DEALER_TWIN) return 0;
+
+    handLimit = MAX_PLAYER_HANDS - 1;
+    if (game->player.perkOwned[PERK_SPLIT_MASTERY]) {
+        handLimit = MAX_PLAYER_HANDS;
+    }
+
     return game->player.hands[game->player.activeHand].count == 2 &&
            game->player.hands[game->player.activeHand].cards[0].rank ==
                game->player.hands[game->player.activeHand].cards[1].rank &&
-           game->player.handCount < MAX_PLAYER_HANDS &&
+           game->player.handCount < handLimit &&
            (long long)game->player.chips >=
                2LL * (long long)game->player.bets[game->player.activeHand] &&
            !game->player.isSplitAce[game->player.activeHand];

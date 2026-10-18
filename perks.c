@@ -31,30 +31,20 @@ static const PerkInfo PERK_INFO[] = {
      "Every consecutive win adds +1 to the next payout.", 75},
     {PERK_INSURANCE_PERK, "Insurance",
      "Once per floor, a losing hand loses half the bet.", 50},
-    {PERK_SLEIGHT, "Sleight",
-     "Once per floor, swap the last drawn player card for the next deck card.", 65},
-    {PERK_MULLIGAN, "Mulligan",
-     "Once per run, discard your hand and redraw it.", 90},
     {PERK_MARKED_CARD, "Marked Card",
      "The top three deck cards are visible each round.", 45},
-    {PERK_FREEZE, "Freeze",
-     "Once per floor, freeze the dealer at their current total.", 85},
     {PERK_BANKROLL, "Bankroll",
      "Start each floor with +5 chips.", 40},
     {PERK_EXTRA_LIFE, "Extra Life",
      "Once per run, a loss that would end the run is forgiven.", 100}
 };
 
+/* All perks in the current catalogue are sold. The
+   function is retained so future unsold perks can be
+   gated here without changing callers. */
 int perkIsSold(PerkId id) {
-    switch (id) {
-        case PERK_SPLIT_MASTERY:
-        case PERK_SLEIGHT:
-        case PERK_MULLIGAN:
-        case PERK_FREEZE:
-            return 0;
-        default:
-            return 1;
-    }
+    (void)id;
+    return 1;
 }
 
 const PerkInfo *getPerkInfo(PerkId id) {

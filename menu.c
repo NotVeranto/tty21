@@ -256,7 +256,6 @@ static void purchasePerk(Game *game, int perkIndex) {
             perkIndex == PERK_INSURANCE_PERK ||
             perkIndex == PERK_DEALERS_FAVOR ||
             perkIndex == PERK_MARKED_CARD ||
-            perkIndex == PERK_MULLIGAN ||
             perkIndex == PERK_EXTRA_LIFE) {
             game->player.perkCharges[perkIndex] = 1;
         }

@@ -18,7 +18,7 @@ typedef enum {
     STATE_QUIT
 } GameState;
 
-#define MAX_PLAYER_HANDS 4
+#define MAX_PLAYER_HANDS 5
 
 typedef struct {
     Hand hands[MAX_PLAYER_HANDS];
