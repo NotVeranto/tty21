@@ -3,6 +3,9 @@
 
 #include "dealers.h"
 #include "twists.h"
+#include "perks.h"
+
+#define SHOP_POOL_SIZE 3
 
 typedef enum {
     MODE_ROGUELIKE = 0,
@@ -26,6 +29,9 @@ typedef struct {
     int twistBlocked;      /* 1 if current twist is neutralized */
     int twistRerolled;     /* 1 if reroll used this floor */
     int bossRewarded;      /* 1 if current boss floor already paid */
+    PerkId shopPerks[SHOP_POOL_SIZE];
+    int shopPerkCount;
+    int shopPerksRerolled;
 } Run;
 
 void initRun(Run *run);
