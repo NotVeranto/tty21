@@ -390,12 +390,17 @@ void runShop(Game *game) {
                       game->run.shopPerksRerolled != 0 ||
                       game->run.marks < 10);
         if (game->loanAmount == 0) {
-            snprintf(message, sizeof(message),
-                     "%s", "repay 75 by F+3");
-            snprintf(serviceLabels[serviceLabelCount],
-                     sizeof(serviceLabels[serviceLabelCount]),
-                     "%-13s  %-9s  %s",
-                     "Loan", "+50 chips", message);
+            {
+                char loanEffect[32];
+
+                snprintf(loanEffect, sizeof(loanEffect),
+                         "repay 75 by F%d",
+                         game->run.floor + 3);
+                snprintf(serviceLabels[serviceLabelCount],
+                         sizeof(serviceLabels[serviceLabelCount]),
+                         "%-13s  %-9s  %s",
+                         "Loan", "+50 chips", loanEffect);
+            }
             ADD_SHOP_ITEM('l', serviceLabels[serviceLabelCount++],
                           "Repay on the due floor or the run ends.",
                           game->player.chips >= nextMinBet);
