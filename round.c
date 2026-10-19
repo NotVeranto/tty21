@@ -1287,7 +1287,8 @@ void playerTurn(Game *game) {
                     renderActionBar(actions,
                                     actionCount,
                                     actionIndex,
-                                    ROW_PROMPT);
+                                    ROW_PROMPT,
+                                    game->mode == MODE_ROGUELIKE);
                     continue;
                 }
 
