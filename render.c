@@ -1441,7 +1441,7 @@ void renderGameStateFallback(const Game *game, int hideDealerCard)
     }
 
     printf("\n");
- 
+
     {
         int logIndex;
         int sourceIndex;
@@ -2004,9 +2004,9 @@ void renderHelpOverlay(const Game *game) {
                    scrDim(),
                    scrReset());
             contentRow += 2;
-    
+
             ownedPerkCount = 0;
-    
+
             for (index = 0; index < PERK_COUNT; index++) {
                 if (game->player.perkOwned[index]) {
                     snprintf(line,
@@ -2022,7 +2022,7 @@ void renderHelpOverlay(const Game *game) {
                     ownedPerkCount++;
                 }
             }
-    
+
             if (ownedPerkCount == 0) {
                 printHelpColumnLine(contentRow,
                                     leftColumn,
@@ -2030,14 +2030,14 @@ void renderHelpOverlay(const Game *game) {
                                     "  None");
                 contentRow++;
             }
-    
+
             if (game->run.coldSnapActive) {
                 printf(SCR_CURSOR, contentRow + 1, leftColumn);
                 printf("%sCold snap pending%s",
                        scrDim(), scrReset());
                 contentRow += 2;
             }
-    
+
             if (game->run.perkLockedId >= 0) {
                 printf(SCR_CURSOR, contentRow + 1, leftColumn);
                 printf("%sLocked: %s (this floor)%s",
@@ -2046,7 +2046,7 @@ void renderHelpOverlay(const Game *game) {
                        scrReset());
                 contentRow += 2;
             }
-    
+
             }
 
         if (payoutBreakdownText[0] != '\0') {
@@ -2148,7 +2148,7 @@ void renderHelpOverlay(const Game *game) {
         if (game->mode == MODE_ROGUELIKE) {
             printf("\nPerks owned:\n");
             ownedPerkCount = 0;
-    
+
             for (index = 0; index < PERK_COUNT; index++) {
                 if (game->player.perkOwned[index]) {
                     printf("  - %s: %s\n",
@@ -2157,20 +2157,20 @@ void renderHelpOverlay(const Game *game) {
                     ownedPerkCount++;
                 }
             }
-    
+
             if (ownedPerkCount == 0) {
                 printf("  None\n");
             }
-    
+
             if (game->run.coldSnapActive) {
                 printf("\nCold snap pending\n");
             }
-    
+
             if (game->run.perkLockedId >= 0) {
                 printf("\nLocked: %s (this floor)\n",
                        perkName((PerkId)game->run.perkLockedId));
             }
-    
+
             }
 
         if (payoutBreakdownText[0] != '\0') {
