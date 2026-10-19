@@ -243,6 +243,13 @@ void floorMenu(Game *game) {
 static void purchasePerk(Game *game, int perkIndex) {
     char message[128];
 
+    if (game->run.perkLockedId == perkIndex) {
+        logPush(game,
+                "Perk is disabled this floor.",
+                MSG_DEFAULT);
+        return;
+    }
+
     if (game->player.perkOwned[perkIndex]) {
         logPush(game, "Already owned.", MSG_DEFAULT);
     } else if (game->run.marks < perkCost((PerkId)perkIndex)) {
@@ -309,7 +316,11 @@ void runShop(Game *game) {
             const char *status;
 
             perkId = game->run.shopPerks[perkIndex];
-            status = game->player.perkOwned[perkId] ? "OWNED" : "BUY";
+            if (game->run.perkLockedId == (int)perkId) {
+                status = "LOCKED";
+            } else {
+                status = game->player.perkOwned[perkId] ? "OWNED" : "BUY";
+            }
             snprintf(labels[itemCount],
                      sizeof(labels[itemCount]),
                      "%-15s  %3d marks   %s",
@@ -322,6 +333,7 @@ void runShop(Game *game) {
             descriptions[itemCount] = perkDescription(perkId);
 
             if (game->player.perkOwned[perkId] ||
+                game->run.perkLockedId == (int)perkId ||
                 game->run.marks < perkCost(perkId)) {
                 disabledMask |= 1 << itemCount;
             }
