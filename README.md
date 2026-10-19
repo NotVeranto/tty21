@@ -19,6 +19,7 @@ Implemented:
 - Full-screen ASCII table with ANSI styling.
 - Raw terminal input via termios.
 - Twists: 16 floor rule modifiers with anti-farm pressure. Twist banner is colored by category: green favorable, dim neutral, red hostile.
+- Cold snap (floor 8+) and locked action (floor 10+): once per run, a low-card hand or a disabled perk.
 - No Reshuffle floors show a live deck countdown. Floor 10+ shows a 'running hot' hint when low cards are depleted.
 - Deterministic runs via --seed.
 - Perks and between-floor shop (rotating pool of 3 perks per floor, 13 in pool).
