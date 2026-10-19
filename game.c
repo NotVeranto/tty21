@@ -186,6 +186,12 @@ void advanceFloor(Game *game) {
         logPush(game, message, MSG_LOSS);
     }
 
+    /* Restore a perk locked on a previous floor before charge refills. */
+    if (game->run.perkLockedId >= 0) {
+        game->player.perkOwned[game->run.perkLockedId] = 1;
+        game->run.perkLockedId = -1;
+    }
+
     if (game->player.perkOwned[PERK_PEEK]) {
         game->player.perkCharges[PERK_PEEK] = 1;
     }
@@ -292,6 +298,45 @@ void advanceFloor(Game *game) {
     resetHand(&game->dealer.hands[0]);
     resetHand(&game->dealer.hands[1]);
     game->dealer.handCount = 1;
+
+    /* Trigger run-limited floor hazards before the floor summary. */
+    if (!game->run.coldSnapUsed &&
+        game->run.floor >= 8 &&
+        rngRange(0, 99) < 25) {
+        game->run.coldSnapUsed = 1;
+        game->run.coldSnapActive = 1;
+        logPush(game,
+                "The deck runs cold. Next hand is low.",
+                MSG_LOSS);
+    }
+
+    if (!game->run.perkLockedUsed &&
+        game->run.floor >= 10) {
+        PerkId candidates[PERK_COUNT];
+        int count = 0;
+        int i;
+        int lockRoll;
+
+        for (i = 0; i < PERK_COUNT; i++) {
+            if (game->player.perkOwned[i]) {
+                candidates[count++] = (PerkId)i;
+            }
+        }
+
+        lockRoll = rngRange(0, 99);
+        if (count > 0 && lockRoll < 25) {
+            PerkId locked = candidates[rngRange(0, count - 1)];
+            char lockedMsg[128];
+
+            game->run.perkLockedUsed = 1;
+            game->player.perkOwned[locked] = 0;
+            game->run.perkLockedId = (int)locked;
+            snprintf(lockedMsg, sizeof(lockedMsg),
+                     "%s disabled this floor.",
+                     perkName(locked));
+            logPush(game, lockedMsg, MSG_LOSS);
+        }
+    }
 
     snprintf(message,
              sizeof(message),
