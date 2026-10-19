@@ -1583,9 +1583,13 @@ void renderMenu(const char *title,
 void renderShop(const Game *game,
                 const MenuItem *items,
                 const char **descriptions,
+                const int *groups,
                 int itemCount,
                 int disabledMask,
                 int selectedIndex) {
+    static const char *GROUP_TITLES[] = {
+        "PERKS", "SERVICES", "TWIST TOOLS"
+    };
     int terminalWidth;
     int terminalHeight;
     int tableWidth;
@@ -1593,6 +1597,9 @@ void renderShop(const Game *game,
     int titlePadding;
     int itemIndex;
     int itemRow;
+    int currentRow;
+    int prevGroup;
+    int groupIndex;
     int isDisabled;
     int maxLabelWidth;
     int blockPadding;
@@ -1639,8 +1646,23 @@ void renderShop(const Game *game,
             blockPadding = 0;
         }
 
+        currentRow = SHOP_ITEM_START_ROW;
+        prevGroup = -1;
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
-            itemRow = SHOP_ITEM_START_ROW + itemIndex;
+            if (groups[itemIndex] != prevGroup) {
+                groupIndex = groups[itemIndex];
+                if (groupIndex >= 0 && groupIndex < 3) {
+                    printf(SCR_CURSOR, currentRow, blockPadding + 1);
+                    printf(SCR_ERASE_EOL);
+                    printf("%s%s%s",
+                           scrDim(),
+                           GROUP_TITLES[groupIndex],
+                           scrReset());
+                    currentRow++;
+                }
+                prevGroup = groups[itemIndex];
+            }
+            itemRow = currentRow++;
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
 
             printf(SCR_CURSOR, itemRow, blockPadding + 1);
@@ -1678,7 +1700,15 @@ void renderShop(const Game *game,
     } else {
         printf("SHOP\n");
         printf("Marks: %d | Chips: %d\n\n", game->run.marks, game->player.chips);
+        prevGroup = -1;
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+            if (groups[itemIndex] != prevGroup) {
+                groupIndex = groups[itemIndex];
+                if (groupIndex >= 0 && groupIndex < 3) {
+                    printf("\n%s\n", GROUP_TITLES[groupIndex]);
+                }
+                prevGroup = groups[itemIndex];
+            }
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
             printf("%s[%c] %s%s\n",
                    itemIndex == selectedIndex ? "> " : "  ",
