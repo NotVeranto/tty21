@@ -32,6 +32,10 @@ typedef struct {
     PerkId shopPerks[SHOP_POOL_SIZE];
     int shopPerkCount;
     int shopPerksRerolled;
+    int coldSnapUsed;      /* 1 if triggered this run */
+    int coldSnapActive;    /* 1 if next round is low-only */
+    int perkLockedUsed;    /* 1 if triggered this run */
+    int perkLockedId;      /* perk id, -1 if none */
 } Run;
 
 void initRun(Run *run);
