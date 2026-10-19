@@ -1594,10 +1594,9 @@ void renderShop(const Game *game,
     int itemIndex;
     int itemRow;
     int isDisabled;
-    int rowWidth;
-    int menuAreaWidth;
-    int menuAreaPadding;
-    int rowPadding;
+    int maxLabelWidth;
+    int blockPadding;
+    int blockWidth;
 
     initColors();
     getTerminalSize(&terminalWidth, &terminalHeight);
@@ -1625,39 +1624,44 @@ void renderShop(const Game *game,
         moveToTableRow(ROW_SHOP_CHIPS, shopPadding);
         printf("Chips: %d", game->player.chips);
 
+        maxLabelWidth = 0;
+        for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+            int width;
+
+            width = (int)strlen(items[itemIndex].label);
+            if (width > maxLabelWidth) {
+                maxLabelWidth = width;
+            }
+        }
+        blockWidth = 6 + maxLabelWidth;
+        blockPadding = (terminalWidth - blockWidth) / 2;
+        if (blockPadding < 0) {
+            blockPadding = 0;
+        }
+
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             itemRow = SHOP_ITEM_START_ROW + itemIndex;
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
-            rowWidth = 2 + 3 + 2 + (int)strlen(items[itemIndex].label);
-            menuAreaWidth = tableWidth;
-            menuAreaPadding = shopPadding;
-            if (menuAreaWidth < rowWidth) {
-                menuAreaWidth = terminalWidth;
-                menuAreaPadding = 0;
-            }
-            rowPadding = menuAreaPadding + (menuAreaWidth - rowWidth) / 2;
-            if (rowPadding < 0) rowPadding = 0;
 
-            printf(SCR_CURSOR, itemRow, rowPadding + 1);
+            printf(SCR_CURSOR, itemRow, blockPadding + 1);
             printf(SCR_ERASE_EOL);
             if (isDisabled) {
-                printf("%s  [%c]  %s%s",
-                       scrDim(), items[itemIndex].hotkey,
-                       items[itemIndex].label, scrReset());
+                printf("  %s[%c]%s %s%s%s",
+                       scrDim(), items[itemIndex].hotkey, scrReset(),
+                       scrDim(), items[itemIndex].label, scrReset());
+            } else if (itemIndex == selectedIndex) {
+                printf("%s> %s[%c]%s %s%s%s",
+                       scrBold(), scrDim(), items[itemIndex].hotkey,
+                       scrReset(), scrBold(), items[itemIndex].label,
+                       scrReset());
             } else {
-                if (itemIndex == selectedIndex) printf("%s> ", scrBold());
-                else printf("  ");
-                printf("%s[%c]%s  ", scrDim(),
-                       items[itemIndex].hotkey, scrReset());
-                if (itemIndex == selectedIndex) {
-                    printf("%s%s%s", scrBold(), items[itemIndex].label, scrReset());
-                } else {
-                    printf("%s", items[itemIndex].label);
-                }
+                printf("  %s[%c]%s %s",
+                       scrDim(), items[itemIndex].hotkey, scrReset(),
+                       items[itemIndex].label);
             }
         }
 
-        moveToTableRow(SHOP_DESCRIPTION_ROW, shopPadding);
+        moveToTableRow(SHOP_DESCRIPTION_ROW, blockPadding);
         if (selectedIndex >= 0 && selectedIndex < itemCount &&
             descriptions[selectedIndex] != NULL) {
             printf(SCR_ERASE_EOL);
@@ -1791,6 +1795,26 @@ static void printHelpColumnLine(int row,
     printf(SCR_CURSOR, row, column);
     printf(SCR_ERASE_EOL);
     printf("%.*s", length, text);
+}
+
+static int effectiveMaxBet(const Game *game) {
+    int cap;
+    int limit;
+
+    cap = game->player.chips;
+    if (game->mode == MODE_ROGUELIKE) {
+        limit = game->player.chips;
+        if (game->run.floor >= 12) {
+            limit = game->player.chips / 3;
+        } else if (game->run.floor >= 8) {
+            limit = game->player.chips / 2;
+        }
+        if (limit > 0) {
+            cap = limit;
+        }
+    }
+
+    return cap;
 }
 
 void renderHelpOverlay(const Game *game) {
@@ -1974,53 +1998,56 @@ void renderHelpOverlay(const Game *game) {
             }
         }
 
-        printf(SCR_CURSOR, contentRow + 1, leftColumn);
-        printf("%sPerks owned:%s",
-               scrDim(),
-               scrReset());
-        contentRow += 2;
-
-        ownedPerkCount = 0;
-
-        for (index = 0; index < PERK_COUNT; index++) {
-            if (game->player.perkOwned[index]) {
-                snprintf(line,
-                         sizeof(line),
-                         "  - %s: %s",
-                         perkName((PerkId)index),
-                         perkDescription((PerkId)index));
+        if (game->mode == MODE_ROGUELIKE) {
+            printf(SCR_CURSOR, contentRow + 1, leftColumn);
+            printf("%sPerks owned:%s",
+                   scrDim(),
+                   scrReset());
+            contentRow += 2;
+    
+            ownedPerkCount = 0;
+    
+            for (index = 0; index < PERK_COUNT; index++) {
+                if (game->player.perkOwned[index]) {
+                    snprintf(line,
+                             sizeof(line),
+                             "  - %s: %s",
+                             perkName((PerkId)index),
+                             perkDescription((PerkId)index));
+                    printHelpColumnLine(contentRow,
+                                        leftColumn,
+                                        columnWidth,
+                                        line);
+                    contentRow++;
+                    ownedPerkCount++;
+                }
+            }
+    
+            if (ownedPerkCount == 0) {
                 printHelpColumnLine(contentRow,
                                     leftColumn,
                                     columnWidth,
-                                    line);
+                                    "  None");
                 contentRow++;
-                ownedPerkCount++;
             }
-        }
-
-        if (ownedPerkCount == 0) {
-            printHelpColumnLine(contentRow,
-                                leftColumn,
-                                columnWidth,
-                                "  None");
-            contentRow++;
-        }
-
-        if (game->run.coldSnapActive) {
-            printf(SCR_CURSOR, contentRow + 1, leftColumn);
-            printf("%sCold snap pending%s",
-                   scrDim(), scrReset());
-            contentRow += 2;
-        }
-
-        if (game->run.perkLockedId >= 0) {
-            printf(SCR_CURSOR, contentRow + 1, leftColumn);
-            printf("%sLocked: %s (this floor)%s",
-                   scrDim(),
-                   perkName((PerkId)game->run.perkLockedId),
-                   scrReset());
-            contentRow += 2;
-        }
+    
+            if (game->run.coldSnapActive) {
+                printf(SCR_CURSOR, contentRow + 1, leftColumn);
+                printf("%sCold snap pending%s",
+                       scrDim(), scrReset());
+                contentRow += 2;
+            }
+    
+            if (game->run.perkLockedId >= 0) {
+                printf(SCR_CURSOR, contentRow + 1, leftColumn);
+                printf("%sLocked: %s (this floor)%s",
+                       scrDim(),
+                       perkName((PerkId)game->run.perkLockedId),
+                       scrReset());
+                contentRow += 2;
+            }
+    
+            }
 
         if (payoutBreakdownText[0] != '\0') {
             printf(SCR_CURSOR, contentRow + 1, leftColumn);
@@ -2036,17 +2063,21 @@ void renderHelpOverlay(const Game *game) {
         bottomRow = contentRow + 1;
 
         printf(SCR_CURSOR, bottomRow, leftColumn);
-        printf("Floor: %d    Marks: %d    Chips: %d    Bet: %d",
-               game->run.floor,
-               game->run.marks,
-               game->player.chips,
-               game->player.bets[game->player.activeHand]);
+        if (game->mode == MODE_ROGUELIKE) {
+            printf("Floor: %d    Marks: %d    Chips: %d    Bet: %d",
+                   game->run.floor, game->run.marks,
+                   game->player.chips,
+                   game->player.bets[game->player.activeHand]);
+        } else {
+            printf("Chips: %d    Bet: %d", game->player.chips,
+                   game->player.bets[game->player.activeHand]);
+        }
         bottomRow++;
 
         printf(SCR_CURSOR, bottomRow, leftColumn);
         printf("Min bet: %d    Max bet: %d",
                getMinBet(game, game->run.floor, game->mode),
-               game->player.chips);
+               effectiveMaxBet(game));
         bottomRow += 2;
 
         printf(SCR_CURSOR, bottomRow, leftColumn);
@@ -2114,44 +2145,51 @@ void renderHelpOverlay(const Game *game) {
             }
         }
 
-        printf("\nPerks owned:\n");
-        ownedPerkCount = 0;
-
-        for (index = 0; index < PERK_COUNT; index++) {
-            if (game->player.perkOwned[index]) {
-                printf("  - %s: %s\n",
-                       perkName((PerkId)index),
-                       perkDescription((PerkId)index));
-                ownedPerkCount++;
+        if (game->mode == MODE_ROGUELIKE) {
+            printf("\nPerks owned:\n");
+            ownedPerkCount = 0;
+    
+            for (index = 0; index < PERK_COUNT; index++) {
+                if (game->player.perkOwned[index]) {
+                    printf("  - %s: %s\n",
+                           perkName((PerkId)index),
+                           perkDescription((PerkId)index));
+                    ownedPerkCount++;
+                }
             }
-        }
-
-        if (ownedPerkCount == 0) {
-            printf("  None\n");
-        }
-
-        if (game->run.coldSnapActive) {
-            printf("\nCold snap pending\n");
-        }
-
-        if (game->run.perkLockedId >= 0) {
-            printf("\nLocked: %s (this floor)\n",
-                   perkName((PerkId)game->run.perkLockedId));
-        }
+    
+            if (ownedPerkCount == 0) {
+                printf("  None\n");
+            }
+    
+            if (game->run.coldSnapActive) {
+                printf("\nCold snap pending\n");
+            }
+    
+            if (game->run.perkLockedId >= 0) {
+                printf("\nLocked: %s (this floor)\n",
+                       perkName((PerkId)game->run.perkLockedId));
+            }
+    
+            }
 
         if (payoutBreakdownText[0] != '\0') {
             printf("\nLast round:\n  %s\n",
                    payoutBreakdownText);
         }
 
-        printf("\nFloor: %d    Marks: %d    Chips: %d    Bet: %d\n",
-               game->run.floor,
-               game->run.marks,
-               game->player.chips,
-               game->player.bets[game->player.activeHand]);
+        if (game->mode == MODE_ROGUELIKE) {
+            printf("\nFloor: %d    Marks: %d    Chips: %d    Bet: %d\n",
+                   game->run.floor, game->run.marks,
+                   game->player.chips,
+                   game->player.bets[game->player.activeHand]);
+        } else {
+            printf("\nChips: %d    Bet: %d\n", game->player.chips,
+                   game->player.bets[game->player.activeHand]);
+        }
         printf("Min bet: %d    Max bet: %d\n",
                getMinBet(game, game->run.floor, game->mode),
-               game->player.chips);
+               effectiveMaxBet(game));
         printf("\nPress any key to return.\n");
         fflush(stdout);
     }
@@ -2161,7 +2199,8 @@ void renderHelpOverlay(const Game *game) {
 void renderActionBar(const ActionId *actions,
                      int actionCount,
                      int selectedIndex,
-                     int row) {
+                     int row,
+                     int showHelp) {
     static const char *ACTION_NAMES[] = {
         "Hit",
         "Stand",
@@ -2217,8 +2256,9 @@ void renderActionBar(const ActionId *actions,
         }
     }
 
-    printf("   %s? help%s",
-           scrDim(),
-           scrReset());
+    if (showHelp) {
+        printf("   %s[?]%s %shelp%s",
+               scrDim(), scrReset(), scrDim(), scrReset());
+    }
     fflush(stdout);
 }
