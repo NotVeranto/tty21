@@ -2006,6 +2006,22 @@ void renderHelpOverlay(const Game *game) {
             contentRow++;
         }
 
+        if (game->run.coldSnapActive) {
+            printf(SCR_CURSOR, contentRow + 1, leftColumn);
+            printf("%sCold snap pending%s",
+                   scrDim(), scrReset());
+            contentRow += 2;
+        }
+
+        if (game->run.perkLockedId >= 0) {
+            printf(SCR_CURSOR, contentRow + 1, leftColumn);
+            printf("%sLocked: %s (this floor)%s",
+                   scrDim(),
+                   perkName((PerkId)game->run.perkLockedId),
+                   scrReset());
+            contentRow += 2;
+        }
+
         if (payoutBreakdownText[0] != '\0') {
             printf(SCR_CURSOR, contentRow + 1, leftColumn);
             printf("%sLast round:%s", scrDim(), scrReset());
@@ -2112,6 +2128,15 @@ void renderHelpOverlay(const Game *game) {
 
         if (ownedPerkCount == 0) {
             printf("  None\n");
+        }
+
+        if (game->run.coldSnapActive) {
+            printf("\nCold snap pending\n");
+        }
+
+        if (game->run.perkLockedId >= 0) {
+            printf("\nLocked: %s (this floor)\n",
+                   perkName((PerkId)game->run.perkLockedId));
         }
 
         if (payoutBreakdownText[0] != '\0') {
