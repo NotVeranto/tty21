@@ -1068,6 +1068,40 @@ void startRound(Game *game) {
         redrawFirstPlayerCard(game, 0);
     }
 
+    if (game->run.coldSnapActive) {
+        int cardIndex;
+
+        for (cardIndex = 0;
+             cardIndex < game->player.hands[0].count;
+             cardIndex++) {
+            int attempts;
+            Card drawn;
+            int found;
+
+            attempts = 0;
+            found = 0;
+            while (attempts < 50 && !found) {
+                if (game->deck.top >= DECK_SIZE) {
+                    initDeck(&game->deck);
+                    shuffleDeck(&game->deck);
+                }
+                drawn = game->deck.cards[game->deck.top];
+                game->deck.top++;
+                if (drawn.rank <= SIX) {
+                    game->player.hands[0].cards[cardIndex] = drawn;
+                    found = 1;
+                }
+                attempts++;
+            }
+        }
+        game->player.hands[0].value =
+            calculateHandValue(&game->player.hands[0]);
+        game->run.coldSnapActive = 0;
+        logPush(game,
+                "Cold snap: hand rewritten to low cards.",
+                MSG_INFO);
+    }
+
     {
         char betMsg[64];
 
