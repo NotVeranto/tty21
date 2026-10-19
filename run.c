@@ -16,6 +16,10 @@ void initRun(Run *run) {
     run->bossRewarded = 0;
     run->shopPerkCount = 0;
     run->shopPerksRerolled = 0;
+    run->coldSnapUsed = 0;
+    run->coldSnapActive = 0;
+    run->perkLockedUsed = 0;
+    run->perkLockedId = -1;
 }
 
 // Returns the minimum bet for a floor.
