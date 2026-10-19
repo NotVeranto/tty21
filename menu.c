@@ -280,6 +280,7 @@ void runShop(Game *game) {
     char labels[24][128];
     const char *descriptions[24];
     MenuItem items[24];
+    int itemGroups[24];
     PerkId itemPerks[24];
     KeyEvent event;
     int actionCharacter;
@@ -333,6 +334,7 @@ void runShop(Game *game) {
             items[itemCount].hotkey = (char)('1' + perkIndex);
             items[itemCount].label = labels[itemCount];
             itemPerks[itemCount] = perkId;
+            itemGroups[itemCount] = 0;
             descriptions[itemCount] = perkDescription(perkId);
 
             if (game->player.perkOwned[perkId] ||
@@ -343,13 +345,14 @@ void runShop(Game *game) {
             itemCount++;
         }
 
-#define ADD_SHOP_ITEM(key, labelText, descriptionText, disabled) \
+#define ADD_SHOP_ITEM(key, labelText, descriptionText, disabled, groupValue) \
         do { \
             items[itemCount].hotkey = (key); \
             snprintf(labels[itemCount], sizeof(labels[itemCount]), "%s", (labelText)); \
             items[itemCount].label = labels[itemCount]; \
             descriptions[itemCount] = (descriptionText); \
             itemPerks[itemCount] = (PerkId)-1; \
+            itemGroups[itemCount] = (groupValue); \
             if (disabled) disabledMask |= 1 << itemCount; \
             itemCount++; \
         } while (0)
@@ -362,7 +365,7 @@ void runShop(Game *game) {
         ADD_SHOP_ITEM('v', serviceLabels[serviceLabelCount++],
                       "Trade 10 chips for 2 marks.",
                       game->player.chips < 10 ||
-                      (long long)game->player.chips - 10 < currentMinBet);
+                      (long long)game->player.chips - 10 < currentMinBet, 1);
         if (game->safetyNetArmed == 0) {
             snprintf(serviceLabels[serviceLabelCount],
                      sizeof(serviceLabels[serviceLabelCount]),
@@ -371,7 +374,7 @@ void runShop(Game *game) {
             ADD_SHOP_ITEM('n', serviceLabels[serviceLabelCount++],
                           "Next wipe leaves you with 20 chips.",
                           game->player.chips < 50 ||
-                          (long long)game->player.chips - 50 < currentMinBet);
+                          (long long)game->player.chips - 50 < currentMinBet, 1);
         }
         snprintf(serviceLabels[serviceLabelCount],
                  sizeof(serviceLabels[serviceLabelCount]),
@@ -380,7 +383,7 @@ void runShop(Game *game) {
         ADD_SHOP_ITEM('t', serviceLabels[serviceLabelCount++],
                       "Hole card visible next round.",
                       game->player.chips < 10 ||
-                      (long long)game->player.chips - 10 < currentMinBet);
+                      (long long)game->player.chips - 10 < currentMinBet, 1);
         snprintf(serviceLabels[serviceLabelCount],
                  sizeof(serviceLabels[serviceLabelCount]),
                  "%-13s  %-9s  %s",
@@ -388,7 +391,7 @@ void runShop(Game *game) {
         ADD_SHOP_ITEM('z', serviceLabels[serviceLabelCount++],
                       "Roll a new set of perks for this floor.",
                       game->run.shopPerksRerolled != 0 ||
-                      game->run.marks < 10);
+                      game->run.marks < 10, 1);
         if (game->loanAmount == 0) {
             {
                 char loanEffect[32];
@@ -403,7 +406,7 @@ void runShop(Game *game) {
             }
             ADD_SHOP_ITEM('l', serviceLabels[serviceLabelCount++],
                           "Repay on the due floor or the run ends.",
-                          game->player.chips >= nextMinBet);
+                          game->player.chips >= nextMinBet, 1);
         }
         if (game->run.floor >= 4 && game->run.twistRerolled == 0) {
             snprintf(serviceLabels[serviceLabelCount],
@@ -412,7 +415,7 @@ void runShop(Game *game) {
                      "Reroll twist", "30 marks", "new twist");
             ADD_SHOP_ITEM('r', serviceLabels[serviceLabelCount++],
                           "Roll a new twist for the current floor.",
-                          game->run.marks < 30);
+                          game->run.marks < 30, 2);
         }
         if (game->run.floor >= 4 && game->run.twistBlocked == 0 &&
             game->run.twistId != TWIST_NONE) {
@@ -422,7 +425,7 @@ void runShop(Game *game) {
                      "Block twist", "40 marks", "neutralize");
             ADD_SHOP_ITEM('b', serviceLabels[serviceLabelCount++],
                           "Neutralize the current twist.",
-                          game->run.marks < 40);
+                          game->run.marks < 40, 2);
         }
 #undef ADD_SHOP_ITEM
 
@@ -430,7 +433,7 @@ void runShop(Game *game) {
             selectedIndex = itemCount - 1;
         }
 
-        renderShop(game, items, descriptions, itemCount,
+        renderShop(game, items, descriptions, itemGroups, itemCount,
                    disabledMask, selectedIndex);
         rawMode = inputIsRaw();
 
