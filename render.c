@@ -1847,6 +1847,11 @@ static int effectiveMaxBet(const Game *game) {
     return cap;
 }
 
+static int shouldShowNextFloor(const Game *game) {
+    return game->state == STATE_MENU &&
+           game->mode == MODE_ROGUELIKE;
+}
+
 void renderHelpOverlay(const Game *game) {
     const DealerInfo *dealerInfo;
     const TwistInfo *twistInfo;
@@ -2090,6 +2095,38 @@ void renderHelpOverlay(const Game *game) {
             contentRow++;
         }
 
+        if (shouldShowNextFloor(game)) {
+            AdvanceForecast forecast;
+            char nextLine[128];
+
+            computeAdvanceForecast(game, &forecast);
+
+            printf(SCR_CURSOR, contentRow + 1, leftColumn);
+            printf("%sNext floor:%s", scrDim(), scrReset());
+            contentRow += 2;
+
+            snprintf(nextLine, sizeof(nextLine),
+                     "  Fee %d, min bet %d",
+                     forecast.fee, forecast.nextMinBet);
+            printHelpColumnLine(contentRow, leftColumn,
+                                columnWidth, nextLine);
+            contentRow++;
+
+            if (forecast.affordable) {
+                snprintf(nextLine, sizeof(nextLine),
+                         "  Post-advance: %d chips",
+                         forecast.postChips);
+            } else {
+                snprintf(nextLine, sizeof(nextLine),
+                         "  Blocked: need %d chips, have %d",
+                         forecast.fee + forecast.nextMinBet,
+                         game->player.chips);
+            }
+            printHelpColumnLine(contentRow, leftColumn,
+                                columnWidth, nextLine);
+            contentRow++;
+        }
+
         bottomRow = contentRow + 1;
 
         printf(SCR_CURSOR, bottomRow, leftColumn);
@@ -2206,6 +2243,23 @@ void renderHelpOverlay(const Game *game) {
         if (payoutBreakdownText[0] != '\0') {
             printf("\nLast round:\n  %s\n",
                    payoutBreakdownText);
+        }
+
+        if (shouldShowNextFloor(game)) {
+            AdvanceForecast forecast;
+
+            computeAdvanceForecast(game, &forecast);
+            printf("\nNext floor:\n");
+            printf("  Fee %d, min bet %d\n",
+                   forecast.fee, forecast.nextMinBet);
+            if (forecast.affordable) {
+                printf("  Post-advance: %d chips\n",
+                       forecast.postChips);
+            } else {
+                printf("  Blocked: need %d chips, have %d\n",
+                       forecast.fee + forecast.nextMinBet,
+                       game->player.chips);
+            }
         }
 
         if (game->mode == MODE_ROGUELIKE) {
