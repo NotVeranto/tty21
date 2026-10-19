@@ -1680,7 +1680,7 @@ void renderShop(const Game *game,
         printf("Marks: %d | Chips: %d\n\n", game->run.marks, game->player.chips);
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
-            printf("%s[%c]  %s%s\n",
+            printf("%s[%c] %s%s\n",
                    itemIndex == selectedIndex ? "> " : "  ",
                    items[itemIndex].hotkey,
                    items[itemIndex].label,
