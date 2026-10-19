@@ -26,9 +26,9 @@
 #define ROW_OVER 45
 #define ROW_FINAL 46
 
-#define ROW_SHOP_TITLE 10
-#define ROW_SHOP_MARKS 11
-#define ROW_SHOP_CHIPS 12
+#define ROW_SHOP_TITLE 9
+#define ROW_SHOP_MARKS 10
+#define ROW_SHOP_CHIPS 11
 #define ROW_SHOP_HINT 24
 
 #include "game.h"
@@ -50,6 +50,7 @@ void renderShowCursor(void);
 void renderShop(const Game *game,
                 const MenuItem *items,
                 const char **descriptions,
+                const int *groups,
                 int itemCount,
                 int disabledMask,
                 int selectedIndex);
