@@ -295,6 +295,9 @@ void runShop(Game *game) {
     int nextMinBet;
     int currentMinBet;
     char message[128];
+    char costBuf[16];
+    char serviceLabels[7][128];
+    int serviceLabelCount;
 
     if (game->mode != MODE_ROGUELIKE) {
         game->state = STATE_MENU;
@@ -321,12 +324,12 @@ void runShop(Game *game) {
             } else {
                 status = game->player.perkOwned[perkId] ? "OWNED" : "BUY";
             }
+            snprintf(costBuf, sizeof(costBuf),
+                     "%d marks", perkCost(perkId));
             snprintf(labels[itemCount],
                      sizeof(labels[itemCount]),
-                     "%-15s  %3d marks   %s",
-                     perkName(perkId),
-                     perkCost(perkId),
-                     status);
+                     "%-13s  %-9s  %s",
+                     perkName(perkId), costBuf, status);
             items[itemCount].hotkey = (char)('1' + perkIndex);
             items[itemCount].label = labels[itemCount];
             itemPerks[itemCount] = perkId;
@@ -351,37 +354,69 @@ void runShop(Game *game) {
             itemCount++; \
         } while (0)
 
-        ADD_SHOP_ITEM('v', "Convert 10 chips to 2 marks",
+        serviceLabelCount = 0;
+        snprintf(serviceLabels[serviceLabelCount],
+                 sizeof(serviceLabels[serviceLabelCount]),
+                 "%-13s  %-9s  %s",
+                 "Convert chips", "10 chips", "-> 2 marks");
+        ADD_SHOP_ITEM('v', serviceLabels[serviceLabelCount++],
                       "Trade 10 chips for 2 marks.",
                       game->player.chips < 10 ||
                       (long long)game->player.chips - 10 < currentMinBet);
         if (game->safetyNetArmed == 0) {
-            ADD_SHOP_ITEM('n', "Buy safety net (50 chips)",
+            snprintf(serviceLabels[serviceLabelCount],
+                     sizeof(serviceLabels[serviceLabelCount]),
+                     "%-13s  %-9s  %s",
+                     "Safety net", "50 chips", "survive wipe");
+            ADD_SHOP_ITEM('n', serviceLabels[serviceLabelCount++],
                           "Next wipe leaves you with 20 chips.",
                           game->player.chips < 50 ||
                           (long long)game->player.chips - 50 < currentMinBet);
         }
-        ADD_SHOP_ITEM('t', "Tip dealer (10 chips)",
+        snprintf(serviceLabels[serviceLabelCount],
+                 sizeof(serviceLabels[serviceLabelCount]),
+                 "%-13s  %-9s  %s",
+                 "Tip dealer", "10 chips", "hole card next round");
+        ADD_SHOP_ITEM('t', serviceLabels[serviceLabelCount++],
                       "Hole card visible next round.",
                       game->player.chips < 10 ||
                       (long long)game->player.chips - 10 < currentMinBet);
-        ADD_SHOP_ITEM('z', "Reroll shop (10 marks)",
+        snprintf(serviceLabels[serviceLabelCount],
+                 sizeof(serviceLabels[serviceLabelCount]),
+                 "%-13s  %-9s  %s",
+                 "Reroll shop", "10 marks", "new perk pool");
+        ADD_SHOP_ITEM('z', serviceLabels[serviceLabelCount++],
                       "Roll a new set of perks for this floor.",
                       game->run.shopPerksRerolled != 0 ||
                       game->run.marks < 10);
         if (game->loanAmount == 0) {
-            ADD_SHOP_ITEM('l', "Take a loan (+50 chips, repay 75)",
+            snprintf(message, sizeof(message),
+                     "repay 75 by F+%d",
+                     game->loanDueFloor - game->run.floor);
+            snprintf(serviceLabels[serviceLabelCount],
+                     sizeof(serviceLabels[serviceLabelCount]),
+                     "%-13s  %-9s  %s",
+                     "Loan", "+50 chips", message);
+            ADD_SHOP_ITEM('l', serviceLabels[serviceLabelCount++],
                           "Repay on the due floor or the run ends.",
                           game->player.chips >= nextMinBet);
         }
         if (game->run.floor >= 4 && game->run.twistRerolled == 0) {
-            ADD_SHOP_ITEM('r', "Reroll twist (30 marks)",
+            snprintf(serviceLabels[serviceLabelCount],
+                     sizeof(serviceLabels[serviceLabelCount]),
+                     "%-13s  %-9s  %s",
+                     "Reroll twist", "30 marks", "new twist");
+            ADD_SHOP_ITEM('r', serviceLabels[serviceLabelCount++],
                           "Roll a new twist for the current floor.",
                           game->run.marks < 30);
         }
         if (game->run.floor >= 4 && game->run.twistBlocked == 0 &&
             game->run.twistId != TWIST_NONE) {
-            ADD_SHOP_ITEM('b', "Block twist (40 marks)",
+            snprintf(serviceLabels[serviceLabelCount],
+                     sizeof(serviceLabels[serviceLabelCount]),
+                     "%-13s  %-9s  %s",
+                     "Block twist", "40 marks", "neutralize");
+            ADD_SHOP_ITEM('b', serviceLabels[serviceLabelCount++],
                           "Neutralize the current twist.",
                           game->run.marks < 40);
         }
