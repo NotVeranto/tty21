@@ -58,6 +58,7 @@ void floorMenu(Game *game) {
     int menuScanIndex;
     int rawMode;
     int itemCount;
+    AdvanceForecast forecast;
 
     currentMinBet = getMinBet(game, game->run.floor, game->mode);
 
@@ -82,21 +83,25 @@ void floorMenu(Game *game) {
                  game->run.floor,
                  game->run.roundsOnFloor,
                  fatiguePercent(game->run.roundsOnFloor));
+        computeAdvanceForecast(game, &forecast);
         if (game->mode == MODE_ROGUELIKE) {
-            if ((long long)game->player.chips >=
-                (long long)advanceFee + nextMinBet) {
+            if (forecast.affordable) {
                 snprintf(advanceLabel, sizeof(advanceLabel),
-                         "Advance to floor %d (fee %d + min bet %d)",
-                         game->run.floor + 1, advanceFee, nextMinBet);
+                         "Advance to floor %d (fee %d, min %d) -> %d chips",
+                         game->run.floor + 1,
+                         forecast.fee,
+                         forecast.nextMinBet,
+                         forecast.postChips);
             } else {
                 snprintf(advanceLabel, sizeof(advanceLabel),
-                         "Advance to floor %d (need %d total: fee %d + bet %d)",
-                         game->run.floor + 1, advanceFee + nextMinBet,
-                         advanceFee, nextMinBet);
+                         "Advance to floor %d (need %d, have %d)",
+                         game->run.floor + 1,
+                         forecast.fee + forecast.nextMinBet,
+                         game->player.chips);
             }
         } else {
             snprintf(advanceLabel, sizeof(advanceLabel),
-                     "Advance to floor %d (earn marks, reset fatigue)",
+                     "Advance to floor %d",
                      game->run.floor + 1);
         }
         snprintf(shopLabel,
