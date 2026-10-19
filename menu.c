@@ -391,7 +391,7 @@ void runShop(Game *game) {
                       game->run.marks < 10);
         if (game->loanAmount == 0) {
             snprintf(message, sizeof(message),
-                     "repay 75 by F+%d", 3);
+                     "%s", "repay 75 by F+3");
             snprintf(serviceLabels[serviceLabelCount],
                      sizeof(serviceLabels[serviceLabelCount]),
                      "%-13s  %-9s  %s",
