@@ -147,6 +147,17 @@ int fatiguePercent(int roundsOnFloor) {
     return 30;
 }
 
+void computeAdvanceForecast(const Game *game,
+                            AdvanceForecast *out) {
+    out->nextMinBet = getMinBet(game, game->run.floor + 1,
+                                game->mode);
+    out->fee = 2 * out->nextMinBet;
+    out->postChips = game->player.chips - out->fee;
+    if (out->postChips < 0) out->postChips = 0;
+    out->affordable =
+        game->player.chips >= out->fee + out->nextMinBet;
+}
+
 static const char *CURSE_NAMES[] = {
     "None",
     "Bleed",
