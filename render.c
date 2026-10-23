@@ -2137,6 +2137,14 @@ void renderHelpOverlay(const Game *game) {
                                 columnWidth, nextLine);
             contentRow++;
 
+            if (forecast.loanDue > 0) {
+                snprintf(nextLine, sizeof(nextLine),
+                         "  Loan due: %d chips", forecast.loanDue);
+                printHelpColumnLine(contentRow, leftColumn,
+                                    columnWidth, nextLine);
+                contentRow++;
+            }
+
             if (forecast.affordable) {
                 snprintf(nextLine, sizeof(nextLine),
                          "  Post-advance: %d chips",
@@ -2144,7 +2152,8 @@ void renderHelpOverlay(const Game *game) {
             } else {
                 snprintf(nextLine, sizeof(nextLine),
                          "  Blocked: need %d chips, have %d",
-                         forecast.fee + forecast.nextMinBet,
+                         forecast.fee + forecast.nextMinBet +
+                             forecast.loanDue,
                          game->player.chips);
             }
             printHelpColumnLine(contentRow, leftColumn,
@@ -2283,12 +2292,16 @@ void renderHelpOverlay(const Game *game) {
             printf("\nNext floor:\n");
             printf("  Fee %d, min bet %d\n",
                    forecast.fee, forecast.nextMinBet);
+            if (forecast.loanDue > 0) {
+                printf("  Loan due: %d chips\n", forecast.loanDue);
+            }
             if (forecast.affordable) {
                 printf("  Post-advance: %d chips\n",
                        forecast.postChips);
             } else {
                 printf("  Blocked: need %d chips, have %d\n",
-                       forecast.fee + forecast.nextMinBet,
+                       forecast.fee + forecast.nextMinBet +
+                           forecast.loanDue,
                        game->player.chips);
             }
         }

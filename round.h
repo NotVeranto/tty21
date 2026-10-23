@@ -20,8 +20,9 @@ int fatiguePercent(int roundsOnFloor);
 typedef struct {
     int fee;           /* advanceFee */
     int nextMinBet;    /* getMinBet(floor + 1) */
-    int postChips;     /* chips after fee is paid */
-    int affordable;    /* 1 if chips >= fee + nextMinBet */
+    int postChips;     /* chips after fee and due loan are paid */
+    int affordable;    /* 1 if chips cover fee, min bet, and due loan */
+    int loanDue;       /* loan repayment on advance, 0 if none due */
 } AdvanceForecast;
 
 void computeAdvanceForecast(const Game *game,

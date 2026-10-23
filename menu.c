@@ -13,16 +13,19 @@
 static void dispatchFloorMenuAction(Game *game,
                                     char actionCharacter,
                                     int currentMinBet,
-                                    int nextMinBet,
                                     int advanceFee) {
     if ((actionCharacter == 'c' || actionCharacter == 'C') &&
         game->player.chips >= currentMinBet) {
         game->state = STATE_BET;
     } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
-               game->mode == MODE_ROGUELIKE &&
-               (long long)game->player.chips >=
-                   (long long)nextMinBet + advanceFee) {
+               game->mode == MODE_ROGUELIKE) {
+        AdvanceForecast forecast;
         char feeMsg[64];
+
+        computeAdvanceForecast(game, &forecast);
+        if (!forecast.affordable) {
+            return;
+        }
 
         game->player.chips -= advanceFee;
         snprintf(feeMsg, sizeof(feeMsg),
@@ -97,17 +100,28 @@ void floorMenu(Game *game) {
         computeAdvanceForecast(game, &forecast);
         if (game->mode == MODE_ROGUELIKE) {
             if (forecast.affordable) {
-                snprintf(advanceLabel, sizeof(advanceLabel),
-                         "Advance to floor %d (fee %d, min %d) -> %d chips",
-                         game->run.floor + 1,
-                         forecast.fee,
-                         forecast.nextMinBet,
-                         forecast.postChips);
+                if (forecast.loanDue > 0) {
+                    snprintf(advanceLabel, sizeof(advanceLabel),
+                             "Advance to floor %d (fee %d, min %d, loan %d) -> %d chips",
+                             game->run.floor + 1,
+                             forecast.fee,
+                             forecast.nextMinBet,
+                             forecast.loanDue,
+                             forecast.postChips);
+                } else {
+                    snprintf(advanceLabel, sizeof(advanceLabel),
+                             "Advance to floor %d (fee %d, min %d) -> %d chips",
+                             game->run.floor + 1,
+                             forecast.fee,
+                             forecast.nextMinBet,
+                             forecast.postChips);
+                }
             } else {
                 snprintf(advanceLabel, sizeof(advanceLabel),
                          "Advance to floor %d (need %d, have %d)",
                          game->run.floor + 1,
-                         forecast.fee + forecast.nextMinBet,
+                         forecast.fee + forecast.nextMinBet +
+                             forecast.loanDue,
                          game->player.chips);
             }
         } else {
@@ -145,8 +159,7 @@ void floorMenu(Game *game) {
              menuScanIndex < itemCount;
              menuScanIndex++) {
             if (menuItems[menuScanIndex].hotkey == 'a' &&
-                (long long)game->player.chips <
-                    (long long)nextMinBet + advanceFee) {
+                !forecast.affordable) {
                 disabledMask |= 1 << menuScanIndex;
             }
         }
@@ -186,7 +199,6 @@ void floorMenu(Game *game) {
                 dispatchFloorMenuAction(game,
                                         actionCharacter,
                                         currentMinBet,
-                                        nextMinBet,
                                         advanceFee);
                 renderMenuLogRefresh(game);
             } else if (event.type == KEY_CHAR) {
@@ -206,7 +218,6 @@ void floorMenu(Game *game) {
                             game,
                             menuItems[menuIndex].hotkey,
                             currentMinBet,
-                            nextMinBet,
                             advanceFee);
                         renderMenuLogRefresh(game);
                         break;
@@ -214,12 +225,14 @@ void floorMenu(Game *game) {
                 }
             } else if (event.type == KEY_ESC ||
                        event.type == KEY_EOF) {
+                game->playerQuit = 1;
                 game->state = STATE_QUIT;
             }
         } else {
             actionCharacter = -1;
 
             if (fgets(input, sizeof(input), stdin) == NULL) {
+                game->playerQuit = 1;
                 game->state = STATE_QUIT;
             } else {
                 if (strchr(input, '\n') == NULL) {
@@ -248,7 +261,6 @@ void floorMenu(Game *game) {
                                 game,
                                 menuItems[menuIndex].hotkey,
                                 currentMinBet,
-                                nextMinBet,
                                 advanceFee);
                             renderMenuLogRefresh(game);
                             break;

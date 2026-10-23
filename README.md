@@ -109,6 +109,10 @@ Betting:
 - Even money is not offered against Twin dealers.
 - Save format is not portable across architectures (endianness, alignment). There is no cross-version migration; changing `Game` invalidates old saves.
 - Save format v1 is not stable until v0.1.0. Any Game struct change invalidates existing saves.
+- Second Wind hands can reach 21 but do not pay as natural blackjack (only the initial deal counts).
+- Save file is atomically written; a failed save leaves the previous save intact.
+- Save loader validates every index field before applying loaded state.
+- Advance forecast includes loan repayment.
 
 ## License
 

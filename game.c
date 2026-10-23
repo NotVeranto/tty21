@@ -50,6 +50,7 @@ void initGame(Game *game, GameMode mode) {
     game->saveEnabled = 1;
     game->lastAutosavedRound = 0;
     game->playerQuit = 0;
+    game->roundHadNaturalBj = 0;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
@@ -80,7 +81,8 @@ void generateShopPool(Game *game) {
     candidateCount = 0;
     for (i = 0; i < PERK_COUNT; i++) {
         if (perkIsSold((PerkId)i) &&
-            !game->player.perkOwned[i]) {
+            !game->player.perkOwned[i] &&
+            i != game->run.perkLockedId) {
             candidates[candidateCount++] = (PerkId)i;
         }
     }
@@ -277,10 +279,20 @@ void advanceFloor(Game *game) {
                     "Floor event: Dealer Lapse (twist forgotten).",
                     MSG_INFO);
         } else {
+            int newMinBet;
+
             game->minBetMultiplier = 2;
             logPush(game,
                     "Floor event: Tight Table (minimum bet doubled).",
                     MSG_INFO);
+            newMinBet = getMinBet(game, game->run.floor, game->mode);
+            if (game->player.chips < newMinBet &&
+                game->player.chips > 0) {
+                game->minBetMultiplier = 1;
+                logPush(game,
+                        "Tight Table skipped: cannot cover.",
+                        MSG_INFO);
+            }
         }
     }
 

@@ -88,6 +88,7 @@ struct Game {
     unsigned long rngCalls; /* RNG draws consumed since rngInit */
     int lastAutosavedRound; /* round number at last successful autosave, 0 if never */
     int playerQuit; /* 1 if player quit to menu, not if the run ended */
+    int roundHadNaturalBj; /* 1 if 21 came from the initial deal */
 };
 
 void initGame(Game *game, GameMode mode);

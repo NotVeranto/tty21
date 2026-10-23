@@ -152,10 +152,18 @@ void computeAdvanceForecast(const Game *game,
     out->nextMinBet = getMinBet(game, game->run.floor + 1,
                                 game->mode);
     out->fee = 2 * out->nextMinBet;
-    out->postChips = game->player.chips - out->fee;
+    out->loanDue = 0;
+    if (game->loanAmount > 0 &&
+        game->loanDueFloor <= game->run.floor + 1) {
+        out->loanDue = game->loanAmount;
+    }
+    out->postChips = game->player.chips -
+                     out->fee - out->loanDue;
     if (out->postChips < 0) out->postChips = 0;
     out->affordable =
-        game->player.chips >= out->fee + out->nextMinBet;
+        game->player.chips >= out->fee +
+                              out->nextMinBet +
+                              out->loanDue;
 }
 
 static const char *CURSE_NAMES[] = {
@@ -1014,6 +1022,9 @@ void startRound(Game *game) {
     betAmount = readBet(game);
 
     if (betAmount < 0 || game->state == STATE_QUIT) {
+        if (game->state != STATE_QUIT) {
+            game->playerQuit = 1;
+        }
         game->state = STATE_QUIT;
         return;
     }
@@ -1128,9 +1139,14 @@ void startRound(Game *game) {
     upcardIsTen = upcardRank >= TEN;
 
     playerValue = calculatePlayerHandValue(game);
-    playerBJ = game->player.hands[0].count == 2 &&
-               playerValue == 21 &&
-               !game->player.usedSplit;
+    game->roundHadNaturalBj = 0;
+    if (game->player.handCount == 1 &&
+        game->player.hands[0].count == 2 &&
+        playerValue == 21 &&
+        !game->player.usedSplit) {
+        game->roundHadNaturalBj = 1;
+    }
+    playerBJ = game->roundHadNaturalBj;
 
     if (upcardIsAce) {
         if (playerBJ && dealerHandsCount(game->run.dealerId) == 1) {
@@ -1166,7 +1182,13 @@ void startRound(Game *game) {
         return;
     }
 
-    if (dealerForcesDouble(game->run.dealerId)) {
+    if (playerValue >= 21) {
+        game->state = STATE_RESULT;
+        return;
+    }
+
+    if (dealerForcesDouble(game->run.dealerId) &&
+        game->run.floor >= 10) {
         if (game->player.hands[0].count == 2 &&
             (long long)game->player.chips >=
                 (long long)game->player.bets[0] * 2) {
@@ -1179,16 +1201,13 @@ void startRound(Game *game) {
                 drawCard(game, &game->dealer.hands[0], 0);
             }
 
+            logPush(game, "Devil forces a double down.", MSG_DEALER);
             game->state = STATE_DEALER_TURN;
             return;
         }
     }
 
-    if (playerValue >= 21) {
-        game->state = STATE_RESULT;
-    } else {
-        game->state = STATE_PLAYER_TURN;
-    }
+    game->state = STATE_PLAYER_TURN;
 }
 
 void playerTurn(Game *game) {
@@ -1388,8 +1407,13 @@ void dealerTurn(Game *game) {
             while (dealerValue < targetValue) {
                 KeyEvent event;
 
+                int prevCount = game->dealer.hands[dealerHandIndex].count;
+
                 drawCard(game,
                          &game->dealer.hands[dealerHandIndex], 0);
+                if (game->dealer.hands[dealerHandIndex].count == prevCount) {
+                    break;
+                }
                 dealerValue = calculateDealerHandValue(
                     game,
                     &game->dealer.hands[dealerHandIndex],
@@ -1743,7 +1767,8 @@ void resolveRound(Game *game) {
          handIndex++) {
         handValue = calculatePlayerHandValueForIndex(game, handIndex);
         handBet = game->player.bets[handIndex];
-        playerBlackjack = game->player.hands[handIndex].count == 2 &&
+        playerBlackjack = game->roundHadNaturalBj &&
+                          game->player.hands[handIndex].count == 2 &&
                           handValue == 21 &&
                           !game->player.usedSplit;
         splitBet = handBet / dealerHandCount;
@@ -1819,7 +1844,6 @@ void resolveRound(Game *game) {
                 if (game->player.perkOwned[PERK_DEALERS_FAVOR] &&
                     game->player.perkCharges[PERK_DEALERS_FAVOR] > 0) {
                     game->player.perkCharges[PERK_DEALERS_FAVOR]--;
-                    game->winStreak = 0;
 
                     if (dealerHandCount == 1 &&
                         game->player.handCount == 1) {
@@ -1996,8 +2020,6 @@ void resolveRound(Game *game) {
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
 
-                game->winStreak = 0;
-
                 if (dealerHandCount == 1) {
                     if (game->player.handCount == 1) {
                         snprintf(resultMessage,
@@ -2026,7 +2048,6 @@ void resolveRound(Game *game) {
                     }
                 }
             } else if (handValue == dealerValue) {
-                game->winStreak = 0;
 
                 if (dealerHandCount == 1) {
                     if (game->player.handCount == 1) {
@@ -2163,7 +2184,6 @@ void resolveRound(Game *game) {
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
-                game->winStreak = 0;
 
                 if (dealerHandCount == 1 && game->player.handCount == 1) {
                     snprintf(resultMessage, sizeof(resultMessage),
@@ -2317,21 +2337,35 @@ void resolveRound(Game *game) {
     if (game->player.chips == 0 &&
         game->player.perkOwned[PERK_EXTRA_LIFE] &&
         game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
-        game->player.chips = 1;
+        int rescueChips = getMinBet(game, game->run.floor, game->mode);
+        char rescueMessage[64];
+
+        if (rescueChips < 1) rescueChips = 1;
+        game->player.chips = rescueChips;
         game->player.perkCharges[PERK_EXTRA_LIFE] = 0;
+        game->lossStreak = 0;
         if (game->state == STATE_QUIT)
             game->state = game->mode == MODE_CLASSIC ? STATE_BET : STATE_MENU;
-        logPush(game, "Extra Life! Run continues with 1 chip.", MSG_WIN);
+        snprintf(rescueMessage, sizeof(rescueMessage),
+                 "Extra Life! Run continues with %d chips.", rescueChips);
+        logPush(game, rescueMessage, MSG_WIN);
     }
     if (game->player.chips > 0 &&
         game->player.chips < getMinBet(game, game->run.floor, game->mode) &&
         game->player.perkOwned[PERK_EXTRA_LIFE] &&
         game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
-        game->player.chips = getMinBet(game, game->run.floor, game->mode);
+        int rescueChips = getMinBet(game, game->run.floor, game->mode);
+        char rescueMessage[64];
+
+        if (rescueChips < 1) rescueChips = 1;
+        game->player.chips = rescueChips;
         game->player.perkCharges[PERK_EXTRA_LIFE] = 0;
+        game->lossStreak = 0;
         if (game->state == STATE_QUIT)
             game->state = game->mode == MODE_CLASSIC ? STATE_BET : STATE_MENU;
-        logPush(game, "Extra Life! Chips restored to the minimum bet.", MSG_WIN);
+        snprintf(rescueMessage, sizeof(rescueMessage),
+                 "Extra Life! Run continues with %d chips.", rescueChips);
+        logPush(game, rescueMessage, MSG_WIN);
     }
 
     game->tippedThisRound = 0;
@@ -2385,4 +2419,5 @@ void resolveRound(Game *game) {
     } else {
         game->state = STATE_MENU;
     }
+    game->roundHadNaturalBj = 0;
 }

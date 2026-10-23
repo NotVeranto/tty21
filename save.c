@@ -75,6 +75,7 @@ int saveExists(void) {
 
 int saveGame(const Game *game) {
     char path[SAVE_PATH_BUFFER];
+    char tmpPath[SAVE_PATH_BUFFER];
     char dir[SAVE_PATH_BUFFER];
     uint8_t header[SAVE_MAGIC_LEN + 12];
     uint32_t version = SAVE_VERSION;
@@ -105,22 +106,34 @@ int saveGame(const Game *game) {
     memcpy(header + SAVE_MAGIC_LEN + 4, &bodySize, sizeof(bodySize));
     memcpy(header + SAVE_MAGIC_LEN + 8, &checksum, sizeof(checksum));
 
-    fp = fopen(path, "wb");
+    if (snprintf(tmpPath, sizeof(tmpPath), "%s.tmp", path) >=
+        (int)sizeof(tmpPath)) return -1;
+
+    fp = fopen(tmpPath, "wb");
     if (fp == NULL) return -1;
     written = fwrite(header, 1, sizeof(header), fp);
     if (written != sizeof(header)) {
         fclose(fp);
-        unlink(path);
+        unlink(tmpPath);
         return -1;
     }
     written = fwrite(game, 1, sizeof(Game), fp);
     if (written != sizeof(Game)) {
         fclose(fp);
-        unlink(path);
+        unlink(tmpPath);
+        return -1;
+    }
+    if (fflush(fp) != 0) {
+        fclose(fp);
+        unlink(tmpPath);
         return -1;
     }
     if (fclose(fp) != 0) {
-        unlink(path);
+        unlink(tmpPath);
+        return -1;
+    }
+    if (rename(tmpPath, path) != 0) {
+        unlink(tmpPath);
         return -1;
     }
     return 0;
@@ -166,12 +179,66 @@ int loadGame(Game *game) {
     if (temp.player.chips < 0) return -1;
     if (temp.player.handCount < 1 ||
         temp.player.handCount > MAX_PLAYER_HANDS) return -1;
+    if (temp.player.activeHand < 0 ||
+        temp.player.activeHand >= MAX_PLAYER_HANDS) return -1;
     if (temp.dealer.handCount < 1 || temp.dealer.handCount > 2) return -1;
     if (temp.run.floor < 1) return -1;
     if (temp.run.dealerId < 0 || temp.run.dealerId >= DEALER_COUNT) return -1;
+    if (temp.run.previousDealerId < 0 ||
+        temp.run.previousDealerId >= DEALER_COUNT) return -1;
     if (temp.run.twistId < 0 || temp.run.twistId >= TWIST_COUNT) return -1;
+    if (temp.run.previousTwistId < 0 ||
+        temp.run.previousTwistId >= TWIST_COUNT) return -1;
+    if (temp.run.perkLockedId < -1 ||
+        temp.run.perkLockedId >= PERK_COUNT) return -1;
+    if (temp.log.count < 0 || temp.log.count > LOG_SIZE) return -1;
+    if (temp.run.shopPerkCount < 0 ||
+        temp.run.shopPerkCount > SHOP_POOL_SIZE) return -1;
+    if (temp.loanDueFloor < 0) return -1;
+    if (temp.loanAmount < 0) return -1;
+    if (temp.run.roundsOnFloor < 0) return -1;
+    if (temp.winStreak < 0) return -1;
+    if (temp.lossStreak < 0) return -1;
+    if (temp.run.bossRewarded < 0 || temp.run.bossRewarded > 1) return -1;
+    if (temp.run.shopPerksRerolled < 0 ||
+        temp.run.shopPerksRerolled > 1) return -1;
+    if (temp.run.coldSnapUsed < 0 || temp.run.coldSnapUsed > 1) return -1;
+    if (temp.run.coldSnapActive < 0 || temp.run.coldSnapActive > 1) return -1;
+    if (temp.run.perkLockedUsed < 0 || temp.run.perkLockedUsed > 1) return -1;
+    if (temp.saveEnabled < 0 || temp.saveEnabled > 1) return -1;
+    if (temp.playerQuit < 0 || temp.playerQuit > 1) return -1;
+    if (temp.deck.top < 0 || temp.deck.top > DECK_SIZE) return -1;
     if (temp.run.extraTwistCount < 0 ||
         temp.run.extraTwistCount > MAX_EXTRA_TWISTS) return -1;
+
+    {
+        int h;
+        for (h = 0; h < MAX_PLAYER_HANDS; h++) {
+            if (temp.player.hands[h].count < 0 ||
+                temp.player.hands[h].count > MAX_HAND_SIZE) return -1;
+            if (temp.player.bets[h] < 0) return -1;
+        }
+        for (h = 0; h < 2; h++) {
+            if (temp.dealer.hands[h].count < 0 ||
+                temp.dealer.hands[h].count > MAX_HAND_SIZE) return -1;
+        }
+    }
+
+    {
+        int t;
+        for (t = 0; t < temp.run.extraTwistCount; t++) {
+            if (temp.run.extraTwists[t] < 0 ||
+                temp.run.extraTwists[t] >= TWIST_COUNT) return -1;
+        }
+    }
+
+    {
+        int p;
+        for (p = 0; p < temp.run.shopPerkCount; p++) {
+            if (temp.run.shopPerks[p] < 0 ||
+                temp.run.shopPerks[p] >= PERK_COUNT) return -1;
+        }
+    }
 
     *game = temp;
     return 0;
