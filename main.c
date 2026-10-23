@@ -2,6 +2,7 @@
 #include "input.h"
 #include "render.h"
 #include "rng.h"
+#include "save.h"
 #include "version.h"
 
 #include <ctype.h>
@@ -26,6 +27,8 @@ static void printUsage(FILE *stream) {
             "  -r, --roguelike Start in roguelike mode (default).\n"
             "  -c, --classic   Start in classic blackjack mode.\n"
             "  --fast          Skip dealer animation pauses.\n"
+            "  --continue      Resume the last roguelike run.\n"
+            "  --no-save       Disable autosave for this session.\n"
             "\n"
             "Requires a terminal of at least 80x50.\n");
 }
@@ -115,8 +118,11 @@ static void printStartupItem(const MenuItem *item,
     }
 }
 
-static GameMode runStartupMenu(void) {
-    MenuItem items[3];
+typedef enum { STARTUP_NEW_ROGUELIKE, STARTUP_NEW_CLASSIC, STARTUP_CONTINUE, STARTUP_QUIT } StartupChoice;
+
+static StartupChoice runStartupMenu(int showContinue) {
+    MenuItem items[4];
+    int itemCount;
     char input[64];
     int selectedIndex;
     int characterIndex;
@@ -127,12 +133,18 @@ static GameMode runStartupMenu(void) {
     int padding;
     KeyEvent event;
 
-    items[0].hotkey = '1';
-    items[0].label = "Roguelike";
-    items[1].hotkey = '2';
-    items[1].label = "Classic blackjack";
-    items[2].hotkey = 'q';
-    items[2].label = "Quit";
+    if (showContinue) {
+        items[0].hotkey = 'c'; items[0].label = "Continue saved run";
+        items[1].hotkey = '1'; items[1].label = "New roguelike";
+        items[2].hotkey = '2'; items[2].label = "New classic";
+        items[3].hotkey = 'q'; items[3].label = "Quit";
+        itemCount = 4;
+    } else {
+        items[0].hotkey = '1'; items[0].label = "Roguelike";
+        items[1].hotkey = '2'; items[1].label = "Classic blackjack";
+        items[2].hotkey = 'q'; items[2].label = "Quit";
+        itemCount = 3;
+    }
 
     selectedIndex = 0;
 
@@ -218,7 +230,7 @@ static GameMode runStartupMenu(void) {
 
         printf("\n\n");
 
-        for (menuIndex = 0; menuIndex < 3; menuIndex++) {
+        for (menuIndex = 0; menuIndex < itemCount; menuIndex++) {
             printStartupItem(&items[menuIndex],
                              menuIndex == selectedIndex,
                              width,
@@ -234,57 +246,43 @@ static GameMode runStartupMenu(void) {
                 selectedIndex--;
 
                 if (selectedIndex < 0) {
-                    selectedIndex = 2;
+                    selectedIndex = itemCount - 1;
                 }
             } else if (event.type == KEY_DOWN) {
                 selectedIndex++;
 
-                if (selectedIndex >= 3) {
+                if (selectedIndex >= itemCount) {
                     selectedIndex = 0;
                 }
             } else if (event.type == KEY_ENTER) {
-                if (items[selectedIndex].hotkey == '1') {
-                    renderShowCursor();
-                    return MODE_ROGUELIKE;
-                }
-
-                if (items[selectedIndex].hotkey == '2') {
-                    renderShowCursor();
-                    return MODE_CLASSIC;
-                }
-
                 renderShowCursor();
+                if (items[selectedIndex].hotkey == 'c') return STARTUP_CONTINUE;
+                if (items[selectedIndex].hotkey == '1') return STARTUP_NEW_ROGUELIKE;
+                if (items[selectedIndex].hotkey == '2') return STARTUP_NEW_CLASSIC;
                 disableRawMode();
-                exit(0);
+                return STARTUP_QUIT;
             } else if (event.type == KEY_CHAR) {
-                for (menuIndex = 0; menuIndex < 3; menuIndex++) {
+                for (menuIndex = 0; menuIndex < itemCount; menuIndex++) {
                     if (event.ch == items[menuIndex].hotkey) {
                         selectedIndex = menuIndex;
 
-                        if (items[menuIndex].hotkey == '1') {
-                            renderShowCursor();
-                            return MODE_ROGUELIKE;
-                        }
-
-                        if (items[menuIndex].hotkey == '2') {
-                            renderShowCursor();
-                            return MODE_CLASSIC;
-                        }
-
                         renderShowCursor();
+                        if (items[menuIndex].hotkey == 'c') return STARTUP_CONTINUE;
+                        if (items[menuIndex].hotkey == '1') return STARTUP_NEW_ROGUELIKE;
+                        if (items[menuIndex].hotkey == '2') return STARTUP_NEW_CLASSIC;
                         disableRawMode();
-                        exit(0);
+                        return STARTUP_QUIT;
                     }
                 }
             } else if (event.type == KEY_ESC ||
                        event.type == KEY_EOF) {
                 renderShowCursor();
                 disableRawMode();
-                exit(0);
+                return STARTUP_QUIT;
             }
         } else {
             if (fgets(input, sizeof(input), stdin) == NULL) {
-                exit(0);
+                return STARTUP_QUIT;
             }
 
             characterIndex = 0;
@@ -294,22 +292,14 @@ static GameMode runStartupMenu(void) {
                 characterIndex++;
             }
 
-            for (menuIndex = 0; menuIndex < 3; menuIndex++) {
+            for (menuIndex = 0; menuIndex < itemCount; menuIndex++) {
                 if (input[characterIndex] == items[menuIndex].hotkey) {
                     selectedIndex = menuIndex;
-
-                    if (items[menuIndex].hotkey == '1') {
-                        renderShowCursor();
-                        return MODE_ROGUELIKE;
-                    }
-
-                    if (items[menuIndex].hotkey == '2') {
-                        renderShowCursor();
-                        return MODE_CLASSIC;
-                    }
-
                     renderShowCursor();
-                    exit(0);
+                    if (items[menuIndex].hotkey == 'c') return STARTUP_CONTINUE;
+                    if (items[menuIndex].hotkey == '1') return STARTUP_NEW_ROGUELIKE;
+                    if (items[menuIndex].hotkey == '2') return STARTUP_NEW_CLASSIC;
+                    return STARTUP_QUIT;
                 }
             }
         }
@@ -348,11 +338,16 @@ int main(int argc, char **argv) {
     int forced;
     GameMode forcedMode;
     GameMode mode;
+    StartupChoice choice;
     int fastFlag;
+    int noSaveFlag;
+    int continueFlag;
 
     seed = 0;
     seedProvided = 0;
     fastFlag = 0;
+    noSaveFlag = 0;
+    continueFlag = 0;
     forced = 0;
     forcedMode = MODE_ROGUELIKE;
 
@@ -368,6 +363,16 @@ int main(int argc, char **argv) {
             strcmp(argv[argumentIndex], "-c") == 0) {
             forced = 1;
             forcedMode = MODE_CLASSIC;
+            continue;
+        }
+
+        if (strcmp(argv[argumentIndex], "--continue") == 0) {
+            continueFlag = 1;
+            continue;
+        }
+
+        if (strcmp(argv[argumentIndex], "--no-save") == 0) {
+            noSaveFlag = 1;
             continue;
         }
 
@@ -445,16 +450,60 @@ int main(int argc, char **argv) {
 
     inputInit();
 
-    if (forced) {
-        mode = forcedMode;
-    } else {
-        mode = runStartupMenu();
+    if (forced && continueFlag) {
+        fprintf(stderr, "error: --continue cannot be combined with --roguelike or --classic.\n");
+        return 1;
     }
 
-    rngInit(seed, seedProvided);
+    if (forced) {
+        mode = forcedMode;
+        rngInit(seed, seedProvided);
+        initGame(&game, mode);
+        game.rngSeed = rngGetSeed();
+        game.rngCalls = rngGetCallCount();
+    } else if (continueFlag) {
+        if (!saveExists()) {
+            fprintf(stderr, "error: no save to continue.\n");
+            return 1;
+        }
+        rngInit(seed, seedProvided);
+        initGame(&game, MODE_ROGUELIKE);
+        if (loadGame(&game) != 0) {
+            fprintf(stderr, "error: cannot load save.\n");
+            return 1;
+        }
+        renderResetScreen();
+        rngInit(game.rngSeed, 1);
+        {
+            unsigned long draw;
+            for (draw = 0; draw < game.rngCalls; draw++) (void)rngNext();
+        }
+    } else {
+        choice = runStartupMenu(saveExists());
+        if (choice == STARTUP_QUIT) return 0;
+        rngInit(seed, seedProvided);
+        if (choice == STARTUP_CONTINUE) {
+            initGame(&game, MODE_ROGUELIKE);
+            if (loadGame(&game) != 0) {
+                fprintf(stderr, "error: cannot load save.\n");
+                return 1;
+            }
+            renderResetScreen();
+            rngInit(game.rngSeed, 1);
+            {
+                unsigned long draw;
+                for (draw = 0; draw < game.rngCalls; draw++) (void)rngNext();
+            }
+        } else {
+            mode = (choice == STARTUP_NEW_CLASSIC) ? MODE_CLASSIC : MODE_ROGUELIKE;
+            initGame(&game, mode);
+            game.rngSeed = rngGetSeed();
+            game.rngCalls = rngGetCallCount();
+        }
+    }
 
-    initGame(&game, mode);
     game.fastMode = fastFlag;
+    if (noSaveFlag) game.saveEnabled = 0;
     runGame(&game);
 
     return 0;

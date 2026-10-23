@@ -659,6 +659,18 @@ static void renderLog(const Game *game,
     fflush(stdout);
 }
 
+void renderResetScreen(void) {
+    initColors();
+    if (!isatty(STDOUT_FILENO)) {
+        return;
+    }
+    printf("%s%s", SCR_CLEAR, SCR_HOME);
+    renderShowCursor();
+    tablePadding = 0;
+    cursorHidden = 0;
+    fflush(stdout);
+}
+
 // Clears and redraws the complete table on fixed rows.
 static void drawStatusLine(const Game *game,
                               int terminalWidth,
@@ -2082,6 +2094,19 @@ void renderHelpOverlay(const Game *game) {
                 contentRow += 2;
             }
 
+            if (game->mode == MODE_ROGUELIKE &&
+                game->lastAutosavedRound > 0) {
+                char saveLine[64];
+                printf(SCR_CURSOR, contentRow + 1, leftColumn);
+                printf("%sSave:%s", scrDim(), scrReset());
+                contentRow += 2;
+                snprintf(saveLine, sizeof(saveLine),
+                         "  Round %d", game->lastAutosavedRound);
+                printHelpColumnLine(contentRow, leftColumn,
+                                    columnWidth, saveLine);
+                contentRow++;
+            }
+
             }
 
         if (payoutBreakdownText[0] != '\0') {
@@ -2236,6 +2261,12 @@ void renderHelpOverlay(const Game *game) {
             if (game->run.perkLockedId >= 0) {
                 printf("\nLocked: %s (this floor)\n",
                        perkName((PerkId)game->run.perkLockedId));
+            }
+
+            if (game->mode == MODE_ROGUELIKE &&
+                game->lastAutosavedRound > 0) {
+                printf("\nSave:\n  Round %d\n",
+                       game->lastAutosavedRound);
             }
 
             }

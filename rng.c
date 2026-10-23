@@ -6,6 +6,7 @@
 #include <time.h>
 
 static unsigned int rngSeed;
+static unsigned long rngCalls;
 
 void rngInit(unsigned int seed, int seedIsValid) {
     if (!seedIsValid) {
@@ -13,10 +14,12 @@ void rngInit(unsigned int seed, int seedIsValid) {
     }
 
     rngSeed = seed;
+    rngCalls = 0;
     srand(rngSeed);
 }
 
 unsigned int rngNext(void) {
+    rngCalls++;
     return (unsigned int)rand();
 }
 
@@ -46,3 +49,11 @@ int rngRange(int minInclusive, int maxInclusive) {
     return minimum + (int)((unsigned long long)randomValue % range);
 }
 
+
+unsigned int rngGetSeed(void) {
+    return rngSeed;
+}
+
+unsigned long rngGetCallCount(void) {
+    return rngCalls;
+}

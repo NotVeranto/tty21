@@ -3,6 +3,7 @@
 #include "render.h"
 #include "menu.h"
 #include "rng.h"
+#include "save.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -45,6 +46,9 @@ void initGame(Game *game, GameMode mode) {
     game->safetyNetArmed = 0;
     game->tippedThisRound = 0;
     game->lastPayoutBreakdown[0] = '\0';
+    game->rngSeed = rngGetSeed();
+    game->saveEnabled = 1;
+    game->lastAutosavedRound = 0;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
@@ -351,6 +355,15 @@ int runGame(Game *game) {
     char finalMsg[64];
 
     while (game->state != STATE_QUIT) {
+        if (game->mode == MODE_ROGUELIKE &&
+            game->saveEnabled &&
+            (game->state == STATE_BET ||
+             game->state == STATE_MENU)) {
+            game->rngCalls = rngGetCallCount();
+            if (saveGame(game) == 0) {
+                game->lastAutosavedRound = game->roundNumber;
+            }
+        }
         if (game->state == STATE_BET) {
             startRound(game);
         } else if (game->state == STATE_PLAYER_TURN) {
@@ -368,6 +381,10 @@ int runGame(Game *game) {
                 floorMenu(game);
             }
         }
+    }
+
+    if (game->mode == MODE_ROGUELIKE && game->saveEnabled) {
+        deleteSave();
     }
 
     snprintf(finalMsg,

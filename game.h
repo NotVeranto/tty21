@@ -83,6 +83,10 @@ struct Game {
     int safetyNetArmed; /* 1 if a safety net is active */
     int tippedThisRound;
     char lastPayoutBreakdown[256];
+    unsigned int rngSeed; /* seed used to start the run, for save round-trip */
+    int saveEnabled; /* 1 = autosave on */
+    unsigned long rngCalls; /* RNG draws consumed since rngInit */
+    int lastAutosavedRound; /* round number at last successful autosave, 0 if never */
 };
 
 void initGame(Game *game, GameMode mode);

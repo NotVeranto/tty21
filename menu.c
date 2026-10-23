@@ -3,6 +3,8 @@
 #include "input.h"
 #include "input_map.h"
 #include "round.h"
+#include "save.h"
+#include "rng.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -30,6 +32,14 @@ static void dispatchFloorMenuAction(Game *game,
         if (game->state != STATE_QUIT) {
             game->state = STATE_BET;
         }
+    } else if ((actionCharacter == 'w' || actionCharacter == 'W') &&
+               game->mode == MODE_ROGUELIKE) {
+        game->rngCalls = rngGetCallCount();
+        if (saveGame(game) == 0) {
+            logPush(game, "Game saved.", MSG_INFO);
+        } else {
+            logPush(game, "Save failed.", MSG_LOSS);
+        }
     } else if ((actionCharacter == 's' || actionCharacter == 'S') &&
                game->mode == MODE_ROGUELIKE) {
         game->state = STATE_SHOP;
@@ -40,7 +50,7 @@ static void dispatchFloorMenuAction(Game *game,
 
 
 void floorMenu(Game *game) {
-    MenuItem menuItems[4];
+    MenuItem menuItems[5];
     char continueLabel[128];
     char advanceLabel[128];
     char shopLabel[128];
@@ -116,6 +126,10 @@ void floorMenu(Game *game) {
 
         menuItems[itemCount].hotkey = 'a';
         menuItems[itemCount].label = advanceLabel;
+        itemCount++;
+
+        menuItems[itemCount].hotkey = 'w';
+        menuItems[itemCount].label = "Save game";
         itemCount++;
 
         menuItems[itemCount].hotkey = 's';

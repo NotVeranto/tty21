@@ -31,9 +31,7 @@ Implemented:
 - Deep-floor dealer power rules from floor 10, including increased losses, restricted actions, and a chip toll on hits.
 - Forced hostile twists every third floor from floor 10, except boss floors.
 - Tighter roguelike economy: advance fees, 10 chips converted to 2 marks, and reduced floor-advance and boss marks rewards.
-
-Planned:
-- Save and load (XDG).
+- Autosave to `XDG_DATA_HOME/tty21/save.dat` (or `~/.local/share/tty21/save.dat`). Resume with `--continue` or the Continue menu entry. Classic mode does not save.
 
 ## Requirements
 
@@ -52,6 +50,8 @@ Planned:
     ./tty21 --roguelike
     ./tty21 --classic
     ./tty21 --seed 12345
+    ./tty21 --continue
+    ./tty21 --no-save
 
 ## Controls
 
@@ -97,7 +97,7 @@ Betting:
 - [x] Difficulty expansion A: quadratic minimum bets, late-floor bet caps, and dealer enrage.
 - [x] Difficulty expansion B: tighter economy, advance fees, chip-to-mark conversion, and reduced marks rewards.
 - [x] Difficulty expansion C: deep-floor dealer power rules and forced hostile twists.
-- [ ] Save and load (XDG).
+- [x] Save and load (XDG).
 - [ ] Polish and animations.
 - [ ] Man page.
 - [ ] Packaging and release.
@@ -107,6 +107,8 @@ Betting:
 - Signal handlers call tcsetattr; not strictly async-signal-safe.
 - Second Wind does not rescue a busted doubled hand.
 - Even money is not offered against Twin dealers.
+- Save format is not portable across architectures (endianness, alignment). There is no cross-version migration; changing `Game` invalidates old saves.
+- Save format v1 is not stable until v0.1.0. Any Game struct change invalidates existing saves.
 
 ## License
 
