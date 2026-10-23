@@ -32,7 +32,8 @@ static void dispatchFloorMenuAction(Game *game,
                  "Advance cost: -%d chips.", advanceFee);
         logPush(game, feeMsg, MSG_LOSS);
         advanceFloor(game);
-        if (game->state != STATE_QUIT) {
+        if (game->state != STATE_QUIT &&
+            game->state != STATE_BOSS_PREP) {
             game->state = STATE_BET;
         }
     } else if ((actionCharacter == 'w' || actionCharacter == 'W') &&

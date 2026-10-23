@@ -15,6 +15,7 @@ typedef enum {
     STATE_RESULT,
     STATE_SHOP,
     STATE_MENU,
+    STATE_BOSS_PREP,
     STATE_QUIT
 } GameState;
 
@@ -89,11 +90,14 @@ struct Game {
     int lastAutosavedRound; /* round number at last successful autosave, 0 if never */
     int playerQuit; /* 1 if player quit to menu, not if the run ended */
     int roundHadNaturalBj; /* 1 if 21 came from the initial deal */
+    int bossRuleDisabled; /* 1 if player paid to disable the first boss rule */
+    int bossRulePaid; /* cost in marks */
 };
 
 void initGame(Game *game, GameMode mode);
 void generateShopPool(Game *game);
 void advanceFloor(Game *game);
+void bossPrepTurn(Game *game);
 void logPush(Game *game, const char *msg, MessageStyle style);
 int runGame(Game *game);
 

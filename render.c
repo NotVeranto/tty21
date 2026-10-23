@@ -659,6 +659,22 @@ static void renderLog(const Game *game,
     fflush(stdout);
 }
 
+void renderBossPrep(const Game *game) {
+    const DealerInfo *dealerInfo = getDealerInfo(game->run.dealerId);
+    const char *rule2 = dealerInfo->rule2;
+    const char *power = dealerPowerRule2(game->run.dealerId, game->run.floor);
+    if (rule2 == NULL && power != NULL) rule2 = power;
+    initColors();
+    printf("%s%s", SCR_CLEAR, SCR_HOME);
+    printf("BOSS FLOOR: %s\n", dealerInfo->name);
+    printf("Rule 1: %s\n", dealerInfo->rule1 != NULL ? dealerInfo->rule1 : "None");
+    printf("Rule 2: %s\n", rule2 != NULL ? rule2 : "None");
+    printf("Disable Rule 1 for %d marks? (y/n)\n", game->bossRulePaid);
+    printf("Current marks: %d\n", game->run.marks);
+    if (game->run.marks < game->bossRulePaid) printf("Not enough marks to disable Rule 1.\n");
+    fflush(stdout);
+}
+
 void renderResetScreen(void) {
     initColors();
     if (!isatty(STDOUT_FILENO)) {
@@ -697,6 +713,11 @@ static void drawStatusLine(const Game *game,
     }
 
     dealerInfo = getDealerInfo(game->run.dealerId);
+    if (game->bossRuleDisabled && dealerIsBoss(game->run.dealerId)) {
+        snprintf(dealerName, sizeof(dealerName), "%s [Rule 1 Disabled]", dealerInfo->name);
+    } else {
+        snprintf(dealerName, sizeof(dealerName), "%s", dealerInfo->name);
+    }
     displayHandIndex = game->player.activeHand;
     if (displayHandIndex >= game->player.handCount) {
         displayHandIndex = game->player.handCount - 1;
@@ -726,7 +747,7 @@ static void drawStatusLine(const Game *game,
                      sizeof(statusText),
                      "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d%s",
                      game->run.floor,
-                     dealerInfo->name,
+                     dealerName,
                      game->run.marks,
                      game->player.chips,
                      game->player.bets[displayHandIndex],
@@ -736,7 +757,7 @@ static void drawStatusLine(const Game *game,
                      sizeof(statusText),
                      "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)%s",
                      game->run.floor,
-                     dealerInfo->name,
+                     dealerName,
                      game->run.marks,
                      game->player.chips,
                      game->player.bets[displayHandIndex],
@@ -758,10 +779,11 @@ static void drawStatusLine(const Game *game,
                     statusText[0] = '\0';
                 }
             } else {
-                snprintf(dealerName,
-                         sizeof(dealerName),
-                         "%s",
-                         dealerInfo->name);
+                if (game->bossRuleDisabled && dealerIsBoss(game->run.dealerId)) {
+                    snprintf(dealerName, sizeof(dealerName), "%s [Rule 1 Disabled]", dealerInfo->name);
+                } else {
+                    snprintf(dealerName, sizeof(dealerName), "%s", dealerInfo->name);
+                }
                 snprintf(statusText,
                          sizeof(statusText),
                          "Floor: %d    Dealer: ",

@@ -37,6 +37,31 @@ static void settleInsurance(Game *game) {
     game->player.insuranceBet = 0;
 }
 
+
+static int bossRule1Disabled(const Game *game) {
+    return game->bossRuleDisabled && dealerIsBoss(game->run.dealerId);
+}
+static int effectiveDealerLossMultiplier(const Game *game) {
+    if (bossRule1Disabled(game) && game->run.dealerId == DEALER_BOSS_PIT) return 100;
+    return dealerLossMultiplierPercent(game->run.dealerId);
+}
+static int effectiveDealerBlackjackNumerator(const Game *game) {
+    if (bossRule1Disabled(game) && game->run.dealerId == DEALER_BOSS_VOID) return 3;
+    return dealerBlackjackNumerator(game->run.dealerId);
+}
+static int effectiveDealerBlackjackDenominator(const Game *game) {
+    if (bossRule1Disabled(game) && game->run.dealerId == DEALER_BOSS_VOID) return 2;
+    return dealerBlackjackDenominator(game->run.dealerId);
+}
+static int effectiveDealerMirrorsOnHit(const Game *game) {
+    if (bossRule1Disabled(game) && game->run.dealerId == DEALER_BOSS_PRIME) return 0;
+    return dealerMirrorsOnHit(game->run.dealerId);
+}
+static int effectiveDealerAcesCountAsOne(const Game *game, DealerId id) {
+    if (bossRule1Disabled(game) && id == DEALER_BOSS_SUPREME) return 0;
+    return dealerAcesCountAsOne(id);
+}
+
 int twistActive(const Game *game, TwistId id) {
     int i;
 
@@ -628,7 +653,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
         }
         drawCard(game, &game->player.hands[game->player.activeHand], 1);
 
-        if (dealerMirrorsOnHit(game->run.dealerId)) {
+        if (effectiveDealerMirrorsOnHit(game)) {
             drawCard(game, &game->dealer.hands[0], 0);
         }
 
@@ -730,7 +755,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             game->player.usedDouble = 1;
             drawCard(game, &game->player.hands[game->player.activeHand], 1);
 
-            if (dealerMirrorsOnHit(game->run.dealerId)) {
+            if (effectiveDealerMirrorsOnHit(game)) {
                 drawCard(game, &game->dealer.hands[0], 0);
             }
 
@@ -833,7 +858,7 @@ int calculateDealerHandValue(const Game *game,
         return calculateHandValueAcesLow(hand);
     }
 
-    if (!dealerAcesCountAsOne(id)) {
+    if (!effectiveDealerAcesCountAsOne(game, id)) {
         return calculateHandValue(hand);
     }
 
@@ -1197,7 +1222,7 @@ void startRound(Game *game) {
             game->player.usedDouble = 1;
             drawCard(game, &game->player.hands[0], 1);
 
-            if (dealerMirrorsOnHit(game->run.dealerId)) {
+            if (effectiveDealerMirrorsOnHit(game)) {
                 drawCard(game, &game->dealer.hands[0], 0);
             }
 
@@ -1556,8 +1581,8 @@ static void buildModifierList(const Game *game,
     } while (0)
 
     if (roundHadBlackjack && isWin) {
-        numerator = dealerBlackjackNumerator(game->run.dealerId);
-        denominator = dealerBlackjackDenominator(game->run.dealerId);
+        numerator = effectiveDealerBlackjackNumerator(game);
+        denominator = effectiveDealerBlackjackDenominator(game);
 
         if (numerator == 3 && denominator == 2) {
             APPEND_MODIFIER("BJ 3:2");
@@ -1609,7 +1634,7 @@ static void buildModifierList(const Game *game,
             APPEND_MODIFIER("Power x2.0");
         }
 
-        if (dealerLossMultiplierPercent(game->run.dealerId) == 150) {
+        if (effectiveDealerLossMultiplier(game) == 150) {
             APPEND_MODIFIER("Dealer 1.5");
         }
     }
@@ -1805,7 +1830,7 @@ void resolveRound(Game *game) {
 
             if (handValue > 21) {
                 baseLoss = ((long long)splitBet *
-                            dealerLossMultiplierPercent(game->run.dealerId)) / 100;
+                            effectiveDealerLossMultiplier(game)) / 100;
                 skipLossReduction =
                     twistActive(game, TWIST_DESPERATION) &&
                     game->player.usedDouble;
@@ -1895,8 +1920,8 @@ void resolveRound(Game *game) {
                     }
                 }
             } else if (playerBlackjack && !dealerBlackjack) {
-                int bjRatioNumerator = dealerBlackjackNumerator(game->run.dealerId);
-                int bjRatioDenominator = dealerBlackjackDenominator(game->run.dealerId);
+                int bjRatioNumerator = effectiveDealerBlackjackNumerator(game);
+                int bjRatioDenominator = effectiveDealerBlackjackDenominator(game);
                 roundHadBlackjack = 1;
                 if (game->run.floor >= 10 && game->run.dealerId == DEALER_REAPER) {
                     bjRatioNumerator = 1;
@@ -1980,7 +2005,7 @@ void resolveRound(Game *game) {
                 }
             } else if (dealerBlackjack && !playerBlackjack) {
                 baseLoss = ((long long)splitBet *
-                            dealerLossMultiplierPercent(game->run.dealerId)) / 100;
+                            effectiveDealerLossMultiplier(game)) / 100;
 
                 if (twistActive(game, TWIST_CHARITY)) {
                     baseLoss /= 2;
@@ -2145,7 +2170,7 @@ void resolveRound(Game *game) {
                 }
             } else {
                 baseLoss = ((long long)splitBet *
-                            dealerLossMultiplierPercent(game->run.dealerId)) / 100;
+                            effectiveDealerLossMultiplier(game)) / 100;
 
                 if (twistActive(game, TWIST_CHARITY)) {
                     baseLoss /= 2;

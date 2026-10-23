@@ -5,8 +5,10 @@
 #include "rng.h"
 #include "save.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include "input.h"
 
 void initGame(Game *game, GameMode mode) {
     initDeck(&game->deck);
@@ -51,6 +53,8 @@ void initGame(Game *game, GameMode mode) {
     game->lastAutosavedRound = 0;
     game->playerQuit = 0;
     game->roundHadNaturalBj = 0;
+    game->bossRuleDisabled = 0;
+    game->bossRulePaid = 0;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
@@ -362,6 +366,37 @@ void advanceFloor(Game *game) {
              game->run.marks,
              getMinBet(game, game->run.floor, game->mode));
     logPush(game, message, MSG_DEFAULT);
+
+    if (dealerIsBoss(game->run.dealerId)) {
+        game->state = STATE_BOSS_PREP;
+        game->bossRuleDisabled = 0;
+        game->bossRulePaid = game->run.floor * 10;
+    } else {
+        game->state = STATE_BET;
+    }
+}
+
+void bossPrepTurn(Game *game) {
+    KeyEvent event;
+    int answer;
+    renderBossPrep(game);
+    answer = EOF;
+    if (inputIsRaw()) {
+        event = readKey();
+        if (event.type == KEY_CHAR) answer = tolower((unsigned char)event.ch);
+    } else {
+        answer = getchar();
+        if (answer != EOF) {
+            answer = tolower((unsigned char)answer);
+            while (answer != '\n' && getchar() != '\n' && !feof(stdin)) {
+            }
+        }
+    }
+    if (answer == 'y' && game->run.marks >= game->bossRulePaid) {
+        game->run.marks -= game->bossRulePaid;
+        game->bossRuleDisabled = 1;
+    }
+    game->state = STATE_BET;
 }
 
 int runGame(Game *game) {
@@ -387,6 +422,8 @@ int runGame(Game *game) {
             resolveRound(game);
         } else if (game->state == STATE_SHOP) {
             runShop(game);
+        } else if (game->state == STATE_BOSS_PREP) {
+            bossPrepTurn(game);
         } else if (game->state == STATE_MENU) {
             if (game->mode == MODE_CLASSIC) {
                 game->state = STATE_BET;
