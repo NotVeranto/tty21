@@ -87,6 +87,7 @@ struct Game {
     int saveEnabled; /* 1 = autosave on */
     unsigned long rngCalls; /* RNG draws consumed since rngInit */
     int lastAutosavedRound; /* round number at last successful autosave, 0 if never */
+    int playerQuit; /* 1 if player quit to menu, not if the run ended */
 };
 
 void initGame(Game *game, GameMode mode);

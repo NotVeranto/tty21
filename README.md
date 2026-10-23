@@ -61,7 +61,7 @@ In-game (during the player's turn):
 - `d` — double down (first two cards only)
 - `p` — split (two cards of the same rank)
 - `k` — peek at dealer hole card (requires the Peek perk or a free-peek floor event)
-- `q` — quit the current run
+- `q` — quit the current run and return to the main menu
 - `?` — show help overlay (active twists, dealer rule, owned perks, current limits)
 - Arrow keys + Enter — navigate and confirm menus and player actions
 - `Ctrl+C` — force quit, terminal state restored
@@ -76,7 +76,7 @@ Betting:
 - `a` — Advance to the next floor (advance fee plus the next floor's minimum bet must both be covered)
 - `s` — Open the shop (perks, services, twist tools; roguelike only)
 - Shop shows a rotating pool of 3 perks per floor. Services and twist tools are always available. Reroll costs 10 marks, once per floor.
-- `q` — Quit the run
+- `q` — Quit the current run and return to the main menu. Save is preserved; use Continue to resume.
 
 ## Project status
 

@@ -49,6 +49,7 @@ void initGame(Game *game, GameMode mode) {
     game->rngSeed = rngGetSeed();
     game->saveEnabled = 1;
     game->lastAutosavedRound = 0;
+    game->playerQuit = 0;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
@@ -383,7 +384,9 @@ int runGame(Game *game) {
         }
     }
 
-    if (game->mode == MODE_ROGUELIKE && game->saveEnabled) {
+    if (game->mode == MODE_ROGUELIKE &&
+        game->saveEnabled &&
+        !game->playerQuit) {
         deleteSave();
     }
 

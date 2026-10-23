@@ -44,6 +44,7 @@ static void dispatchFloorMenuAction(Game *game,
                game->mode == MODE_ROGUELIKE) {
         game->state = STATE_SHOP;
     } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
+        game->playerQuit = 1;
         game->state = STATE_QUIT;
     }
 }

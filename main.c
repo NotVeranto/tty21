@@ -455,56 +455,89 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (forced) {
-        mode = forcedMode;
-        rngInit(seed, seedProvided);
-        initGame(&game, mode);
-        game.rngSeed = rngGetSeed();
-        game.rngCalls = rngGetCallCount();
-    } else if (continueFlag) {
-        if (!saveExists()) {
-            fprintf(stderr, "error: no save to continue.\n");
-            return 1;
-        }
-        rngInit(seed, seedProvided);
-        initGame(&game, MODE_ROGUELIKE);
-        if (loadGame(&game) != 0) {
-            fprintf(stderr, "error: cannot load save.\n");
-            return 1;
-        }
-        renderResetScreen();
-        rngInit(game.rngSeed, 1);
-        {
-            unsigned long draw;
-            for (draw = 0; draw < game.rngCalls; draw++) (void)rngNext();
-        }
-    } else {
-        choice = runStartupMenu(saveExists());
-        if (choice == STARTUP_QUIT) return 0;
-        rngInit(seed, seedProvided);
-        if (choice == STARTUP_CONTINUE) {
-            initGame(&game, MODE_ROGUELIKE);
-            if (loadGame(&game) != 0) {
-                fprintf(stderr, "error: cannot load save.\n");
-                return 1;
+    {
+        int firstRun = 1;
+
+        while (1) {
+            if (forced && firstRun) {
+                mode = forcedMode;
+                rngInit(seed, seedProvided);
+                initGame(&game, mode);
+                game.rngCalls = rngGetCallCount();
+            } else if (continueFlag) {
+                if (!saveExists()) {
+                    fprintf(stderr, "error: no save to continue.\n");
+                    return 1;
+                }
+
+                rngInit(seed, seedProvided);
+                initGame(&game, MODE_ROGUELIKE);
+                if (loadGame(&game) != 0) {
+                    fprintf(stderr, "error: cannot load save.\n");
+                    return 1;
+                }
+                renderResetScreen();
+                rngInit(game.rngSeed, 1);
+                {
+                    unsigned long draw;
+                    for (draw = 0; draw < game.rngCalls; draw++) {
+                        (void)rngNext();
+                    }
+                }
+            } else {
+                choice = runStartupMenu(saveExists());
+                if (choice == STARTUP_QUIT) {
+                    break;
+                }
+
+                if (choice == STARTUP_CONTINUE) {
+                    if (!saveExists()) {
+                        fprintf(stderr, "error: no save to continue.\n");
+                        return 1;
+                    }
+
+                    rngInit(seed, seedProvided);
+                    initGame(&game, MODE_ROGUELIKE);
+                    if (loadGame(&game) != 0) {
+                        fprintf(stderr, "error: cannot load save.\n");
+                        return 1;
+                    }
+                    renderResetScreen();
+                    rngInit(game.rngSeed, 1);
+                    {
+                        unsigned long draw;
+                        for (draw = 0; draw < game.rngCalls; draw++) {
+                            (void)rngNext();
+                        }
+                    }
+                } else {
+                    mode = (choice == STARTUP_NEW_CLASSIC)
+                               ? MODE_CLASSIC
+                               : MODE_ROGUELIKE;
+                    rngInit(seed, seedProvided);
+                    initGame(&game, mode);
+                    game.rngCalls = rngGetCallCount();
+                }
             }
-            renderResetScreen();
-            rngInit(game.rngSeed, 1);
-            {
-                unsigned long draw;
-                for (draw = 0; draw < game.rngCalls; draw++) (void)rngNext();
-            }
-        } else {
-            mode = (choice == STARTUP_NEW_CLASSIC) ? MODE_CLASSIC : MODE_ROGUELIKE;
-            initGame(&game, mode);
+
             game.rngSeed = rngGetSeed();
-            game.rngCalls = rngGetCallCount();
+            game.fastMode = fastFlag;
+            if (noSaveFlag) {
+                game.saveEnabled = 0;
+            }
+
+            runGame(&game);
+
+            if (!inputIsRaw()) {
+                break;
+            }
+
+            /* CLI mode and continue options apply only to the first run. */
+            forced = 0;
+            continueFlag = 0;
+            firstRun = 0;
         }
     }
-
-    game.fastMode = fastFlag;
-    if (noSaveFlag) game.saveEnabled = 0;
-    runGame(&game);
 
     return 0;
 }

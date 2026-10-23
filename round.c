@@ -781,6 +781,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             renderTable(game, 1);
         }
     } else if (action == ACTION_QUIT) {
+        game->playerQuit = 1;
         game->state = STATE_QUIT;
     }
 }
@@ -1266,6 +1267,7 @@ void playerTurn(Game *game) {
                 }
             } else if (event.type == KEY_ESC ||
                        event.type == KEY_EOF) {
+                game->playerQuit = 1;
                 game->state = STATE_QUIT;
             }
         }
@@ -1284,6 +1286,7 @@ void playerTurn(Game *game) {
             inputCharacter = getchar();
 
             if (inputCharacter == EOF) {
+                game->playerQuit = 1;
                 game->state = STATE_QUIT;
             } else {
                 event = makeKeyEvent(inputCharacter);
