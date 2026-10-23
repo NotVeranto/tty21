@@ -7,9 +7,6 @@ void startRound(Game *game);
 void playerTurn(Game *game);
 void dealerTurn(Game *game);
 void resolveRound(Game *game);
-int twistActive(const Game *game, TwistId id);
-int effectiveDealerAcesCountAsOne(const Game *game, DealerId id);
-int fatiguePercent(int roundsOnFloor);
 
 typedef struct {
     int fee;           /* advanceFee */

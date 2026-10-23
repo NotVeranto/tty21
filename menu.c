@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include "round_economy.h"
 
 static void dispatchFloorMenuAction(Game *game,
                                     char actionCharacter,

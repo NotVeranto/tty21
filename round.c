@@ -2,6 +2,8 @@
 #include "round.h"
 #include "round_cards.h"
 #include "round_economy.h"
+#include "round_rules.h"
+#include "round_input.h"
 #include "render.h"
 #include "input.h"
 #include "input_map.h"
@@ -23,139 +25,20 @@
 
 
 
-static int bossRule1Disabled(const Game *game) {
-    return game->bossRuleDisabled && dealerIsBoss(game->run.dealerId);
-}
-static int effectiveDealerLossMultiplier(const Game *game) {
-    if (bossRule1Disabled(game) && game->run.dealerId == DEALER_BOSS_PIT) return 100;
-    return dealerLossMultiplierPercent(game->run.dealerId);
-}
-static int effectiveDealerBlackjackNumerator(const Game *game) {
-    if (bossRule1Disabled(game) && game->run.dealerId == DEALER_BOSS_VOID) return 3;
-    return dealerBlackjackNumerator(game->run.dealerId);
-}
-static int effectiveDealerBlackjackDenominator(const Game *game) {
-    if (bossRule1Disabled(game) && game->run.dealerId == DEALER_BOSS_VOID) return 2;
-    return dealerBlackjackDenominator(game->run.dealerId);
-}
-static int effectiveDealerMirrorsOnHit(const Game *game) {
-    if (bossRule1Disabled(game) && game->run.dealerId == DEALER_BOSS_PRIME) return 0;
-    return dealerMirrorsOnHit(game->run.dealerId);
-}
-int effectiveDealerAcesCountAsOne(const Game *game, DealerId id) {
-    if (bossRule1Disabled(game) && id == DEALER_BOSS_SUPREME) return 0;
-    return dealerAcesCountAsOne(id);
-}
 
-int twistActive(const Game *game, TwistId id) {
-    int i;
 
-    if (game->run.twistBlocked &&
-        id == game->run.twistId) {
-        return 0;
-    }
 
-    if (game->run.twistId == id) {
-        return 1;
-    }
 
-    for (i = 0; i < game->run.extraTwistCount; i++) {
-        if (game->run.extraTwists[i] == id) {
-            return 1;
-        }
-    }
 
-    return 0;
-}
 
-static TwistId pickHostileTwistExcluding(const Game *game) {
-    static const TwistId POOL[] = {
-        TWIST_COLD_DECK,
-        TWIST_HALF_PAYOUT,
-        TWIST_STICKY_HANDS,
-        TWIST_DESPERATION,
-        TWIST_DEALER_TO_18,
-        TWIST_BLOOD_PACT
-    };
-    TwistId candidates[6];
-    int count;
-    int i;
 
-    count = 0;
 
-    for (i = 0; i < 6; i++) {
-        if (!twistActive(game, POOL[i])) {
-            candidates[count] = POOL[i];
-            count++;
-        }
-    }
 
-    if (count == 0) {
-        return TWIST_NONE;
-    }
 
-    return candidates[rngRange(0, count - 1)];
-}
 
-static void applyAntiFarmPressure(Game *game) {
-    int r;
-    int threshold;
 
-    r = game->run.roundsOnFloor;
-    threshold = 0;
 
-    if (r >= 16) {
-        threshold = 3 + (r - 16) / 3;
 
-        if (threshold > MAX_EXTRA_TWISTS) {
-            threshold = MAX_EXTRA_TWISTS;
-        }
-    } else if (r >= 11) {
-        threshold = 2;
-    } else if (r >= 6) {
-        threshold = 1;
-    }
-
-    while (game->run.extraTwistCount < threshold) {
-        TwistId pick;
-        char msg[96];
-
-        pick = pickHostileTwistExcluding(game);
-
-        if (pick == TWIST_NONE) {
-            break;
-        }
-
-        game->run.extraTwists[game->run.extraTwistCount] = pick;
-        game->run.extraTwistCount++;
-
-        snprintf(msg,
-                 sizeof(msg),
-                 "Floor tension rises: %s activates.",
-                 getTwistInfo(pick)->name);
-        logPush(game, msg, MSG_LOSS);
-    }
-}
-
-int fatiguePercent(int roundsOnFloor) {
-    if (roundsOnFloor <= 5) {
-        return 100;
-    }
-
-    if (roundsOnFloor <= 8) {
-        return 80;
-    }
-
-    if (roundsOnFloor <= 11) {
-        return 60;
-    }
-
-    if (roundsOnFloor <= 14) {
-        return 50;
-    }
-
-    return 30;
-}
 
 
 
@@ -238,221 +121,10 @@ static void resetPlayerHandToEleven(Game *game) {
     game->player.hands[game->player.activeHand].value = 11;
 }
 
-static KeyEvent makeKeyEvent(int character) {
-    KeyEvent event;
 
-    event.type = KEY_NONE;
-    event.ch = '\0';
-
-    if (character == EOF) {
-        event.type = KEY_EOF;
-    } else if (character == '\r' || character == '\n') {
-        event.type = KEY_ENTER;
-    } else if (character == 27) {
-        event.type = KEY_ESC;
-    } else {
-        event.type = KEY_CHAR;
-        event.ch = (char)character;
-    }
-
-    return event;
-}
 
 // Reads and validates the player's bet.
-static int readBet(Game *game) {
-    char input[64];
-    char prompt[64];
-    char message[64];
-    char rawInput[9];
-    char *endPointer;
-    long betValue;
-    size_t delimiterPosition;
-    size_t rawLength;
-    int minBet;
-    int maxBet;
-    int validBet;
-    int betDivisor;
-    KeyEvent event;
 
-    minBet = getMinBet(game, game->run.floor, game->mode);
-    maxBet = game->player.chips;
-    betDivisor = dealerHandsCount(game->run.dealerId);
-
-    if (game->mode == MODE_ROGUELIKE) {
-        int cap = game->player.chips;
-
-        if (game->run.floor >= 12) {
-            cap = game->player.chips / 3;
-        } else if (game->run.floor >= 8) {
-            cap = game->player.chips / 2;
-        }
-
-        if (cap >= minBet) {
-            maxBet = cap;
-        }
-    }
-
-    if (game->player.chips < minBet) {
-        snprintf(prompt,
-                 sizeof(prompt),
-                 "Minimum bet is %d. You have %d chips. Run over.",
-                 minBet,
-                 maxBet);
-        renderMessage(prompt, ROW_RESULT, MSG_DEFAULT);
-        game->state = STATE_QUIT;
-        return -1;
-    }
-
-    if (inputIsRaw()) {
-        rawLength = 0;
-        rawInput[0] = '\0';
-
-        while (1) {
-            snprintf(prompt,
-                     sizeof(prompt),
-                     "Enter bet (%d-%d): %s",
-                     minBet,
-                     maxBet,
-                     rawInput);
-            renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
-
-            event = readKey();
-
-            if (event.type == KEY_CHAR) {
-                if (event.ch >= '0' &&
-                    event.ch <= '9') {
-                    if (rawLength < 8) {
-                        rawInput[rawLength] = event.ch;
-                        rawLength++;
-                        rawInput[rawLength] = '\0';
-                    }
-                } else if (event.ch == 0x7F || event.ch == 0x08) {
-                    if (rawLength > 0) {
-                        rawLength--;
-                        rawInput[rawLength] = '\0';
-                    }
-                }
-            } else if (event.type == KEY_ENTER) {
-                if (rawLength == 0) {
-                    renderMessage("Enter a bet.",
-                                  ROW_RESULT,
-                                  MSG_DEFAULT);
-                } else {
-                    betValue = strtol(rawInput, &endPointer, 10);
-
-                    if (*endPointer == '\0' &&
-                        betValue >= minBet &&
-                        betValue <= maxBet) {
-                        if (betDivisor > 1 && betValue % betDivisor != 0) {
-                            snprintf(message,
-                                     sizeof(message),
-                                     "Invalid bet. Enter a multiple of %d between %d and %d.",
-                                     betDivisor,
-                                     minBet,
-                                     maxBet);
-                            renderMessage(message, ROW_RESULT, MSG_DEFAULT);
-                            validBet = 0;
-                        } else {
-                            validBet = 1;
-                        }
-                    } else {
-                        snprintf(message,
-                                 sizeof(message),
-                                 "Invalid bet. Enter an integer between %d and %d.",
-                                 minBet,
-                                 maxBet);
-                        renderMessage(message,
-                                      ROW_RESULT,
-                                      MSG_DEFAULT);
-                        validBet = 0;
-                    }
-
-                    if (validBet) {
-                        return (int)betValue;
-                    }
-                }
-            } else if (event.type == KEY_ESC ||
-                       event.type == KEY_EOF) {
-                return -1;
-            }
-        }
-    } else {
-        snprintf(prompt,
-                 sizeof(prompt),
-                 "Enter bet (%d-%d): ",
-                 minBet,
-                 maxBet);
-
-        validBet = 0;
-
-        while (!validBet) {
-            renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
-
-            if (fgets(input, sizeof(input), stdin) == NULL) {
-                if (ferror(stdin) && errno == EINTR) {
-                    clearerr(stdin);
-                    continue;
-                }
-
-                return -1;
-            }
-
-            delimiterPosition = strcspn(input, "\r\n");
-
-            if (delimiterPosition == sizeof(input) - 1) {
-                int ch;
-
-                while ((ch = getchar()) != '\n' && ch != EOF) {
-                }
-
-                snprintf(message,
-                         sizeof(message),
-                         "Invalid bet. Enter an integer between %d and %d.",
-                         minBet,
-                         maxBet);
-                renderMessage(message, ROW_RESULT, MSG_DEFAULT);
-                continue;
-            }
-
-            if (input[delimiterPosition] != '\0') {
-                input[delimiterPosition] = '\0';
-            }
-
-            betValue = strtol(input, &endPointer, 10);
-
-            while (isspace((unsigned char)*endPointer)) {
-                endPointer++;
-            }
-
-            if (input[0] != '\0' &&
-                *endPointer == '\0' &&
-                betValue >= minBet &&
-                betValue <= maxBet) {
-                if (betDivisor > 1 && betValue % betDivisor != 0) {
-                    snprintf(message,
-                             sizeof(message),
-                             "Invalid bet. Enter a multiple of %d between %d and %d.",
-                             betDivisor,
-                             minBet,
-                             maxBet);
-                    renderMessage(message, ROW_RESULT, MSG_DEFAULT);
-                    validBet = 0;
-                } else {
-                    validBet = 1;
-                }
-            } else {
-                snprintf(message,
-                         sizeof(message),
-                         "Invalid bet. Enter an integer between %d and %d.",
-                         minBet,
-                         maxBet);
-                renderMessage(message, ROW_RESULT, MSG_DEFAULT);
-            }
-        }
-
-        return (int)betValue;
-    }
-}
 
 static int canDouble(const Game *game) {
     if (game->run.floor >= 10 && game->run.dealerId == DEALER_VOID) return 0;
@@ -767,50 +439,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
 
 
 
-static int readYesNoPrompt(const char *prompt) {
-    while (1) {
-        int answer;
 
-        renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
-
-        if (inputIsRaw()) {
-            KeyEvent event;
-
-            event = readKey();
-            if (event.type == KEY_ESC || event.type == KEY_EOF) {
-                return 0;
-            }
-            if (event.type != KEY_CHAR) {
-                continue;
-            }
-            answer = (unsigned char)event.ch;
-        } else {
-            answer = getchar();
-
-            if (answer == EOF) {
-                return 0;
-            }
-
-            if (answer != '\n' && answer != '\r') {
-                while (1) {
-                    int character;
-
-                    character = getchar();
-                    if (character == '\n' || character == EOF) {
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (answer == 'y' || answer == 'Y') {
-            return 1;
-        }
-        if (answer == 'n' || answer == 'N') {
-            return 0;
-        }
-    }
-}
 
 static void askInsurance(Game *game) {
     int cost;

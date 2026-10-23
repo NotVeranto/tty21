@@ -1,5 +1,6 @@
 #include "round_cards.h"
 #include "round.h"
+#include "round_rules.h"
 
 static int countCursedFrost(const Hand *hand) {
     int count;

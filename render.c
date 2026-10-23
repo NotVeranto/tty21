@@ -5,6 +5,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include "round_economy.h"
 
 #define TABLE_MIN_HEIGHT MIN_TERMINAL_HEIGHT
 #define CARD_WIDTH 11

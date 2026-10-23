@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "input.h"
+#include "round_economy.h"
 
 void initGame(Game *game, GameMode mode) {
     initDeck(&game->deck);
