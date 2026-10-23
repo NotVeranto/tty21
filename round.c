@@ -1,5 +1,7 @@
 #define _DEFAULT_SOURCE
 #include "round.h"
+#include "round_cards.h"
+#include "round_economy.h"
 #include "render.h"
 #include "input.h"
 #include "input_map.h"
@@ -16,26 +18,9 @@
 #define DECK_RESHUFFLE_MARGIN 15
 #define FIRST_CARD_RETRY_LIMIT 50
 
-void creditChips(Game *game, int amount) {
-    long long total;
-    if (amount <= 0 || game->player.chips >= INT_MAX) return;
-    total = (long long)game->player.chips + amount;
-    game->player.chips = total > INT_MAX ? INT_MAX : (int)total;
-}
 
-static void settleInsurance(Game *game) {
-    long long value;
-    int payout;
-    char message[64];
-    if (game->player.insuranceBet <= 0) return;
-    value = (long long)game->player.insuranceBet * 3;
-    payout = value > INT_MAX - game->player.chips
-        ? INT_MAX - game->player.chips : (int)value;
-    creditChips(game, payout);
-    snprintf(message, sizeof(message), "Insurance pays: +%d chips.", payout);
-    logPush(game, message, MSG_WIN);
-    game->player.insuranceBet = 0;
-}
+
+
 
 
 static int bossRule1Disabled(const Game *game) {
@@ -57,7 +42,7 @@ static int effectiveDealerMirrorsOnHit(const Game *game) {
     if (bossRule1Disabled(game) && game->run.dealerId == DEALER_BOSS_PRIME) return 0;
     return dealerMirrorsOnHit(game->run.dealerId);
 }
-static int effectiveDealerAcesCountAsOne(const Game *game, DealerId id) {
+int effectiveDealerAcesCountAsOne(const Game *game, DealerId id) {
     if (bossRule1Disabled(game) && id == DEALER_BOSS_SUPREME) return 0;
     return dealerAcesCountAsOne(id);
 }
@@ -172,24 +157,7 @@ int fatiguePercent(int roundsOnFloor) {
     return 30;
 }
 
-void computeAdvanceForecast(const Game *game,
-                            AdvanceForecast *out) {
-    out->nextMinBet = getMinBet(game, game->run.floor + 1,
-                                game->mode);
-    out->fee = 2 * out->nextMinBet;
-    out->loanDue = 0;
-    if (game->loanAmount > 0 &&
-        game->loanDueFloor <= game->run.floor + 1) {
-        out->loanDue = game->loanAmount;
-    }
-    out->postChips = game->player.chips -
-                     out->fee - out->loanDue;
-    if (out->postChips < 0) out->postChips = 0;
-    out->affordable =
-        game->player.chips >= out->fee +
-                              out->nextMinBet +
-                              out->loanDue;
-}
+
 
 static const char *CURSE_NAMES[] = {
     "None",
@@ -257,37 +225,7 @@ static void redrawFirstPlayerCard(Game *game, int requireHighCard) {
     game->player.hands[game->player.activeHand].value = calculateHandValue(&game->player.hands[game->player.activeHand]);
 }
 
-static int applyLoss(Game *game, long long lossValue) {
-    int chipsBeforeLoss;
-    int lossAmount;
-    int remainingChips;
 
-    chipsBeforeLoss = game->player.chips;
-
-    if (chipsBeforeLoss <= 0) {
-        return 0;
-    }
-
-    if (lossValue > chipsBeforeLoss) {
-        lossAmount = chipsBeforeLoss;
-    } else {
-        lossAmount = (int)lossValue;
-    }
-
-    if (game->player.perkOwned[PERK_SURVIVAL] &&
-        lossValue >= chipsBeforeLoss) {
-        // Survival halves the pre-loss chips. With 1 chip this is 0,
-        // which ends the run as specified.
-        remainingChips = chipsBeforeLoss / 2;
-
-        game->player.chips = remainingChips;
-        lossAmount = chipsBeforeLoss - remainingChips;
-    } else {
-        game->player.chips -= lossAmount;
-    }
-
-    return lossAmount;
-}
 
 static void resetPlayerHandToEleven(Game *game) {
     Card recoveryCard;
@@ -819,120 +757,15 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
     }
 }
 
-static int countCursedFrost(const Hand *hand) {
-    int count;
-    int cardIndex;
 
-    count = 0;
 
-    for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
-        if (hand->cards[cardIndex].cursed == CURSED_FROST) {
-            count++;
-        }
-    }
 
-    return count;
-}
 
-static int calculateHandValueAcesLow(const Hand *hand) {
-    int total;
-    int i;
 
-    total = 0;
 
-    for (i = 0; i < hand->count; i++) {
-        if (hand->cards[i].rank == ACE) {
-            total += 1;
-        } else {
-            total += getCardValue(&hand->cards[i]);
-        }
-    }
 
-    return total;
-}
 
-int calculateDealerHandValue(const Game *game,
-                             const Hand *hand,
-                             DealerId id) {
-    if (twistActive(game, TWIST_ACES_LOW)) {
-        return calculateHandValueAcesLow(hand);
-    }
 
-    if (!effectiveDealerAcesCountAsOne(game, id)) {
-        return calculateHandValue(hand);
-    }
-
-    return calculateHandValueAcesLow(hand);
-}
-
-int calculatePlayerHandValue(const Game *game) {
-    int totalValue;
-    int frostCount;
-
-    if (twistActive(game, TWIST_ACES_LOW)) {
-        totalValue = calculateHandValueAcesLow(
-            &game->player.hands[game->player.activeHand]);
-    } else if (!game->player.perkOwned[PERK_ACE_HIGH]) {
-        totalValue = game->player.hands[game->player.activeHand].value;
-    } else {
-        int cardIndex;
-
-        totalValue = 0;
-
-        for (cardIndex = 0;
-             cardIndex < game->player.hands[game->player.activeHand].count;
-             cardIndex++) {
-            totalValue +=
-                getCardValue(&game->player.hands[game->player.activeHand]
-                                 .cards[cardIndex]);
-        }
-    }
-
-    frostCount = countCursedFrost(
-        &game->player.hands[game->player.activeHand]);
-    totalValue -= frostCount * 2;
-
-    if (totalValue < 0) {
-        totalValue = 0;
-    }
-
-    return totalValue;
-}
-
-int calculatePlayerHandValueForIndex(const Game *game,
-                                     int handIndex) {
-    int totalValue;
-    int frostCount;
-
-    if (twistActive(game, TWIST_ACES_LOW)) {
-        totalValue = calculateHandValueAcesLow(
-            &game->player.hands[handIndex]);
-    } else if (!game->player.perkOwned[PERK_ACE_HIGH]) {
-        totalValue = game->player.hands[handIndex].value;
-    } else {
-        int cardIndex;
-
-        totalValue = 0;
-
-        for (cardIndex = 0;
-             cardIndex < game->player.hands[handIndex].count;
-             cardIndex++) {
-            totalValue +=
-                getCardValue(&game->player.hands[handIndex]
-                                 .cards[cardIndex]);
-        }
-    }
-
-    frostCount = countCursedFrost(
-        &game->player.hands[handIndex]);
-    totalValue -= frostCount * 2;
-
-    if (totalValue < 0) {
-        totalValue = 0;
-    }
-
-    return totalValue;
-}
 
 static int readYesNoPrompt(const char *prompt) {
     while (1) {
@@ -1197,7 +1030,7 @@ void startRound(Game *game) {
     }
 
     if (dealerBJ) {
-        settleInsurance(game);
+        roundSettleInsurance(game);
         game->peekActive = 1;
         if (playerBJ)
             logPush(game, "Dealer peeks. Both have blackjack.", MSG_PUSH);
