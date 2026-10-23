@@ -137,6 +137,23 @@ static void getTerminalSize(int *width, int *height) {
     }
 }
 
+// Returns the 1-based column that centers content within the terminal.
+static int getCenteredColumn(int contentWidth) {
+    int terminalWidth;
+    int terminalHeight;
+    int column;
+
+    getTerminalSize(&terminalWidth, &terminalHeight);
+    (void)terminalHeight;
+
+    column = (terminalWidth - contentWidth) / 2 + 1;
+    if (column < 1) {
+        column = 1;
+    }
+
+    return column;
+}
+
 int renderTerminalSizeOk(int *width, int *height) {
     getTerminalSize(width, height);
     return *width >= MIN_TERMINAL_WIDTH &&
@@ -659,19 +676,84 @@ static void renderLog(const Game *game,
     fflush(stdout);
 }
 
+static void printBossPrepBoxLine(int row,
+                                 int column,
+                                 const char *text) {
+    printf(SCR_CURSOR, row, column);
+    printf("| %-60.60s |", text);
+}
+
 void renderBossPrep(const Game *game) {
-    const DealerInfo *dealerInfo = getDealerInfo(game->run.dealerId);
-    const char *rule2 = dealerInfo->rule2;
-    const char *power = dealerPowerRule2(game->run.dealerId, game->run.floor);
-    if (rule2 == NULL && power != NULL) rule2 = power;
+    enum { BOX_WIDTH = 64, BOX_HEIGHT = 9 };
+    const DealerInfo *dealerInfo;
+    const char *rule2;
+    const char *power;
+    int terminalWidth;
+    int terminalHeight;
+    int boxColumn;
+    int boxRow;
+    int i;
+    char line[256];
+
+    dealerInfo = getDealerInfo(game->run.dealerId);
+    rule2 = dealerInfo->rule2;
+    power = dealerPowerRule2(game->run.dealerId, game->run.floor);
+    if (rule2 == NULL && power != NULL) {
+        rule2 = power;
+    }
+
     initColors();
-    printf("%s%s", SCR_CLEAR, SCR_HOME);
-    printf("BOSS FLOOR: %s\n", dealerInfo->name);
-    printf("Rule 1: %s\n", dealerInfo->rule1 != NULL ? dealerInfo->rule1 : "None");
-    printf("Rule 2: %s\n", rule2 != NULL ? rule2 : "None");
-    printf("Disable Rule 1 for %d marks? (y/n)\n", game->bossRulePaid);
-    printf("Current marks: %d\n", game->run.marks);
-    if (game->run.marks < game->bossRulePaid) printf("Not enough marks to disable Rule 1.\n");
+    getTerminalSize(&terminalWidth, &terminalHeight);
+    (void)terminalWidth;
+    boxColumn = getCenteredColumn(BOX_WIDTH);
+    boxRow = (terminalHeight - BOX_HEIGHT) / 2 + 1;
+    if (boxRow < 1) {
+        boxRow = 1;
+    }
+
+    renderHideCursor();
+    printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
+
+    printf(SCR_CURSOR, boxRow, boxColumn);
+    printf("%s", scrDim());
+    for (i = 0; i < BOX_WIDTH; i++) {
+        putchar('-');
+    }
+    printf("%s", scrReset());
+
+    snprintf(line, sizeof(line), "BOSS FLOOR: %.240s",
+             dealerInfo->name != NULL ? dealerInfo->name : "Unknown");
+    printBossPrepBoxLine(boxRow + 1, boxColumn, line);
+
+    snprintf(line, sizeof(line), "Rule 1: %.240s",
+             dealerInfo->rule1 != NULL ? dealerInfo->rule1 : "None");
+    printBossPrepBoxLine(boxRow + 2, boxColumn, line);
+
+    snprintf(line, sizeof(line), "Rule 2: %.240s",
+             rule2 != NULL ? rule2 : "None");
+    printBossPrepBoxLine(boxRow + 3, boxColumn, line);
+
+    printBossPrepBoxLine(boxRow + 4, boxColumn, "");
+
+    snprintf(line, sizeof(line), "Disable Rule 1 for %d marks? (y/n)",
+             game->bossRulePaid);
+    printBossPrepBoxLine(boxRow + 5, boxColumn, line);
+
+    snprintf(line, sizeof(line), "Current marks: %d", game->run.marks);
+    printBossPrepBoxLine(boxRow + 6, boxColumn, line);
+
+    if (game->run.marks < game->bossRulePaid) {
+        printBossPrepBoxLine(boxRow + 7, boxColumn, "Not enough marks.");
+    } else {
+        printBossPrepBoxLine(boxRow + 7, boxColumn, "");
+    }
+
+    printf(SCR_CURSOR, boxRow + BOX_HEIGHT - 1, boxColumn);
+    printf("%s", scrDim());
+    for (i = 0; i < BOX_WIDTH; i++) {
+        putchar('-');
+    }
+    printf("%s", scrReset());
     fflush(stdout);
 }
 
@@ -1499,8 +1581,6 @@ void renderMenu(const char *title,
                 int startRow) {
     int terminalWidth;
     int terminalHeight;
-    int menuAreaWidth;
-    int menuAreaPadding;
     int titlePadding;
     int itemIndex;
     int isDisabled;
@@ -1521,21 +1601,7 @@ void renderMenu(const char *title,
         terminalWidth >= MIN_TERMINAL_WIDTH &&
         terminalHeight >= MIN_TERMINAL_HEIGHT) {
         renderHideCursor();
-        menuAreaWidth = terminalWidth - tablePadding * 2;
-        menuAreaPadding = tablePadding;
-
-        if (menuAreaWidth < 1 ||
-            menuAreaWidth < (int)strlen(title)) {
-            menuAreaWidth = terminalWidth;
-            menuAreaPadding = 0;
-        }
-
-        titlePadding = menuAreaPadding +
-                       (menuAreaWidth - (int)strlen(title)) / 2;
-
-        if (titlePadding < 0) {
-            titlePadding = 0;
-        }
+        titlePadding = getCenteredColumn((int)strlen(title)) - 1;
 
         printf(SCR_CURSOR, startRow - 1, titlePadding + 1);
         printf(SCR_ERASE_EOL);
@@ -1546,20 +1612,7 @@ void renderMenu(const char *title,
             rowWidth = 2 + 3 + 2 +
                        (int)strlen(items[itemIndex].label);
 
-            menuAreaWidth = terminalWidth - tablePadding * 2;
-            menuAreaPadding = tablePadding;
-
-            if (menuAreaWidth < rowWidth) {
-                menuAreaWidth = terminalWidth;
-                menuAreaPadding = 0;
-            }
-
-            rowPadding = menuAreaPadding +
-                         (menuAreaWidth - rowWidth) / 2;
-
-            if (rowPadding < 0) {
-                rowPadding = 0;
-            }
+            rowPadding = getCenteredColumn(rowWidth) - 1;
 
             printf(SCR_CURSOR, startRow + itemIndex, rowPadding + 1);
             printf(SCR_ERASE_EOL);
@@ -1652,10 +1705,8 @@ void renderShop(const Game *game,
         terminalWidth >= MIN_TERMINAL_WIDTH &&
         terminalHeight >= MIN_TERMINAL_HEIGHT) {
         renderHideCursor();
-        shopPadding = (terminalWidth - tableWidth) / 2;
-        if (shopPadding < 0) shopPadding = 0;
-        titlePadding = shopPadding +
-                       (tableWidth - (int)strlen("SHOP")) / 2;
+        shopPadding = getCenteredColumn(tableWidth) - 1;
+        titlePadding = getCenteredColumn((int)strlen("SHOP")) - 1;
 
         printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
         printf(SCR_CURSOR, ROW_SHOP_TITLE, titlePadding + 1);
@@ -1675,10 +1726,7 @@ void renderShop(const Game *game,
             }
         }
         blockWidth = 6 + maxLabelWidth;
-        blockPadding = (terminalWidth - blockWidth) / 2;
-        if (blockPadding < 0) {
-            blockPadding = 0;
-        }
+        blockPadding = getCenteredColumn(blockWidth) - 1;
 
         currentRow = SHOP_ITEM_START_ROW;
         prevGroup = -1;
@@ -1937,18 +1985,19 @@ void renderHelpOverlay(const Game *game) {
                 boxWidth = 60;
             }
 
-            boxLeft = (terminalWidth - boxWidth) / 2 + 1;
+            boxLeft = getCenteredColumn(boxWidth);
             leftColumn = boxLeft;
             columnWidth = boxWidth;
             boxTop = 2;
             contentRow = boxTop + 4;
         } else {
-            leftColumn = 2;
-            columnWidth = terminalWidth - 3;
+            columnWidth = terminalWidth - 4;
 
             if (columnWidth < 20) {
                 columnWidth = 20;
             }
+
+            leftColumn = getCenteredColumn(columnWidth);
 
             boxTop = 1;
             contentRow = 4;
