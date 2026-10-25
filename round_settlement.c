@@ -15,6 +15,13 @@ typedef struct {
     int winStreakBefore;
     int evenMoneyBefore;
     int roundHadBlackjack;
+    int currentFatigue;
+    int handValue;
+    int playerBlackjack;
+    int splitBet;
+    int dealerValue;
+    int dealerHandCount;
+    int outcome;
 } SettlementContext;
 
 typedef enum {
@@ -53,6 +60,83 @@ static HandOutcome classifyHandOutcome(int handValue,
         return HAND_OUTCOME_WIN;
     }
     return HAND_OUTCOME_LOSS;
+}
+
+
+static int calculateHandPayout(Game *game, const SettlementContext *ctx,
+                               int playerHandIndex, int dealerHandIndex) {
+    long long basePayout = 0;
+    long long payoutValue;
+    int splitBet = game->player.bets[playerHandIndex] / ctx->dealerHandCount;
+    int payout;
+    HandOutcome outcome = (HandOutcome)ctx->outcome;
+    (void)dealerHandIndex;
+    if (outcome == HAND_OUTCOME_BLACKJACK) {
+        int numerator = effectiveDealerBlackjackNumerator(game);
+        int denominator = effectiveDealerBlackjackDenominator(game);
+        if (game->run.floor >= 10 && game->run.dealerId == DEALER_REAPER) {
+            numerator = 1; denominator = 1;
+        }
+        basePayout = ((long long)splitBet * numerator) / denominator;
+        if (twistActive(game, TWIST_DESPERATION) && game->player.usedDouble) basePayout *= 3;
+        if (twistActive(game, TWIST_HIGH_STAKES)) basePayout *= 2;
+        if (twistActive(game, TWIST_BLOOD_PACT)) basePayout *= 2;
+        if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble && !game->player.usedSplit)
+            basePayout += splitBet / 2;
+        if (game->player.perkOwned[PERK_COMPOUNDING])
+            basePayout += game->winStreak < 10 ? game->winStreak : 10;
+    } else if (outcome == HAND_OUTCOME_WIN) {
+        basePayout = splitBet;
+        if (dealerPaysPureHandBonus(game->run.dealerId) && !game->player.usedSplit && !game->player.usedDouble) basePayout *= 2;
+        if (twistActive(game, TWIST_DESPERATION) && game->player.usedDouble) basePayout *= 3;
+        if (twistActive(game, TWIST_HIGH_STAKES)) basePayout *= 2;
+        if (twistActive(game, TWIST_BLOOD_PACT)) basePayout *= 2;
+        if (twistActive(game, TWIST_HALF_PAYOUT)) basePayout /= 2;
+        if (twistActive(game, TWIST_JACKPOT) && rngRange(0, 99) < 5) basePayout *= 10;
+        if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble && !game->player.usedSplit)
+            basePayout += splitBet / 2;
+        if (game->player.perkOwned[PERK_COMPOUNDING])
+            basePayout += game->winStreak < 10 ? game->winStreak : 10;
+    } else return 0;
+    payoutValue = basePayout;
+    if (game->mode == MODE_ROGUELIKE && game->winStreak >= 3) payoutValue *= 2;
+    payoutValue = payoutValue * ctx->currentFatigue / 100;
+    if (payoutValue > INT_MAX - game->player.chips) payout = INT_MAX - game->player.chips;
+    else payout = (int)payoutValue;
+    return payout;
+}
+
+static int calculateHandLoss(Game *game, const SettlementContext *ctx,
+                             int playerHandIndex, int dealerHandIndex) {
+    long long baseLoss;
+    long long lossPower;
+    int splitBet = game->player.bets[playerHandIndex] / ctx->dealerHandCount;
+    int skipLossReduction;
+    HandOutcome outcome = (HandOutcome)ctx->outcome;
+    (void)dealerHandIndex;
+    baseLoss = ((long long)splitBet * effectiveDealerLossMultiplier(game)) / 100;
+    if (outcome == HAND_OUTCOME_BUST) {
+        skipLossReduction = twistActive(game, TWIST_DESPERATION) && game->player.usedDouble;
+        if (!skipLossReduction && twistActive(game, TWIST_BUST_INSURANCE)) baseLoss /= 2;
+        if (!skipLossReduction && twistActive(game, TWIST_CHARITY)) baseLoss /= 2;
+        if (!skipLossReduction && twistActive(game, TWIST_HIGH_STAKES)) baseLoss *= 2;
+    } else {
+        if (twistActive(game, TWIST_CHARITY)) baseLoss /= 2;
+        if (twistActive(game, TWIST_HIGH_STAKES)) baseLoss *= 2;
+    }
+    if (twistActive(game, TWIST_BLOOD_PACT)) baseLoss *= 2;
+    lossPower = dealerPowerLossMultiplier(game->run.dealerId, game->run.floor);
+    if (lossPower != 100) baseLoss = baseLoss * lossPower / 100;
+    if (outcome != HAND_OUTCOME_LOSS && baseLoss > INT_MAX) baseLoss = INT_MAX;
+    if (outcome != HAND_OUTCOME_BUST &&
+        game->player.perkOwned[PERK_INSURANCE_PERK] &&
+        game->player.perkCharges[PERK_INSURANCE_PERK] > 0 && baseLoss > 0) {
+        baseLoss /= 2;
+        game->player.perkCharges[PERK_INSURANCE_PERK]--;
+        logPush(game, "Insurance used: loss halved.", MSG_INFO);
+    }
+    if (baseLoss > INT_MAX) baseLoss = INT_MAX;
+    return (int)baseLoss;
 }
 
 static void applyRoundRewards(Game *game, MessageStyle resultStyle) {
@@ -324,12 +408,9 @@ void resolveRound(Game *game) {
     int messageTruncated;
     int dealerHandIndex;
     int anyDealerBlackjack;
-    int skipLossReduction;
     int greedAwarded;
     int handWon;
     int currentFatigue;
-    long long payoutValue;
-    long long basePayout;
     long long baseLoss;
     long long payoutTotal;
     long long lossTotal;
@@ -426,6 +507,8 @@ void resolveRound(Game *game) {
         currentFatigue = 100;
     }
 
+    ctx.currentFatigue = currentFatigue;
+    ctx.dealerHandCount = dealerHandCount;
     resultMessage[0] = '\0';
     messageTruncated = 0;
 
@@ -439,6 +522,9 @@ void resolveRound(Game *game) {
                           handValue == 21 &&
                           !game->player.usedSplit;
         splitBet = handBet / dealerHandCount;
+        ctx.handValue = handValue;
+        ctx.playerBlackjack = playerBlackjack;
+        ctx.splitBet = splitBet;
         handPayoutTotal = 0;
         handLossTotal = 0;
         anyDealerBlackjack = 0;
@@ -464,51 +550,15 @@ void resolveRound(Game *game) {
 
             payout = 0;
             lossAmount = 0;
-            payoutValue = 0;
-            basePayout = 0;
             baseLoss = 0;
-            skipLossReduction = 0;
             handWon = 0;
 
             outcome = classifyHandOutcome(handValue, playerBlackjack,
                                           dealerBlackjack, dealerValue);
+            ctx.outcome = (int)outcome;
+            ctx.dealerValue = dealerValue;
             if (outcome == HAND_OUTCOME_BUST) {
-                baseLoss = ((long long)splitBet *
-                            effectiveDealerLossMultiplier(game)) / 100;
-                skipLossReduction =
-                    twistActive(game, TWIST_DESPERATION) &&
-                    game->player.usedDouble;
-
-                if (!skipLossReduction &&
-                    twistActive(game, TWIST_BUST_INSURANCE)) {
-                    baseLoss /= 2;
-                }
-
-                if (!skipLossReduction &&
-                    twistActive(game, TWIST_CHARITY)) {
-                    baseLoss /= 2;
-                }
-
-                if (!skipLossReduction &&
-                    twistActive(game, TWIST_HIGH_STAKES)) {
-                    baseLoss *= 2;
-                }
-
-                if (twistActive(game, TWIST_BLOOD_PACT)) {
-                    baseLoss *= 2;
-                }
-
-                {
-                    long long lossPower = dealerPowerLossMultiplier(
-                        game->run.dealerId, game->run.floor);
-                    if (lossPower != 100) {
-                        baseLoss = baseLoss * lossPower / 100;
-                    }
-                }
-
-                if (baseLoss > INT_MAX) {
-                    baseLoss = INT_MAX;
-                }
+                baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
 
                 if (game->player.perkOwned[PERK_DEALERS_FAVOR] &&
                     game->player.perkCharges[PERK_DEALERS_FAVOR] > 0) {
@@ -521,6 +571,16 @@ void resolveRound(Game *game) {
                                  "Dealer's Favor: bust pushed.");
                     }
                 } else {
+                    if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
+                        game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
+                        baseLoss > 0) {
+                        baseLoss /= 2;
+                        game->player.perkCharges[PERK_INSURANCE_PERK]--;
+                        logPush(game,
+                                "Insurance used: loss halved.",
+                                MSG_INFO);
+                    }
+
                     if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
                         game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
                         baseLoss > 0) {
@@ -564,57 +624,8 @@ void resolveRound(Game *game) {
                     }
                 }
             } else if (outcome == HAND_OUTCOME_BLACKJACK) {
-                int bjRatioNumerator = effectiveDealerBlackjackNumerator(game);
-                int bjRatioDenominator = effectiveDealerBlackjackDenominator(game);
                 ctx.roundHadBlackjack = 1;
-                if (game->run.floor >= 10 && game->run.dealerId == DEALER_REAPER) {
-                    bjRatioNumerator = 1;
-                    bjRatioDenominator = 1;
-                }
-                basePayout = ((long long)splitBet * bjRatioNumerator) /
-                             bjRatioDenominator;
-
-                if (twistActive(game, TWIST_DESPERATION) &&
-                    game->player.usedDouble) {
-                    basePayout *= 3;
-                }
-
-                if (twistActive(game, TWIST_HIGH_STAKES)) {
-                    basePayout *= 2;
-                }
-
-                if (twistActive(game, TWIST_BLOOD_PACT)) {
-                    basePayout *= 2;
-                }
-
-                if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
-                    game->player.usedDouble &&
-                    !game->player.usedSplit) {
-                    basePayout += splitBet / 2;
-                }
-
-                if (game->player.perkOwned[PERK_COMPOUNDING]) {
-                    basePayout += game->winStreak < 10 ?
-                                  game->winStreak : 10;
-                }
-
-                payoutValue = basePayout;
-
-                if (game->mode == MODE_ROGUELIKE &&
-                    game->winStreak >= 3) {
-                    /* Apply the streak bonus before floor fatigue. */
-                    payoutValue *= 2;
-                }
-
-                payoutValue = payoutValue *
-                              currentFatigue / 100;
-
-                if (payoutValue > INT_MAX - game->player.chips) {
-                    payout = INT_MAX - game->player.chips;
-                } else {
-                    payout = (int)payoutValue;
-                }
-
+                payout = calculateHandPayout(game, &ctx, handIndex, dealerHandIndex);
                 creditChips(game, payout);
                 payoutTotal += payout;
                 handPayoutTotal += payout;
@@ -648,43 +659,7 @@ void resolveRound(Game *game) {
                     }
                 }
             } else if (outcome == HAND_OUTCOME_DEALER_BLACKJACK) {
-                baseLoss = ((long long)splitBet *
-                            effectiveDealerLossMultiplier(game)) / 100;
-
-                if (twistActive(game, TWIST_CHARITY)) {
-                    baseLoss /= 2;
-                }
-
-                if (twistActive(game, TWIST_HIGH_STAKES)) {
-                    baseLoss *= 2;
-                }
-
-                if (twistActive(game, TWIST_BLOOD_PACT)) {
-                    baseLoss *= 2;
-                }
-
-                {
-                    long long lossPower = dealerPowerLossMultiplier(
-                        game->run.dealerId, game->run.floor);
-                    if (lossPower != 100) {
-                        baseLoss = baseLoss * lossPower / 100;
-                    }
-                }
-
-                if (baseLoss > INT_MAX) {
-                    baseLoss = INT_MAX;
-                }
-
-                if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
-                    game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
-                    baseLoss > 0) {
-                    baseLoss /= 2;
-                    game->player.perkCharges[PERK_INSURANCE_PERK]--;
-                    logPush(game,
-                            "Insurance used: loss halved.",
-                            MSG_INFO);
-                }
-
+                baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
@@ -744,64 +719,7 @@ void resolveRound(Game *game) {
                     }
                 }
             } else if (outcome == HAND_OUTCOME_WIN) {
-                basePayout = splitBet;
-
-                if (dealerPaysPureHandBonus(game->run.dealerId) &&
-                    !game->player.usedSplit &&
-                    !game->player.usedDouble) {
-                    basePayout *= 2;
-                }
-
-                if (twistActive(game, TWIST_DESPERATION) &&
-                    game->player.usedDouble) {
-                    basePayout *= 3;
-                }
-
-                if (twistActive(game, TWIST_HIGH_STAKES)) {
-                    basePayout *= 2;
-                }
-
-                if (twistActive(game, TWIST_BLOOD_PACT)) {
-                    basePayout *= 2;
-                }
-
-                if (twistActive(game, TWIST_HALF_PAYOUT)) {
-                    basePayout /= 2;
-                }
-
-                if (twistActive(game, TWIST_JACKPOT) &&
-                    rngRange(0, 99) < 5) {
-                    basePayout *= 10;
-                }
-
-                if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
-                    game->player.usedDouble &&
-                    !game->player.usedSplit) {
-                    basePayout += splitBet / 2;
-                }
-
-                if (game->player.perkOwned[PERK_COMPOUNDING]) {
-                    basePayout += game->winStreak < 10 ?
-                                  game->winStreak : 10;
-                }
-
-                payoutValue = basePayout;
-
-                if (game->mode == MODE_ROGUELIKE &&
-                    game->winStreak >= 3) {
-                    /* Apply the streak bonus before floor fatigue. */
-                    payoutValue *= 2;
-                }
-
-                payoutValue = payoutValue *
-                              currentFatigue / 100;
-
-                if (payoutValue > INT_MAX - game->player.chips) {
-                    payout = INT_MAX - game->player.chips;
-                } else {
-                    payout = (int)payoutValue;
-                }
-
+                payout = calculateHandPayout(game, &ctx, handIndex, dealerHandIndex);
                 creditChips(game, payout);
                 payoutTotal += payout;
                 handPayoutTotal += payout;
@@ -813,43 +731,7 @@ void resolveRound(Game *game) {
                              payout, game->player.chips);
                 }
             } else {
-                baseLoss = ((long long)splitBet *
-                            effectiveDealerLossMultiplier(game)) / 100;
-
-                if (twistActive(game, TWIST_CHARITY)) {
-                    baseLoss /= 2;
-                }
-
-                if (twistActive(game, TWIST_HIGH_STAKES)) {
-                    baseLoss *= 2;
-                }
-
-                if (twistActive(game, TWIST_BLOOD_PACT)) {
-                    baseLoss *= 2;
-                }
-
-                {
-                    long long lossPower = dealerPowerLossMultiplier(
-                        game->run.dealerId, game->run.floor);
-                    if (lossPower != 100) {
-                        baseLoss = baseLoss * lossPower / 100;
-                    }
-                }
-
-                if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
-                    game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
-                    baseLoss > 0) {
-                    baseLoss /= 2;
-                    game->player.perkCharges[PERK_INSURANCE_PERK]--;
-                    logPush(game,
-                            "Insurance used: loss halved.",
-                            MSG_INFO);
-                }
-
-                if (baseLoss > INT_MAX) {
-                    baseLoss = INT_MAX;
-                }
-
+                baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;

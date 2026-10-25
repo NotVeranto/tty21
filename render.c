@@ -1,5 +1,8 @@
 #include "render.h"
 
+#include "round_cards.h"
+#include "round_rules.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
