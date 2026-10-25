@@ -11,21 +11,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-static KeyEvent makeKeyEvent(int character) {
+KeyEvent makeKeyEvent(char inputCharacter) {
     KeyEvent event;
 
     event.type = KEY_NONE;
     event.ch = '\0';
 
-    if (character == EOF) {
+    if (inputCharacter == EOF) {
         event.type = KEY_EOF;
-    } else if (character == '\r' || character == '\n') {
+    } else if (inputCharacter == '\r' || inputCharacter == '\n') {
         event.type = KEY_ENTER;
-    } else if (character == 27) {
+    } else if (inputCharacter == 27) {
         event.type = KEY_ESC;
     } else {
         event.type = KEY_CHAR;
-        event.ch = (char)character;
+        event.ch = (char)inputCharacter;
     }
 
     return event;
