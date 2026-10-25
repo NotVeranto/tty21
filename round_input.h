@@ -2,6 +2,7 @@
 #define ROUND_INPUT_H
 
 #include "game.h"
+#include "input.h"
 #include "input_map.h"
 
 KeyEvent makeKeyEvent(char inputCharacter);

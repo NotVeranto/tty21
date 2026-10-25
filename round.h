@@ -6,8 +6,6 @@
 void startRound(Game *game);
 void drawCard(Game *game, Hand *hand, int allowCurse);
 void resetPlayerHandToEleven(Game *game);
-void dealerTurn(Game *game);
-void resolveRound(Game *game);
 
 typedef struct {
     int fee;           /* advanceFee */

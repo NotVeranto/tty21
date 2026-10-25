@@ -1,5 +1,7 @@
 #include "game.h"
 #include "round.h"
+#include "round_dealer.h"
+#include "round_settlement.h"
 #include "round_actions.h"
 #include "render.h"
 #include "menu.h"

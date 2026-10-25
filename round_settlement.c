@@ -1,0 +1,953 @@
+#include "round_settlement.h"
+
+#include "round_cards.h"
+#include "round_economy.h"
+#include "round_rules.h"
+#include "dealers.h"
+#include "render.h"
+#include "rng.h"
+
+#include <stdio.h>
+#include <string.h>
+
+static void appendResultMessage(char *buffer,
+                                size_t bufferSize,
+                                const char *message,
+                                int *truncated) {
+    size_t currentLength;
+    const char *separator;
+    int written;
+
+    if (*truncated) {
+        return;
+    }
+
+    currentLength = strlen(buffer);
+    separator = currentLength > 0 ? "   " : "";
+    written = snprintf(buffer + currentLength,
+                       bufferSize - currentLength,
+                       "%s%s",
+                       separator,
+                       message);
+
+    if (written < 0) {
+        *truncated = 1;
+    } else if ((size_t)written >= bufferSize - currentLength) {
+        if (bufferSize >= 4) {
+            buffer[bufferSize - 4] = '.';
+            buffer[bufferSize - 3] = '.';
+            buffer[bufferSize - 2] = '.';
+            buffer[bufferSize - 1] = '\0';
+        }
+
+        *truncated = 1;
+    }
+}
+
+static void appendModifierToken(char *out, size_t outSize,
+                                 const char *token) {
+    size_t length;
+
+    length = strlen(out);
+    if (length + 2 + strlen(token) >= outSize) {
+        return;
+    }
+
+    snprintf(out + length,
+             outSize - length,
+             "%s%s",
+             length > 0 ? ", " : "",
+             token);
+}
+
+static void buildModifierList(const Game *game,
+                              int winStreakBefore,
+                              int roundHadBlackjack,
+                              int isWin,
+                              char *out, size_t outSize) {
+    int numerator;
+    int denominator;
+    int powerMultiplier;
+    int compoundingBonus;
+    char token[32];
+
+    if (outSize == 0) {
+        return;
+    }
+
+    out[0] = '\0';
+
+#define APPEND_MODIFIER(tokenValue) \
+    do { \
+        if (strlen(out) + 2 + strlen(tokenValue) >= outSize) { \
+            goto modifier_list_done; \
+        } \
+        appendModifierToken(out, outSize, tokenValue); \
+    } while (0)
+
+    if (roundHadBlackjack && isWin) {
+        numerator = effectiveDealerBlackjackNumerator(game);
+        denominator = effectiveDealerBlackjackDenominator(game);
+
+        if (numerator == 3 && denominator == 2) {
+            APPEND_MODIFIER("BJ 3:2");
+        } else if (numerator == 1 && denominator == 1) {
+            APPEND_MODIFIER("BJ 1:1");
+        } else {
+            APPEND_MODIFIER("BJ");
+        }
+    }
+
+    if (twistActive(game, TWIST_DESPERATION) &&
+        game->player.usedDouble && isWin) {
+        APPEND_MODIFIER("Desp 3x");
+    }
+
+    if (twistActive(game, TWIST_HIGH_STAKES)) {
+        APPEND_MODIFIER("High 2x");
+    }
+
+    if (twistActive(game, TWIST_BLOOD_PACT)) {
+        APPEND_MODIFIER("Blood 2x");
+    }
+
+    if (twistActive(game, TWIST_HALF_PAYOUT) && isWin) {
+        APPEND_MODIFIER("Half 0.5");
+    }
+
+    if (twistActive(game, TWIST_CHARITY) && !isWin) {
+        APPEND_MODIFIER("Charity 0.5");
+    }
+
+    if (twistActive(game, TWIST_BUST_INSURANCE) && !isWin) {
+        APPEND_MODIFIER("BustIns 0.5");
+    }
+
+    if (game->mode == MODE_ROGUELIKE &&
+        winStreakBefore >= 3 && isWin) {
+        APPEND_MODIFIER("Streak 2x");
+    }
+
+    if (!isWin) {
+        powerMultiplier = dealerPowerLossMultiplier(game->run.dealerId,
+                                                     game->run.floor);
+        if (powerMultiplier == 125) {
+            APPEND_MODIFIER("Power x1.25");
+        } else if (powerMultiplier == 150) {
+            APPEND_MODIFIER("Power x1.5");
+        } else if (powerMultiplier == 200) {
+            APPEND_MODIFIER("Power x2.0");
+        }
+
+        if (effectiveDealerLossMultiplier(game) == 150) {
+            APPEND_MODIFIER("Dealer 1.5");
+        }
+    }
+
+    if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
+        game->player.usedDouble &&
+        !game->player.usedSplit && isWin) {
+        APPEND_MODIFIER("Dip +B/2");
+    }
+
+    if (game->player.perkOwned[PERK_COMPOUNDING] &&
+        winStreakBefore > 0 && isWin) {
+        compoundingBonus = winStreakBefore < 10 ? winStreakBefore : 10;
+        snprintf(token, sizeof(token), "Comp +%d", compoundingBonus);
+        APPEND_MODIFIER(token);
+    }
+
+modifier_list_done:
+    if (out[0] == '\0') {
+        snprintf(out, outSize, "(none)");
+    }
+
+#undef APPEND_MODIFIER
+}
+
+void resolveRound(Game *game) {
+    int dealerValue;
+    int dealerBlackjack;
+    int dealerHandCount;
+    int dealerValues[2];
+    int dealerBlackjacks[2];
+    int handIndex;
+    int handValue;
+    int handBet;
+    int splitBet;
+    int payout;
+    int lossAmount;
+    int playerBlackjack;
+    int messageLength;
+    int messageTruncated;
+    int dealerHandIndex;
+    int anyDealerBlackjack;
+    int skipLossReduction;
+    int greedAwarded;
+    int handWon;
+    int currentFatigue;
+    int winStreakBefore;
+    int roundHadBlackjack;
+    int evenMoneyBefore;
+    long long payoutValue;
+    long long basePayout;
+    long long baseLoss;
+    long long payoutTotal;
+    long long lossTotal;
+    long long handPayoutTotal;
+    long long handLossTotal;
+    MessageStyle resultStyle;
+    char resultMessage[256];
+    char handMessage[64];
+    char *payoutBreakdownText;
+
+    winStreakBefore = game->winStreak;
+    roundHadBlackjack = 0;
+    evenMoneyBefore = game->player.evenMoneyTaken;
+    payoutBreakdownText = game->lastPayoutBreakdown;
+    game->lastPayoutBreakdown[0] = '\0';
+
+    dealerHandCount = game->dealer.handCount;
+
+    for (dealerHandIndex = 0;
+         dealerHandIndex < dealerHandCount;
+         dealerHandIndex++) {
+        dealerValues[dealerHandIndex] =
+            calculateDealerHandValue(game,
+                                     &game->dealer.hands[dealerHandIndex],
+                                     game->run.dealerId);
+        dealerBlackjacks[dealerHandIndex] =
+            game->dealer.hands[dealerHandIndex].count == 2 &&
+            dealerValues[dealerHandIndex] == 21;
+    }
+
+    {
+        int bleedCount;
+        int playerCardIndex;
+
+        bleedCount = 0;
+
+        for (handIndex = 0;
+             handIndex < game->player.handCount;
+             handIndex++) {
+            for (playerCardIndex = 0;
+                 playerCardIndex < game->player.hands[handIndex].count;
+                 playerCardIndex++) {
+                if (game->player.hands[handIndex]
+                        .cards[playerCardIndex].cursed == CURSED_BLEED) {
+                    bleedCount++;
+                }
+            }
+        }
+
+        if (bleedCount > 0) {
+            int bleedLoss;
+
+            bleedLoss = bleedCount;
+
+            if (bleedLoss > game->player.chips) {
+                bleedLoss = game->player.chips;
+            }
+
+            game->player.chips -= bleedLoss;
+
+            if (game->player.chips < 0) {
+                game->player.chips = 0;
+            }
+
+            {
+                char bleedMessage[64];
+
+                snprintf(bleedMessage,
+                         sizeof(bleedMessage),
+                         "Bleed: -%d chips.",
+                         bleedCount);
+                logPush(game, bleedMessage, MSG_LOSS);
+            }
+        }
+    }
+
+    payoutTotal = 0;
+    lossTotal = 0;
+    greedAwarded = 0;
+    if (game->mode == MODE_ROGUELIKE) {
+        currentFatigue = fatiguePercent(game->run.roundsOnFloor);
+
+        if (game->fatigueTier == 0) {
+            game->fatigueTier = currentFatigue;
+        } else if (currentFatigue < game->fatigueTier) {
+            char fatigueMessage[64];
+
+            snprintf(fatigueMessage,
+                     sizeof(fatigueMessage),
+                     "Payout reduced to %d%% (floor fatigue).",
+                     currentFatigue);
+            logPush(game, fatigueMessage, MSG_LOSS);
+            game->fatigueTier = currentFatigue;
+        }
+    } else {
+        currentFatigue = 100;
+    }
+
+    resultMessage[0] = '\0';
+    messageTruncated = 0;
+
+    for (handIndex = 0;
+         handIndex < game->player.handCount;
+         handIndex++) {
+        handValue = calculatePlayerHandValueForIndex(game, handIndex);
+        handBet = game->player.bets[handIndex];
+        playerBlackjack = game->roundHadNaturalBj &&
+                          game->player.hands[handIndex].count == 2 &&
+                          handValue == 21 &&
+                          !game->player.usedSplit;
+        splitBet = handBet / dealerHandCount;
+        handPayoutTotal = 0;
+        handLossTotal = 0;
+        anyDealerBlackjack = 0;
+
+        if (game->player.evenMoneyTaken) {
+            payoutTotal += handBet;
+            handPayoutTotal = handBet;
+            handWon = 1;
+            snprintf(resultMessage, sizeof(resultMessage),
+                     "Even money taken: +%d chips.", handBet);
+            continue;
+        }
+
+        for (dealerHandIndex = 0;
+             dealerHandIndex < dealerHandCount;
+             dealerHandIndex++) {
+            dealerValue = dealerValues[dealerHandIndex];
+            dealerBlackjack = dealerBlackjacks[dealerHandIndex];
+
+            if (dealerBlackjack) {
+                anyDealerBlackjack = 1;
+            }
+
+            payout = 0;
+            lossAmount = 0;
+            payoutValue = 0;
+            basePayout = 0;
+            baseLoss = 0;
+            skipLossReduction = 0;
+            handWon = 0;
+
+            if (handValue > 21) {
+                baseLoss = ((long long)splitBet *
+                            effectiveDealerLossMultiplier(game)) / 100;
+                skipLossReduction =
+                    twistActive(game, TWIST_DESPERATION) &&
+                    game->player.usedDouble;
+
+                if (!skipLossReduction &&
+                    twistActive(game, TWIST_BUST_INSURANCE)) {
+                    baseLoss /= 2;
+                }
+
+                if (!skipLossReduction &&
+                    twistActive(game, TWIST_CHARITY)) {
+                    baseLoss /= 2;
+                }
+
+                if (!skipLossReduction &&
+                    twistActive(game, TWIST_HIGH_STAKES)) {
+                    baseLoss *= 2;
+                }
+
+                if (twistActive(game, TWIST_BLOOD_PACT)) {
+                    baseLoss *= 2;
+                }
+
+                {
+                    long long lossPower = dealerPowerLossMultiplier(
+                        game->run.dealerId, game->run.floor);
+                    if (lossPower != 100) {
+                        baseLoss = baseLoss * lossPower / 100;
+                    }
+                }
+
+                if (baseLoss > INT_MAX) {
+                    baseLoss = INT_MAX;
+                }
+
+                if (game->player.perkOwned[PERK_DEALERS_FAVOR] &&
+                    game->player.perkCharges[PERK_DEALERS_FAVOR] > 0) {
+                    game->player.perkCharges[PERK_DEALERS_FAVOR]--;
+
+                    if (dealerHandCount == 1 &&
+                        game->player.handCount == 1) {
+                        snprintf(resultMessage,
+                                 sizeof(resultMessage),
+                                 "Dealer's Favor: bust pushed.");
+                    }
+                } else {
+                    if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
+                        game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
+                        baseLoss > 0) {
+                        baseLoss /= 2;
+                        game->player.perkCharges[PERK_INSURANCE_PERK]--;
+                        logPush(game,
+                                "Insurance used: loss halved.",
+                                MSG_INFO);
+                    }
+
+                    lossAmount = applyLoss(game, baseLoss);
+                    lossTotal += lossAmount;
+                    handLossTotal += lossAmount;
+
+                    if (dealerHandCount == 1) {
+                        if (game->player.handCount == 1) {
+                            snprintf(resultMessage,
+                                     sizeof(resultMessage),
+                                     "Player busts. You lose %d chips. Chips: %d.",
+                                     lossAmount,
+                                     game->player.chips);
+                        } else {
+                            messageLength = snprintf(handMessage,
+                                                     sizeof(handMessage),
+                                                     "Hand %d: bust (-%d)",
+                                                     handIndex + 1,
+                                                     lossAmount);
+
+                            if (messageLength < 0) {
+                                snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: bust",
+                                         handIndex + 1);
+                            }
+
+                            appendResultMessage(resultMessage,
+                                                sizeof(resultMessage),
+                                                handMessage,
+                                                &messageTruncated);
+                        }
+                    }
+                }
+            } else if (playerBlackjack && !dealerBlackjack) {
+                int bjRatioNumerator = effectiveDealerBlackjackNumerator(game);
+                int bjRatioDenominator = effectiveDealerBlackjackDenominator(game);
+                roundHadBlackjack = 1;
+                if (game->run.floor >= 10 && game->run.dealerId == DEALER_REAPER) {
+                    bjRatioNumerator = 1;
+                    bjRatioDenominator = 1;
+                }
+                basePayout = ((long long)splitBet * bjRatioNumerator) /
+                             bjRatioDenominator;
+
+                if (twistActive(game, TWIST_DESPERATION) &&
+                    game->player.usedDouble) {
+                    basePayout *= 3;
+                }
+
+                if (twistActive(game, TWIST_HIGH_STAKES)) {
+                    basePayout *= 2;
+                }
+
+                if (twistActive(game, TWIST_BLOOD_PACT)) {
+                    basePayout *= 2;
+                }
+
+                if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
+                    game->player.usedDouble &&
+                    !game->player.usedSplit) {
+                    basePayout += splitBet / 2;
+                }
+
+                if (game->player.perkOwned[PERK_COMPOUNDING]) {
+                    basePayout += game->winStreak < 10 ?
+                                  game->winStreak : 10;
+                }
+
+                payoutValue = basePayout;
+
+                if (game->mode == MODE_ROGUELIKE &&
+                    game->winStreak >= 3) {
+                    /* Apply the streak bonus before floor fatigue. */
+                    payoutValue *= 2;
+                }
+
+                payoutValue = payoutValue *
+                              currentFatigue / 100;
+
+                if (payoutValue > INT_MAX - game->player.chips) {
+                    payout = INT_MAX - game->player.chips;
+                } else {
+                    payout = (int)payoutValue;
+                }
+
+                creditChips(game, payout);
+                payoutTotal += payout;
+                handPayoutTotal += payout;
+                handWon = 1;
+
+                if (dealerHandCount == 1) {
+                    if (game->player.handCount == 1) {
+                        snprintf(resultMessage,
+                                 sizeof(resultMessage),
+                                 "Blackjack! You win %d chips. Chips: %d.",
+                                 payout,
+                                 game->player.chips);
+                    } else {
+                        messageLength = snprintf(handMessage,
+                                                 sizeof(handMessage),
+                                                 "Hand %d: blackjack (+%d)",
+                                                 handIndex + 1,
+                                                 payout);
+
+                        if (messageLength < 0) {
+                            snprintf(handMessage,
+                                     sizeof(handMessage),
+                                     "Hand %d: blackjack",
+                                     handIndex + 1);
+                        }
+
+                        appendResultMessage(resultMessage,
+                                            sizeof(resultMessage),
+                                            handMessage,
+                                            &messageTruncated);
+                    }
+                }
+            } else if (dealerBlackjack && !playerBlackjack) {
+                baseLoss = ((long long)splitBet *
+                            effectiveDealerLossMultiplier(game)) / 100;
+
+                if (twistActive(game, TWIST_CHARITY)) {
+                    baseLoss /= 2;
+                }
+
+                if (twistActive(game, TWIST_HIGH_STAKES)) {
+                    baseLoss *= 2;
+                }
+
+                if (twistActive(game, TWIST_BLOOD_PACT)) {
+                    baseLoss *= 2;
+                }
+
+                {
+                    long long lossPower = dealerPowerLossMultiplier(
+                        game->run.dealerId, game->run.floor);
+                    if (lossPower != 100) {
+                        baseLoss = baseLoss * lossPower / 100;
+                    }
+                }
+
+                if (baseLoss > INT_MAX) {
+                    baseLoss = INT_MAX;
+                }
+
+                if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
+                    game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
+                    baseLoss > 0) {
+                    baseLoss /= 2;
+                    game->player.perkCharges[PERK_INSURANCE_PERK]--;
+                    logPush(game,
+                            "Insurance used: loss halved.",
+                            MSG_INFO);
+                }
+
+                lossAmount = applyLoss(game, baseLoss);
+                lossTotal += lossAmount;
+                handLossTotal += lossAmount;
+
+                if (dealerHandCount == 1) {
+                    if (game->player.handCount == 1) {
+                        snprintf(resultMessage,
+                                 sizeof(resultMessage),
+                                 "Dealer has blackjack. You lose %d chips. Chips: %d.",
+                                 lossAmount,
+                                 game->player.chips);
+                    } else {
+                        messageLength = snprintf(handMessage,
+                                                 sizeof(handMessage),
+                                                 "Hand %d: dealer BJ (-%d)",
+                                                 handIndex + 1,
+                                                 lossAmount);
+
+                        if (messageLength < 0) {
+                            snprintf(handMessage,
+                                     sizeof(handMessage),
+                                     "Hand %d: dealer BJ",
+                                     handIndex + 1);
+                        }
+
+                        appendResultMessage(resultMessage,
+                                            sizeof(resultMessage),
+                                            handMessage,
+                                            &messageTruncated);
+                    }
+                }
+            } else if (handValue == dealerValue) {
+
+                if (dealerHandCount == 1) {
+                    if (game->player.handCount == 1) {
+                        snprintf(resultMessage,
+                                 sizeof(resultMessage),
+                                 "Push. Your bet is returned. Chips: %d.",
+                                 game->player.chips);
+                    } else {
+                        messageLength = snprintf(handMessage,
+                                                 sizeof(handMessage),
+                                                 "Hand %d: push",
+                                                 handIndex + 1);
+
+                        if (messageLength < 0) {
+                            snprintf(handMessage,
+                                     sizeof(handMessage),
+                                     "Hand %d: push",
+                                     handIndex + 1);
+                        }
+
+                        appendResultMessage(resultMessage,
+                                            sizeof(resultMessage),
+                                            handMessage,
+                                            &messageTruncated);
+                    }
+                }
+            } else if (dealerValue > 21 || handValue > dealerValue) {
+                basePayout = splitBet;
+
+                if (dealerPaysPureHandBonus(game->run.dealerId) &&
+                    !game->player.usedSplit &&
+                    !game->player.usedDouble) {
+                    basePayout *= 2;
+                }
+
+                if (twistActive(game, TWIST_DESPERATION) &&
+                    game->player.usedDouble) {
+                    basePayout *= 3;
+                }
+
+                if (twistActive(game, TWIST_HIGH_STAKES)) {
+                    basePayout *= 2;
+                }
+
+                if (twistActive(game, TWIST_BLOOD_PACT)) {
+                    basePayout *= 2;
+                }
+
+                if (twistActive(game, TWIST_HALF_PAYOUT)) {
+                    basePayout /= 2;
+                }
+
+                if (twistActive(game, TWIST_JACKPOT) &&
+                    rngRange(0, 99) < 5) {
+                    basePayout *= 10;
+                }
+
+                if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
+                    game->player.usedDouble &&
+                    !game->player.usedSplit) {
+                    basePayout += splitBet / 2;
+                }
+
+                if (game->player.perkOwned[PERK_COMPOUNDING]) {
+                    basePayout += game->winStreak < 10 ?
+                                  game->winStreak : 10;
+                }
+
+                payoutValue = basePayout;
+
+                if (game->mode == MODE_ROGUELIKE &&
+                    game->winStreak >= 3) {
+                    /* Apply the streak bonus before floor fatigue. */
+                    payoutValue *= 2;
+                }
+
+                payoutValue = payoutValue *
+                              currentFatigue / 100;
+
+                if (payoutValue > INT_MAX - game->player.chips) {
+                    payout = INT_MAX - game->player.chips;
+                } else {
+                    payout = (int)payoutValue;
+                }
+
+                creditChips(game, payout);
+                payoutTotal += payout;
+                handPayoutTotal += payout;
+                handWon = 1;
+
+                if (dealerHandCount == 1 && game->player.handCount == 1) {
+                    snprintf(resultMessage, sizeof(resultMessage),
+                             "You win %d chips. Chips: %d.",
+                             payout, game->player.chips);
+                }
+            } else {
+                baseLoss = ((long long)splitBet *
+                            effectiveDealerLossMultiplier(game)) / 100;
+
+                if (twistActive(game, TWIST_CHARITY)) {
+                    baseLoss /= 2;
+                }
+
+                if (twistActive(game, TWIST_HIGH_STAKES)) {
+                    baseLoss *= 2;
+                }
+
+                if (twistActive(game, TWIST_BLOOD_PACT)) {
+                    baseLoss *= 2;
+                }
+
+                {
+                    long long lossPower = dealerPowerLossMultiplier(
+                        game->run.dealerId, game->run.floor);
+                    if (lossPower != 100) {
+                        baseLoss = baseLoss * lossPower / 100;
+                    }
+                }
+
+                if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
+                    game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
+                    baseLoss > 0) {
+                    baseLoss /= 2;
+                    game->player.perkCharges[PERK_INSURANCE_PERK]--;
+                    logPush(game,
+                            "Insurance used: loss halved.",
+                            MSG_INFO);
+                }
+
+                if (baseLoss > INT_MAX) {
+                    baseLoss = INT_MAX;
+                }
+
+                lossAmount = applyLoss(game, baseLoss);
+                lossTotal += lossAmount;
+                handLossTotal += lossAmount;
+
+                if (dealerHandCount == 1 && game->player.handCount == 1) {
+                    snprintf(resultMessage, sizeof(resultMessage),
+                             "You lose %d chips. Chips: %d.",
+                             lossAmount, game->player.chips);
+                }
+            }
+
+            if (handWon &&
+                twistActive(game, TWIST_GREED) &&
+                !greedAwarded) {
+                game->run.marks += 1;
+                greedAwarded = 1;
+            }
+        }
+
+        if (dealerHandCount > 1 && !game->player.evenMoneyTaken) {
+            if (handValue > 21) {
+                messageLength = snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: bust (-%lld)",
+                                         handIndex + 1,
+                                         handLossTotal);
+            } else if (handPayoutTotal > handLossTotal) {
+                if (playerBlackjack && !anyDealerBlackjack) {
+                    messageLength = snprintf(handMessage,
+                                             sizeof(handMessage),
+                                             "Hand %d: blackjack (+%lld)",
+                                             handIndex + 1,
+                                             handPayoutTotal);
+                } else {
+                    messageLength = snprintf(handMessage,
+                                             sizeof(handMessage),
+                                             "Hand %d: win (+%lld)",
+                                             handIndex + 1,
+                                             handPayoutTotal);
+                }
+            } else if (handLossTotal > handPayoutTotal) {
+                messageLength = snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: loss (-%lld)",
+                                         handIndex + 1,
+                                         handLossTotal);
+            } else {
+                messageLength = snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: push",
+                                         handIndex + 1);
+            }
+
+            if (messageLength < 0) {
+                snprintf(handMessage,
+                         sizeof(handMessage),
+                         "Hand %d: result",
+                         handIndex + 1);
+            }
+
+            appendResultMessage(resultMessage,
+                                sizeof(resultMessage),
+                                handMessage,
+                                &messageTruncated);
+        }
+    }
+
+    if (payoutTotal > lossTotal) {
+        resultStyle = MSG_WIN;
+    } else if (payoutTotal < lossTotal) {
+        resultStyle = MSG_LOSS;
+    } else {
+        resultStyle = MSG_PUSH;
+    }
+
+    if (game->mode == MODE_ROGUELIKE) {
+        if (resultStyle == MSG_WIN) {
+            game->winStreak++;
+            game->lossStreak = 0;
+
+            if (game->winStreak == 3) {
+                logPush(game,
+                        "Streak 3! Wins now pay double.",
+                        MSG_WIN);
+            }
+        } else if (resultStyle == MSG_LOSS) {
+            game->lossStreak++;
+            game->winStreak = 0;
+        }
+    }
+
+    if (resultStyle == MSG_WIN &&
+        dealerIsBoss(game->run.dealerId) &&
+        !game->run.bossRewarded) {
+        long long rewardValue;
+        long long availableMarks;
+        int reward;
+        char bossMsg[96];
+
+        rewardValue = 10LL + (long long)game->run.floor * 2LL;
+        if (rewardValue > INT_MAX) {
+            rewardValue = INT_MAX;
+        }
+
+        availableMarks = (long long)INT_MAX - game->run.marks;
+        if (rewardValue > availableMarks) {
+            rewardValue = availableMarks;
+        }
+
+        if (rewardValue < 0) {
+            rewardValue = 0;
+        }
+
+        reward = (int)rewardValue;
+        game->run.marks += reward;
+        game->run.bossRewarded = 1;
+        snprintf(bossMsg, sizeof(bossMsg),
+                 "BOSS DEFEATED. +%d marks.", reward);
+        logPush(game, bossMsg, MSG_WIN);
+    }
+
+    logPush(game, resultMessage, resultStyle);
+
+    if (game->mode == MODE_ROGUELIKE &&
+        resultStyle == MSG_LOSS) {
+        static const char *TAUNTS[] = {
+            "The house always wins.",
+            "Better luck next time.",
+            "You'll be back."
+        };
+        int tauntIndex;
+
+        tauntIndex = (game->run.floor + game->roundNumber) % 3;
+        logPush(game, TAUNTS[tauntIndex], MSG_DEALER);
+    }
+
+    if (game->mode == MODE_ROGUELIKE &&
+        game->lossStreak >= 5) {
+        logPush(game,
+                "Five losses in a row. The pit boss ends your run.",
+                MSG_LOSS);
+        game->state = STATE_QUIT;
+    }
+
+    if (game->safetyNetArmed &&
+        game->player.chips == 0) {
+        game->player.chips = 20;
+        game->safetyNetArmed = 0;
+        logPush(game,
+                "Safety net triggered. 20 chips remain.",
+                MSG_WIN);
+    }
+
+    if (game->player.chips == 0 &&
+        game->player.perkOwned[PERK_EXTRA_LIFE] &&
+        game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
+        int rescueChips = getMinBet(game, game->run.floor, game->mode);
+        char rescueMessage[64];
+
+        if (rescueChips < 1) rescueChips = 1;
+        game->player.chips = rescueChips;
+        game->player.perkCharges[PERK_EXTRA_LIFE] = 0;
+        game->lossStreak = 0;
+        if (game->state == STATE_QUIT)
+            game->state = game->mode == MODE_CLASSIC ? STATE_BET : STATE_MENU;
+        snprintf(rescueMessage, sizeof(rescueMessage),
+                 "Extra Life! Run continues with %d chips.", rescueChips);
+        logPush(game, rescueMessage, MSG_WIN);
+    }
+    if (game->player.chips > 0 &&
+        game->player.chips < getMinBet(game, game->run.floor, game->mode) &&
+        game->player.perkOwned[PERK_EXTRA_LIFE] &&
+        game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
+        int rescueChips = getMinBet(game, game->run.floor, game->mode);
+        char rescueMessage[64];
+
+        if (rescueChips < 1) rescueChips = 1;
+        game->player.chips = rescueChips;
+        game->player.perkCharges[PERK_EXTRA_LIFE] = 0;
+        game->lossStreak = 0;
+        if (game->state == STATE_QUIT)
+            game->state = game->mode == MODE_CLASSIC ? STATE_BET : STATE_MENU;
+        snprintf(rescueMessage, sizeof(rescueMessage),
+                 "Extra Life! Run continues with %d chips.", rescueChips);
+        logPush(game, rescueMessage, MSG_WIN);
+    }
+
+    game->tippedThisRound = 0;
+    game->player.insuranceBet = 0;
+    game->player.evenMoneyTaken = 0;
+
+    renderTable(game, 0);
+
+    {
+        char breakdown[256];
+
+        if (evenMoneyBefore) {
+            snprintf(breakdown, sizeof(breakdown),
+                     "Even money | bet %d paid 1:1",
+                     game->player.bets[0]);
+        } else if (payoutTotal > 0 && lossTotal > 0) {
+            snprintf(breakdown, sizeof(breakdown),
+                     "Won %lld, lost %lld",
+                     payoutTotal, lossTotal);
+        } else if (payoutTotal > 0) {
+            char modifiers[160];
+            buildModifierList(game, winStreakBefore,
+                              roundHadBlackjack, 1,
+                              modifiers, sizeof(modifiers));
+            snprintf(breakdown, sizeof(breakdown),
+                     "Won %lld | modifiers: %s | fatigue %d%%",
+                     payoutTotal, modifiers, currentFatigue);
+        } else if (lossTotal > 0) {
+            char modifiers[160];
+            buildModifierList(game, winStreakBefore,
+                              0, 0,
+                              modifiers, sizeof(modifiers));
+            snprintf(breakdown, sizeof(breakdown),
+                     "Lost %lld | modifiers: %s",
+                     lossTotal, modifiers);
+        } else {
+            snprintf(breakdown, sizeof(breakdown),
+                     "Push | bet returned");
+        }
+
+        snprintf(payoutBreakdownText,
+                 sizeof(breakdown),
+                 "%s", breakdown);
+    }
+
+    if (game->state == STATE_QUIT ||
+        game->player.chips == 0) {
+        game->state = STATE_QUIT;
+    } else if (game->mode == MODE_CLASSIC) {
+        game->state = STATE_BET;
+    } else {
+        game->state = STATE_MENU;
+    }
+    game->roundHadNaturalBj = 0;
+}
