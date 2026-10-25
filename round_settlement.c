@@ -7,8 +7,148 @@
 #include "render.h"
 #include "rng.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
+
+typedef struct {
+    int winStreakBefore;
+    int evenMoneyBefore;
+    int roundHadBlackjack;
+} SettlementContext;
+
+typedef enum {
+    HAND_OUTCOME_BUST,
+    HAND_OUTCOME_BLACKJACK,
+    HAND_OUTCOME_DEALER_BLACKJACK,
+    HAND_OUTCOME_PUSH,
+    HAND_OUTCOME_WIN,
+    HAND_OUTCOME_LOSS
+} HandOutcome;
+
+static void captureSettlementContext(const Game *game,
+                                     SettlementContext *ctx) {
+    ctx->winStreakBefore = game->winStreak;
+    ctx->evenMoneyBefore = game->player.evenMoneyTaken;
+    ctx->roundHadBlackjack = 0;
+}
+
+static HandOutcome classifyHandOutcome(int handValue,
+                                       int playerBlackjack,
+                                       int dealerBlackjack,
+                                       int dealerValue) {
+    if (handValue > 21) {
+        return HAND_OUTCOME_BUST;
+    }
+    if (playerBlackjack && !dealerBlackjack) {
+        return HAND_OUTCOME_BLACKJACK;
+    }
+    if (dealerBlackjack && !playerBlackjack) {
+        return HAND_OUTCOME_DEALER_BLACKJACK;
+    }
+    if (handValue == dealerValue) {
+        return HAND_OUTCOME_PUSH;
+    }
+    if (dealerValue > 21 || handValue > dealerValue) {
+        return HAND_OUTCOME_WIN;
+    }
+    return HAND_OUTCOME_LOSS;
+}
+
+static void applyRoundRewards(Game *game, MessageStyle resultStyle) {
+    if (game->mode == MODE_ROGUELIKE) {
+        if (resultStyle == MSG_WIN) {
+            game->winStreak++;
+            game->lossStreak = 0;
+
+            if (game->winStreak == 3) {
+                logPush(game,
+                        "Streak 3! Wins now pay double.",
+                        MSG_WIN);
+            }
+        } else if (resultStyle == MSG_LOSS) {
+            game->lossStreak++;
+            game->winStreak = 0;
+        }
+    }
+
+    if (resultStyle == MSG_WIN &&
+        dealerIsBoss(game->run.dealerId) &&
+        !game->run.bossRewarded) {
+        long long rewardValue;
+        long long availableMarks;
+        int reward;
+        char bossMsg[96];
+
+        rewardValue = 10LL + (long long)game->run.floor * 2LL;
+        if (rewardValue > INT_MAX) {
+            rewardValue = INT_MAX;
+        }
+
+        availableMarks = (long long)INT_MAX - game->run.marks;
+        if (rewardValue > availableMarks) {
+            rewardValue = availableMarks;
+        }
+
+        if (rewardValue < 0) {
+            rewardValue = 0;
+        }
+
+        reward = (int)rewardValue;
+        game->run.marks += reward;
+        game->run.bossRewarded = 1;
+        snprintf(bossMsg, sizeof(bossMsg),
+                 "BOSS DEFEATED. +%d marks.", reward);
+        logPush(game, bossMsg, MSG_WIN);
+    }
+
+}
+
+static void applyRoundRecovery(Game *game) {
+    if (game->safetyNetArmed &&
+        game->player.chips == 0) {
+        game->player.chips = 20;
+        game->safetyNetArmed = 0;
+        logPush(game,
+                "Safety net triggered. 20 chips remain.",
+                MSG_WIN);
+    }
+
+    if (game->player.chips == 0 &&
+        game->player.perkOwned[PERK_EXTRA_LIFE] &&
+        game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
+        int rescueChips = getMinBet(game, game->run.floor, game->mode);
+        char rescueMessage[64];
+
+        if (rescueChips < 1) rescueChips = 1;
+        game->player.chips = rescueChips;
+        game->player.perkCharges[PERK_EXTRA_LIFE] = 0;
+        game->lossStreak = 0;
+        if (game->state == STATE_QUIT)
+            game->state = game->mode == MODE_CLASSIC ? STATE_BET : STATE_MENU;
+        snprintf(rescueMessage, sizeof(rescueMessage),
+                 "Extra Life! Run continues with %d chips.", rescueChips);
+        logPush(game, rescueMessage, MSG_WIN);
+    }
+    if (game->player.chips > 0 &&
+        game->player.chips < getMinBet(game, game->run.floor, game->mode) &&
+        game->player.perkOwned[PERK_EXTRA_LIFE] &&
+        game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
+        int rescueChips = getMinBet(game, game->run.floor, game->mode);
+        char rescueMessage[64];
+
+        if (rescueChips < 1) rescueChips = 1;
+        game->player.chips = rescueChips;
+        game->player.perkCharges[PERK_EXTRA_LIFE] = 0;
+        game->lossStreak = 0;
+        if (game->state == STATE_QUIT)
+            game->state = game->mode == MODE_CLASSIC ? STATE_BET : STATE_MENU;
+        snprintf(rescueMessage, sizeof(rescueMessage),
+                 "Extra Life! Run continues with %d chips.", rescueChips);
+        logPush(game, rescueMessage, MSG_WIN);
+    }
+
+}
 
 static void appendResultMessage(char *buffer,
                                 size_t bufferSize,
@@ -166,6 +306,8 @@ modifier_list_done:
 }
 
 void resolveRound(Game *game) {
+    SettlementContext ctx;
+    HandOutcome outcome;
     int dealerValue;
     int dealerBlackjack;
     int dealerHandCount;
@@ -186,9 +328,6 @@ void resolveRound(Game *game) {
     int greedAwarded;
     int handWon;
     int currentFatigue;
-    int winStreakBefore;
-    int roundHadBlackjack;
-    int evenMoneyBefore;
     long long payoutValue;
     long long basePayout;
     long long baseLoss;
@@ -201,9 +340,7 @@ void resolveRound(Game *game) {
     char handMessage[64];
     char *payoutBreakdownText;
 
-    winStreakBefore = game->winStreak;
-    roundHadBlackjack = 0;
-    evenMoneyBefore = game->player.evenMoneyTaken;
+    captureSettlementContext(game, &ctx);
     payoutBreakdownText = game->lastPayoutBreakdown;
     game->lastPayoutBreakdown[0] = '\0';
 
@@ -333,7 +470,9 @@ void resolveRound(Game *game) {
             skipLossReduction = 0;
             handWon = 0;
 
-            if (handValue > 21) {
+            outcome = classifyHandOutcome(handValue, playerBlackjack,
+                                          dealerBlackjack, dealerValue);
+            if (outcome == HAND_OUTCOME_BUST) {
                 baseLoss = ((long long)splitBet *
                             effectiveDealerLossMultiplier(game)) / 100;
                 skipLossReduction =
@@ -424,10 +563,10 @@ void resolveRound(Game *game) {
                         }
                     }
                 }
-            } else if (playerBlackjack && !dealerBlackjack) {
+            } else if (outcome == HAND_OUTCOME_BLACKJACK) {
                 int bjRatioNumerator = effectiveDealerBlackjackNumerator(game);
                 int bjRatioDenominator = effectiveDealerBlackjackDenominator(game);
-                roundHadBlackjack = 1;
+                ctx.roundHadBlackjack = 1;
                 if (game->run.floor >= 10 && game->run.dealerId == DEALER_REAPER) {
                     bjRatioNumerator = 1;
                     bjRatioDenominator = 1;
@@ -508,7 +647,7 @@ void resolveRound(Game *game) {
                                             &messageTruncated);
                     }
                 }
-            } else if (dealerBlackjack && !playerBlackjack) {
+            } else if (outcome == HAND_OUTCOME_DEALER_BLACKJACK) {
                 baseLoss = ((long long)splitBet *
                             effectiveDealerLossMultiplier(game)) / 100;
 
@@ -577,7 +716,7 @@ void resolveRound(Game *game) {
                                             &messageTruncated);
                     }
                 }
-            } else if (handValue == dealerValue) {
+            } else if (outcome == HAND_OUTCOME_PUSH) {
 
                 if (dealerHandCount == 1) {
                     if (game->player.handCount == 1) {
@@ -604,7 +743,7 @@ void resolveRound(Game *game) {
                                             &messageTruncated);
                     }
                 }
-            } else if (dealerValue > 21 || handValue > dealerValue) {
+            } else if (outcome == HAND_OUTCOME_WIN) {
                 basePayout = splitBet;
 
                 if (dealerPaysPureHandBonus(game->run.dealerId) &&
@@ -786,51 +925,7 @@ void resolveRound(Game *game) {
         resultStyle = MSG_PUSH;
     }
 
-    if (game->mode == MODE_ROGUELIKE) {
-        if (resultStyle == MSG_WIN) {
-            game->winStreak++;
-            game->lossStreak = 0;
-
-            if (game->winStreak == 3) {
-                logPush(game,
-                        "Streak 3! Wins now pay double.",
-                        MSG_WIN);
-            }
-        } else if (resultStyle == MSG_LOSS) {
-            game->lossStreak++;
-            game->winStreak = 0;
-        }
-    }
-
-    if (resultStyle == MSG_WIN &&
-        dealerIsBoss(game->run.dealerId) &&
-        !game->run.bossRewarded) {
-        long long rewardValue;
-        long long availableMarks;
-        int reward;
-        char bossMsg[96];
-
-        rewardValue = 10LL + (long long)game->run.floor * 2LL;
-        if (rewardValue > INT_MAX) {
-            rewardValue = INT_MAX;
-        }
-
-        availableMarks = (long long)INT_MAX - game->run.marks;
-        if (rewardValue > availableMarks) {
-            rewardValue = availableMarks;
-        }
-
-        if (rewardValue < 0) {
-            rewardValue = 0;
-        }
-
-        reward = (int)rewardValue;
-        game->run.marks += reward;
-        game->run.bossRewarded = 1;
-        snprintf(bossMsg, sizeof(bossMsg),
-                 "BOSS DEFEATED. +%d marks.", reward);
-        logPush(game, bossMsg, MSG_WIN);
-    }
+    applyRoundRewards(game, resultStyle);
 
     logPush(game, resultMessage, resultStyle);
 
@@ -855,48 +950,7 @@ void resolveRound(Game *game) {
         game->state = STATE_QUIT;
     }
 
-    if (game->safetyNetArmed &&
-        game->player.chips == 0) {
-        game->player.chips = 20;
-        game->safetyNetArmed = 0;
-        logPush(game,
-                "Safety net triggered. 20 chips remain.",
-                MSG_WIN);
-    }
-
-    if (game->player.chips == 0 &&
-        game->player.perkOwned[PERK_EXTRA_LIFE] &&
-        game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
-        int rescueChips = getMinBet(game, game->run.floor, game->mode);
-        char rescueMessage[64];
-
-        if (rescueChips < 1) rescueChips = 1;
-        game->player.chips = rescueChips;
-        game->player.perkCharges[PERK_EXTRA_LIFE] = 0;
-        game->lossStreak = 0;
-        if (game->state == STATE_QUIT)
-            game->state = game->mode == MODE_CLASSIC ? STATE_BET : STATE_MENU;
-        snprintf(rescueMessage, sizeof(rescueMessage),
-                 "Extra Life! Run continues with %d chips.", rescueChips);
-        logPush(game, rescueMessage, MSG_WIN);
-    }
-    if (game->player.chips > 0 &&
-        game->player.chips < getMinBet(game, game->run.floor, game->mode) &&
-        game->player.perkOwned[PERK_EXTRA_LIFE] &&
-        game->player.perkCharges[PERK_EXTRA_LIFE] > 0) {
-        int rescueChips = getMinBet(game, game->run.floor, game->mode);
-        char rescueMessage[64];
-
-        if (rescueChips < 1) rescueChips = 1;
-        game->player.chips = rescueChips;
-        game->player.perkCharges[PERK_EXTRA_LIFE] = 0;
-        game->lossStreak = 0;
-        if (game->state == STATE_QUIT)
-            game->state = game->mode == MODE_CLASSIC ? STATE_BET : STATE_MENU;
-        snprintf(rescueMessage, sizeof(rescueMessage),
-                 "Extra Life! Run continues with %d chips.", rescueChips);
-        logPush(game, rescueMessage, MSG_WIN);
-    }
+    applyRoundRecovery(game);
 
     game->tippedThisRound = 0;
     game->player.insuranceBet = 0;
@@ -907,7 +961,7 @@ void resolveRound(Game *game) {
     {
         char breakdown[256];
 
-        if (evenMoneyBefore) {
+        if (ctx.evenMoneyBefore) {
             snprintf(breakdown, sizeof(breakdown),
                      "Even money | bet %d paid 1:1",
                      game->player.bets[0]);
@@ -917,15 +971,15 @@ void resolveRound(Game *game) {
                      payoutTotal, lossTotal);
         } else if (payoutTotal > 0) {
             char modifiers[160];
-            buildModifierList(game, winStreakBefore,
-                              roundHadBlackjack, 1,
+            buildModifierList(game, ctx.winStreakBefore,
+                              ctx.roundHadBlackjack, 1,
                               modifiers, sizeof(modifiers));
             snprintf(breakdown, sizeof(breakdown),
                      "Won %lld | modifiers: %s | fatigue %d%%",
                      payoutTotal, modifiers, currentFatigue);
         } else if (lossTotal > 0) {
             char modifiers[160];
-            buildModifierList(game, winStreakBefore,
+            buildModifierList(game, ctx.winStreakBefore,
                               0, 0,
                               modifiers, sizeof(modifiers));
             snprintf(breakdown, sizeof(breakdown),
