@@ -293,6 +293,7 @@ static void buildModifierList(const Game *game,
     int denominator;
     int powerMultiplier;
     int compoundingBonus;
+    int modifierListFull;
     char token[32];
 
     if (outSize == 0) {
@@ -301,12 +302,17 @@ static void buildModifierList(const Game *game,
 
     out[0] = '\0';
 
+    modifierListFull = 0;
+
 #define APPEND_MODIFIER(tokenValue) \
     do { \
-        if (strlen(out) + 2 + strlen(tokenValue) >= outSize) { \
-            goto modifier_list_done; \
+        if (!modifierListFull) { \
+            if (strlen(out) + 2 + strlen(tokenValue) >= outSize) { \
+                modifierListFull = 1; \
+            } else { \
+                appendModifierToken(out, outSize, tokenValue); \
+            } \
         } \
-        appendModifierToken(out, outSize, tokenValue); \
     } while (0)
 
     if (roundHadBlackjack && isWin) {
@@ -381,7 +387,6 @@ static void buildModifierList(const Game *game,
         APPEND_MODIFIER(token);
     }
 
-modifier_list_done:
     if (out[0] == '\0') {
         snprintf(out, outSize, "(none)");
     }
@@ -873,7 +878,7 @@ void resolveRound(Game *game) {
         }
 
         snprintf(payoutBreakdownText,
-                 sizeof(breakdown),
+                 sizeof(game->lastPayoutBreakdown),
                  "%s", breakdown);
     }
 

@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "round_economy.h"
+#include "round_rules.h"
 
 static void dispatchFloorMenuAction(Game *game,
                                     char actionCharacter,

@@ -14,6 +14,5 @@ typedef struct {
 void addCardToHand(Hand *hand, const Card *card);
 int calculateHandValue(const Hand *hand);
 void resetHand(Hand *hand);
-void printHand(const Hand *hand);
 
 #endif

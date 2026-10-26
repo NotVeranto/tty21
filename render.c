@@ -451,6 +451,10 @@ static void drawDealerHands(const Game *game,
     int handPadding;
     int handWidth;
 
+    if (game->dealer.handCount <= 0) {
+        return;
+    }
+
     handPadding = padding;
 
     if (game->dealer.handCount > 1) {

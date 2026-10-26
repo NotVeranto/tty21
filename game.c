@@ -46,7 +46,6 @@ void initGame(Game *game, GameMode mode) {
     game->lossStreak = 0;
     game->loanAmount = 0;
     game->loanDueFloor = 0;
-    game->extraPerkSlots = 0;
     game->freePeekReady = 0;
     game->minBetMultiplier = 1;
     game->safetyNetArmed = 0;

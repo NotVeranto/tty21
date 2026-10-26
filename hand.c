@@ -1,7 +1,5 @@
 #include "hand.h"
 
-#include <stdio.h>
-
 // Calculates the hand value with blackjack ace conversion.
 int calculateHandValue(const Hand *hand) {
     int totalValue, aceCount, cardIndex;
@@ -38,19 +36,4 @@ void addCardToHand(Hand *hand, const Card *card) {
 void resetHand(Hand *hand) {
     hand->count = 0;
     hand->value = 0;
-}
-
-// Prints all cards on one line followed by the total value.
-void printHand(const Hand *hand) {
-    int cardIndex;
-
-    for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
-        if (cardIndex > 0) {
-            printf(" ");
-        }
-
-        printCard(&hand->cards[cardIndex]);
-    }
-
-    printf(" | Total value: %d\n", hand->value);
 }
