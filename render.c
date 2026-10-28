@@ -1628,6 +1628,7 @@ void renderMenu(const char *title,
                 int startRow) {
     int terminalWidth;
     int terminalHeight;
+    int titlePadding;
     int itemIndex;
     int isDisabled;
     int rowWidth;
