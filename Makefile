@@ -1,7 +1,7 @@
 CC      = gcc
 CFLAGS  = -Wall -Wextra -Werror -std=c11 -g
 VERSION = 0.1.0
-CFLAGS += -DTTY21_VERSION=\\\"$(VERSION)\\\"
+CFLAGS += -DTTY21_VERSION=\"$(VERSION)\"
 CFLAGS += -MMD -MP
 PREFIX  ?= /usr/local
 DESTDIR ?=
@@ -9,9 +9,9 @@ BINDIR  = $(PREFIX)/bin
 TARGET  = tty21
 SRCS    = main.c card.c hand.c game.c round.c round_cards.c round_economy.c round_rules.c round_input.c round_actions.c round_dealer.c round_settlement.c render.c menu.c input.c input_map.c dealers.c twists.c rng.c perks.c run.c save.c
 OBJS    = $(SRCS:.c=.o)
-TESTS_SRCS = tests/run_tests.c tests/test_hand.c \\
-             tests/test_card.c tests/test_rng.c tests/test_twists.c \\
-             tests/test_dealers.c tests/test_perks.c tests/test_run.c \\
+TESTS_SRCS = tests/run_tests.c tests/test_hand.c \
+             tests/test_card.c tests/test_rng.c tests/test_twists.c \
+             tests/test_dealers.c tests/test_perks.c tests/test_run.c \
              tests/test_settlement.c
 TEST_LIB_SRCS = $(filter-out main.c,$(SRCS))
 
