@@ -2,34 +2,9 @@
 #include "run.h"
 #include "game.h"
 #include "round.h"
+#include "round_rules.h"
 
 #include <string.h>
-
-/*
- * Link shim for run.c's dependency on twistActive(), which lives in round.c.
- * These tests isolate getMinBet() and do not link the full round/game loop.
- */
-int twistActive(const Game *game, TwistId id) {
-    int twistIndex;
-
-    if (game->run.twistBlocked &&
-        id == game->run.twistId) {
-        return 0;
-    }
-
-    if (game->run.twistId == id) {
-        return 1;
-    }
-
-    for (twistIndex = 0; twistIndex < game->run.extraTwistCount;
-         twistIndex++) {
-        if (game->run.extraTwists[twistIndex] == id) {
-            return 1;
-        }
-    }
-
-    return 0;
-}
 
 static void test_init_game_for_min_bet(Game *game) {
     memset(game, 0, sizeof(*game));

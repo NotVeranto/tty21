@@ -1,5 +1,6 @@
 #include "run.h"
 #include "round.h"
+#include "round_rules.h"
 
 // Initializes the persistent state for a new run.
 void initRun(Run *run) {
