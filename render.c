@@ -52,7 +52,7 @@ static void initColors(void) {
 }
 
 // Returns the ANSI reset sequence when colors are enabled.
-static const char *scrReset(void) {
+const char *scrReset(void) {
     return colorEnabled ? "\033[0m" : "";
 }
 
@@ -104,12 +104,12 @@ static const char *scrMagenta(void) {
 }
 
 // Returns the ANSI bold sequence when colors are enabled.
-static const char *scrBold(void) {
+const char *scrBold(void) {
     return colorEnabled ? "\033[1m" : "";
 }
 
 // Returns the ANSI dim sequence when colors are enabled.
-static const char *scrDim(void) {
+const char *scrDim(void) {
     return colorEnabled ? "\033[2m" : "";
 }
 
@@ -156,6 +156,62 @@ static int getCenteredColumn(int contentWidth) {
     }
 
     return column;
+}
+
+
+/* Prints a consistent centered title, optional subtitle, and dim separator. */
+void renderScreenHeader(const char *title,
+                        const char *subtitle,
+                        int row) {
+    int terminalWidth;
+    int terminalHeight;
+    int separatorWidth;
+    int titleColumn;
+
+    getTerminalSize(&terminalWidth, &terminalHeight);
+    (void)terminalHeight;
+
+    titleColumn = getCenteredColumn((int)strlen(title));
+    printf(SCR_CURSOR, row, titleColumn);
+    printf("%s%s%s", scrBold(), title, scrReset());
+
+    if (subtitle != NULL) {
+        printf(SCR_CURSOR, row + 1, getCenteredColumn((int)strlen(subtitle)));
+        printf("%s%s%s", scrDim(), subtitle, scrReset());
+    }
+
+    separatorWidth = terminalWidth < 60 ? terminalWidth : 60;
+    if (separatorWidth < 1) {
+        separatorWidth = 1;
+    }
+
+    printf(SCR_CURSOR,
+           row + (subtitle != NULL ? 2 : 1),
+           getCenteredColumn(separatorWidth));
+    printf("%s", scrDim());
+    while (separatorWidth-- > 0) {
+        putchar('-');
+    }
+    printf("%s", scrReset());
+}
+
+/* Draws the shared dim box border used by framed screens. */
+static void printBoxBorder(int row, int column, int width) {
+    int index;
+
+    printf(SCR_CURSOR, row, column);
+    printf("%s+", scrDim());
+    for (index = 0; index < width - 2; index++) {
+        putchar('-');
+    }
+    printf("+%s", scrReset());
+}
+
+static void printBoxSides(int row, int column, int width) {
+    printf(SCR_CURSOR, row, column);
+    printf("%s|%s", scrDim(), scrReset());
+    printf(SCR_CURSOR, row, column + width - 1);
+    printf("%s|%s", scrDim(), scrReset());
 }
 
 int renderTerminalSizeOk(int *width, int *height) {
@@ -526,10 +582,14 @@ static void printPlayerHandStatus(const Game *game,
         textPadding = 0;
     }
 
-    style = handIndex == game->player.activeHand &&
-            game->player.activeHand < game->player.handCount
-                ? scrBold()
-                : scrDim();
+    if (handValue > 21) {
+        style = scrRed();
+    } else {
+        style = handIndex == game->player.activeHand &&
+                game->player.activeHand < game->player.handCount
+                    ? scrBold()
+                    : scrDim();
+    }
 
     moveToTableRow(PLAYER_CARD_ROW + CARD_HEIGHT, padding);
     printf("%*s%s%s%s",
@@ -688,11 +748,12 @@ static void printBossPrepBoxLine(int row,
                                  int column,
                                  const char *text) {
     printf(SCR_CURSOR, row, column);
-    printf("| %-60.60s |", text);
+    printf("%s|%s  %-58.58s  %s|%s",
+           scrDim(), scrReset(), text, scrDim(), scrReset());
 }
 
 void renderBossPrep(const Game *game) {
-    enum { BOX_WIDTH = 64, BOX_HEIGHT = 9 };
+    enum { BOX_WIDTH = 64, BOX_HEIGHT = 12 };
     const DealerInfo *dealerInfo;
     const char *rule2;
     const char *power;
@@ -701,6 +762,7 @@ void renderBossPrep(const Game *game) {
     int boxColumn;
     int boxRow;
     int i;
+    char title[256];
     char line[256];
 
     dealerInfo = getDealerInfo(game->run.dealerId);
@@ -722,46 +784,39 @@ void renderBossPrep(const Game *game) {
     renderHideCursor();
     printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
 
-    printf(SCR_CURSOR, boxRow, boxColumn);
-    printf("%s", scrDim());
-    for (i = 0; i < BOX_WIDTH; i++) {
-        putchar('-');
-    }
-    printf("%s", scrReset());
-
-    snprintf(line, sizeof(line), "BOSS FLOOR: %.240s",
+    snprintf(title, sizeof(title), "TTY21 - BOSS: %.44s",
              dealerInfo->name != NULL ? dealerInfo->name : "Unknown");
-    printBossPrepBoxLine(boxRow + 1, boxColumn, line);
+    printBoxBorder(boxRow, boxColumn, BOX_WIDTH);
+    renderScreenHeader(title, "Review the rules before entering",
+                       boxRow + 1);
+    for (i = boxRow + 1; i < boxRow + BOX_HEIGHT - 1; i++) {
+        printBoxSides(i, boxColumn, BOX_WIDTH);
+    }
 
     snprintf(line, sizeof(line), "Rule 1: %.240s",
              dealerInfo->rule1 != NULL ? dealerInfo->rule1 : "None");
-    printBossPrepBoxLine(boxRow + 2, boxColumn, line);
+    printBossPrepBoxLine(boxRow + 4, boxColumn, line);
 
     snprintf(line, sizeof(line), "Rule 2: %.240s",
              rule2 != NULL ? rule2 : "None");
-    printBossPrepBoxLine(boxRow + 3, boxColumn, line);
+    printBossPrepBoxLine(boxRow + 5, boxColumn, line);
 
-    printBossPrepBoxLine(boxRow + 4, boxColumn, "");
+    printBossPrepBoxLine(boxRow + 6, boxColumn, "");
 
     snprintf(line, sizeof(line), "Disable Rule 1 for %d marks? (y/n)",
              game->bossRulePaid);
-    printBossPrepBoxLine(boxRow + 5, boxColumn, line);
+    printBossPrepBoxLine(boxRow + 7, boxColumn, line);
 
     snprintf(line, sizeof(line), "Current marks: %d", game->run.marks);
-    printBossPrepBoxLine(boxRow + 6, boxColumn, line);
+    printBossPrepBoxLine(boxRow + 8, boxColumn, line);
 
     if (game->run.marks < game->bossRulePaid) {
-        printBossPrepBoxLine(boxRow + 7, boxColumn, "Not enough marks.");
+        printBossPrepBoxLine(boxRow + 9, boxColumn, "Not enough marks.");
     } else {
-        printBossPrepBoxLine(boxRow + 7, boxColumn, "");
+        printBossPrepBoxLine(boxRow + 9, boxColumn, "");
     }
 
-    printf(SCR_CURSOR, boxRow + BOX_HEIGHT - 1, boxColumn);
-    printf("%s", scrDim());
-    for (i = 0; i < BOX_WIDTH; i++) {
-        putchar('-');
-    }
-    printf("%s", scrReset());
+    printBoxBorder(boxRow + BOX_HEIGHT - 1, boxColumn, BOX_WIDTH);
     fflush(stdout);
 }
 
@@ -1028,7 +1083,6 @@ void renderTable(const Game *game, int hideDealerCard) {
     int terminalHeight;
     int tableWidth;
     int dealerCardHidden;
-    int separatorIndex;
     int displayHandIndex;
     int displayHandValue;
     int dealerValue;
@@ -1152,29 +1206,14 @@ void renderTable(const Game *game, int hideDealerCard) {
         const char *modeText =
             game->mode == MODE_CLASSIC ? "[CLASSIC]" : "[ROGUELIKE]";
 
-        char headerText[32];
-
+        renderScreenHeader("TTY21", modeText, TITLE_ROW);
         if (bossActive) {
-            snprintf(headerText, sizeof(headerText), "TTY21  %s  BOSS", modeText);
-        } else {
-            snprintf(headerText, sizeof(headerText), "TTY21  %s", modeText);
-        }
+            int bossColumn;
 
-        printf(SCR_CURSOR, TITLE_ROW,
-               (terminalWidth - (int)strlen(headerText)) / 2 + 1);
-        printf("%sTTY21%s  %s%s%s",
-               scrBold(), scrReset(),
-               scrDim(), modeText, scrReset());
-        if (bossActive) {
-            printf("  %s%sBOSS%s", scrRed(), scrBold(), scrReset());
-        }
-
-        moveToTableRow(SEPARATOR_ROW, tablePadding);
-
-        for (separatorIndex = 0;
-             separatorIndex < tableWidth;
-             separatorIndex++) {
-            printf("-");
+            bossColumn = getCenteredColumn((int)strlen(modeText)) +
+                         (int)strlen(modeText) + 2;
+            printf(SCR_CURSOR, TITLE_ROW + 1, bossColumn);
+            printf("%s%sBOSS%s", scrRed(), scrBold(), scrReset());
         }
 
         printCenteredAtRow(roundText, ROUND_ROW, terminalWidth);
@@ -1589,7 +1628,6 @@ void renderMenu(const char *title,
                 int startRow) {
     int terminalWidth;
     int terminalHeight;
-    int titlePadding;
     int itemIndex;
     int isDisabled;
     int rowWidth;
@@ -1689,7 +1727,6 @@ void renderShop(const Game *game,
     int terminalHeight;
     int tableWidth;
     int shopPadding;
-    int titlePadding;
     int itemIndex;
     int itemRow;
     int currentRow;
@@ -1714,11 +1751,8 @@ void renderShop(const Game *game,
         terminalHeight >= MIN_TERMINAL_HEIGHT) {
         renderHideCursor();
         shopPadding = getCenteredColumn(tableWidth) - 1;
-        titlePadding = getCenteredColumn((int)strlen("SHOP")) - 1;
-
         printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
-        printf(SCR_CURSOR, ROW_SHOP_TITLE, titlePadding + 1);
-        printf("%sSHOP%s", scrBold(), scrReset());
+        renderScreenHeader("TTY21 - SHOP", NULL, ROW_SHOP_TITLE);
         moveToTableRow(ROW_SHOP_MARKS, shopPadding);
         printf("Marks: %d", game->run.marks);
         moveToTableRow(ROW_SHOP_CHIPS, shopPadding);
@@ -1788,7 +1822,7 @@ void renderShop(const Game *game,
         renderLog(game, shopPadding, terminalWidth);
         fflush(stdout);
     } else {
-        printf("SHOP\n");
+        printf("TTY21 - SHOP\n");
         printf("Marks: %d | Chips: %d\n\n", game->run.marks, game->player.chips);
         prevGroup = -1;
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
@@ -1994,8 +2028,8 @@ void renderHelpOverlay(const Game *game) {
             }
 
             boxLeft = getCenteredColumn(boxWidth);
-            leftColumn = boxLeft;
-            columnWidth = boxWidth;
+            leftColumn = boxLeft + 3;
+            columnWidth = boxWidth - 6;
             boxTop = 2;
             contentRow = boxTop + 4;
         } else {
@@ -2013,27 +2047,9 @@ void renderHelpOverlay(const Game *game) {
 
         renderHideCursor();
         printf("%s%s", SCR_CLEAR, SCR_HOME);
-
-        if (showBox) {
-            printf(SCR_CURSOR,
-                   boxTop,
-                   (terminalWidth - (int)strlen(helpTitle)) / 2 + 1);
-            printf("%s%s%s",
-                   scrBold(),
-                   helpTitle,
-                   scrReset());
-
-            printf(SCR_CURSOR, boxTop + 1, boxLeft);
-            for (index = 0; index < boxWidth; index++) {
-                putchar('=');
-            }
-        } else {
-            printf(SCR_CURSOR, boxTop, leftColumn);
-            printf("%s%s%s",
-                   scrBold(),
-                   helpTitle,
-                   scrReset());
-        }
+        renderScreenHeader(helpTitle,
+                           showBox ? "Current run" : NULL,
+                           boxTop);
 
         printf(SCR_CURSOR, contentRow, leftColumn);
         printf("%sDealer:%s  %s%s",
@@ -2264,6 +2280,16 @@ void renderHelpOverlay(const Game *game) {
         printf("%sPress any key to return.%s",
                scrDim(),
                scrReset());
+
+        if (showBox) {
+            int frameRow;
+
+            printBoxBorder(boxTop - 1, boxLeft, boxWidth);
+            for (frameRow = boxTop; frameRow <= bottomRow; frameRow++) {
+                printBoxSides(frameRow, boxLeft, boxWidth);
+            }
+            printBoxBorder(bottomRow + 1, boxLeft, boxWidth);
+        }
         fflush(stdout);
         return;
     }
