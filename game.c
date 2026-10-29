@@ -372,6 +372,7 @@ void advanceFloor(Game *game) {
 
     renderFloorTransition(game);
     renderPause(game, 1200);
+    flushInput();
 
     if (dealerIsBoss(game->run.dealerId)) {
         game->state = STATE_BOSS_PREP;

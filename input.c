@@ -145,6 +145,12 @@ int inputIsRaw(void) {
     return rawModeEnabled;
 }
 
+void flushInput(void) {
+    if (isatty(STDIN_FILENO)) {
+        tcflush(STDIN_FILENO, TCIFLUSH);
+    }
+}
+
 int getch(void) {
     unsigned char character;
     ssize_t bytesRead;

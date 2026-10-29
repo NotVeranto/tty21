@@ -581,6 +581,7 @@ void runShop(Game *game) {
                 renderShop(game, items, descriptions, itemGroups, itemCount,
                            disabledMask, selectedIndex);
                 renderPause(game, 300);
+                flushInput();
                 snprintf(labels[menuIndex], sizeof(labels[menuIndex]), "%s",
                          savedLabel);
             }

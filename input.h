@@ -21,6 +21,7 @@ typedef struct {
 int inputInit(void);
 void disableRawMode(void);
 int inputIsRaw(void);
+void flushInput(void);
 int getch(void);
 KeyEvent readKey(void);
 

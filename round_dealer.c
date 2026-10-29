@@ -23,6 +23,7 @@ void dealerTurn(Game *game) {
             !twistActive(game, TWIST_SNIPER)) {
             renderMessage("DEALER REVEALS...", ROW_PROMPT, MSG_INFO);
             renderPause(game, 400);
+            flushInput();
             renderTable(game, 0);
         }
 

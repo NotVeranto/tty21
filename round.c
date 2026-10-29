@@ -376,6 +376,7 @@ void startRound(Game *game) {
         }
     }
 
+    flushInput();
     game->state = STATE_PLAYER_TURN;
 }
 
