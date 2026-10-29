@@ -526,6 +526,7 @@ int main(int argc, char **argv) {
                 game.saveEnabled = 0;
             }
 
+            flushInput();
             runGame(&game);
 
             if (!inputIsRaw()) {

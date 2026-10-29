@@ -386,14 +386,15 @@ void playerTurn(Game *game) {
 
                     if (matchedIndex >= 0) {
                         actionIndex = matchedIndex;
+                        dispatchPlayerAction(game, action);
                     }
-
-                    dispatchPlayerAction(game, action);
                 }
-            } else if (event.type == KEY_ESC ||
-                       event.type == KEY_EOF) {
+            } else if (event.type == KEY_ESC) {
                 game->playerQuit = 1;
                 game->state = STATE_QUIT;
+            } else if (event.type == KEY_EOF ||
+                       event.type == KEY_NONE) {
+                continue;
             }
         }
     } else {
@@ -447,9 +448,8 @@ void playerTurn(Game *game) {
 
                         if (matchedIndex >= 0) {
                             actionIndex = matchedIndex;
+                            dispatchPlayerAction(game, action);
                         }
-
-                        dispatchPlayerAction(game, action);
                     } else {
                         renderMessage("Invalid action. Enter h, s, d, p, k, or q.",
                                       ROW_PROMPT,
