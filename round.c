@@ -212,9 +212,28 @@ void startRound(Game *game) {
     }
 
     drawCard(game, &game->player.hands[0], 1);
+    if (!game->fastMode && isatty(STDOUT_FILENO)) {
+        renderTable(game, 1);
+        renderPause(game, 150);
+    }
+
     drawCard(game, &game->dealer.hands[0], 0);
+    if (!game->fastMode && isatty(STDOUT_FILENO)) {
+        renderTable(game, 1);
+        renderPause(game, 150);
+    }
+
     drawCard(game, &game->player.hands[0], 1);
+    if (!game->fastMode && isatty(STDOUT_FILENO)) {
+        renderTable(game, 1);
+        renderPause(game, 150);
+    }
+
     drawCard(game, &game->dealer.hands[0], 0);
+    if (!game->fastMode && isatty(STDOUT_FILENO)) {
+        renderTable(game, 1);
+        renderPause(game, 150);
+    }
     game->dealer.handCount = dealerHandsCount(game->run.dealerId);
 
     {

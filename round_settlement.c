@@ -139,6 +139,28 @@ static int calculateHandLoss(Game *game, const SettlementContext *ctx,
     return (int)baseLoss;
 }
 
+static int playerAllHandsBust(const Game *game) {
+    int handIndex;
+    int foundHand;
+
+    foundHand = 0;
+    for (handIndex = 0;
+         handIndex < game->player.handCount &&
+         handIndex < MAX_PLAYER_HANDS;
+         handIndex++) {
+        if (game->player.hands[handIndex].count < 1) {
+            continue;
+        }
+
+        foundHand = 1;
+        if (calculatePlayerHandValueForIndex(game, handIndex) <= 21) {
+            return 0;
+        }
+    }
+
+    return foundHand;
+}
+
 static void applyRoundRewards(Game *game, MessageStyle resultStyle) {
     if (game->mode == MODE_ROGUELIKE) {
         if (resultStyle == MSG_WIN) {
@@ -844,6 +866,17 @@ void resolveRound(Game *game) {
     game->player.evenMoneyTaken = 0;
 
     renderTable(game, 0);
+
+    if (resultStyle == MSG_WIN) {
+        renderResultFlash(game, "YOU WIN!", MSG_WIN);
+        renderPause(game, 600);
+    } else if (resultStyle == MSG_PUSH) {
+        renderResultFlash(game, "PUSH", MSG_PUSH);
+        renderPause(game, 600);
+    } else if (playerAllHandsBust(game)) {
+        renderResultFlash(game, "BUST!", MSG_LOSS);
+        renderPause(game, 600);
+    }
 
     {
         char breakdown[256];

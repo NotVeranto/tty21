@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include "menu.h"
 #include "render.h"
 #include "input.h"
@@ -9,6 +10,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "round_economy.h"
 #include "round_rules.h"
 
@@ -275,14 +277,17 @@ void floorMenu(Game *game) {
     }
 }
 
-static void purchasePerk(Game *game, int perkIndex) {
+static int purchasePerk(Game *game, int perkIndex) {
     char message[128];
+    int purchased;
+
+    purchased = 0;
 
     if (game->run.perkLockedId == perkIndex) {
         logPush(game,
                 "Perk is disabled this floor.",
                 MSG_DEFAULT);
-        return;
+        return 0;
     }
 
     if (game->player.perkOwned[perkIndex]) {
@@ -307,7 +312,10 @@ static void purchasePerk(Game *game, int perkIndex) {
                  "%s purchased.",
                  perkName((PerkId)perkIndex));
         logPush(game, message, MSG_WIN);
+        purchased = 1;
     }
+
+    return purchased;
 }
 
 void runShop(Game *game) {
@@ -552,7 +560,30 @@ void runShop(Game *game) {
         }
 
         if (itemPerks[menuIndex] >= 0) {
-            purchasePerk(game, (int)itemPerks[menuIndex]);
+            if (purchasePerk(game, (int)itemPerks[menuIndex]) &&
+                !game->fastMode && isatty(STDOUT_FILENO)) {
+                char savedLabel[128];
+                int labelLength;
+
+                snprintf(savedLabel, sizeof(savedLabel), "%s",
+                         items[menuIndex].label);
+                labelLength = (int)strlen(savedLabel);
+                if (labelLength > (int)(sizeof("[ PURCHASED ]") - 1)) {
+                    memset(labels[menuIndex], ' ', (size_t)labelLength);
+                    memcpy(labels[menuIndex], "[ PURCHASED ]",
+                           sizeof("[ PURCHASED ]") - 1);
+                    labels[menuIndex][labelLength] = '\0';
+                } else {
+                    snprintf(labels[menuIndex], sizeof(labels[menuIndex]),
+                             "[ PURCHASED ]");
+                }
+
+                renderShop(game, items, descriptions, itemGroups, itemCount,
+                           disabledMask, selectedIndex);
+                renderPause(game, 300);
+                snprintf(labels[menuIndex], sizeof(labels[menuIndex]), "%s",
+                         savedLabel);
+            }
             continue;
         }
 

@@ -17,6 +17,15 @@ void dealerTurn(Game *game) {
     int dealerValue;
 
     if (game->state == STATE_DEALER_TURN) {
+        if (!game->fastMode &&
+            isatty(STDOUT_FILENO) &&
+            !game->peekActive &&
+            !twistActive(game, TWIST_SNIPER)) {
+            renderMessage("DEALER REVEALS...", ROW_PROMPT, MSG_INFO);
+            renderPause(game, 400);
+            renderTable(game, 0);
+        }
+
         targetValue = dealerTargetValue(game->run.dealerId);
 
         if (twistActive(game, TWIST_DEALER_TO_18) &&
@@ -70,11 +79,13 @@ void dealerTurn(Game *game) {
                     game,
                     &game->dealer.hands[dealerHandIndex],
                     game->run.dealerId);
-                renderTable(game, 0);
+                if (!game->fastMode && isatty(STDOUT_FILENO)) {
+                    renderTable(game, 0);
+                }
 
-                if (game->fastMode) {
-                    usleep(180000);
-                } else if (inputIsRaw()) {
+                if (!game->fastMode &&
+                    isatty(STDOUT_FILENO) &&
+                    inputIsRaw()) {
                     renderMessage("Press any key for next card...",
                                   ROW_PROMPT,
                                   MSG_INFO);

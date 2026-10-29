@@ -370,6 +370,9 @@ void advanceFloor(Game *game) {
              getMinBet(game, game->run.floor, game->mode));
     logPush(game, message, MSG_DEFAULT);
 
+    renderFloorTransition(game);
+    renderPause(game, 1200);
+
     if (dealerIsBoss(game->run.dealerId)) {
         game->state = STATE_BOSS_PREP;
         game->bossRuleDisabled = 0;

@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include "render.h"
 
 #include "round_cards.h"
@@ -49,6 +50,15 @@ static void initColors(void) {
                        isatty(STDOUT_FILENO);
         initialized = 1;
     }
+}
+
+void renderPause(const Game *game, int ms) {
+    if (game == NULL || game->fastMode || ms <= 0 ||
+        !isatty(STDOUT_FILENO)) {
+        return;
+    }
+
+    usleep((unsigned int)ms * 1000U);
 }
 
 // Returns the ANSI reset sequence when colors are enabled.
@@ -218,6 +228,76 @@ int renderTerminalSizeOk(int *width, int *height) {
     getTerminalSize(width, height);
     return *width >= MIN_TERMINAL_WIDTH &&
            *height >= MIN_TERMINAL_HEIGHT;
+}
+
+static void printFloorTransitionLine(int row,
+                                     int column,
+                                     const char *text,
+                                     int centered) {
+    char content[35];
+    int textLength;
+    int offset;
+
+    textLength = (int)strlen(text);
+    if (textLength > 34) {
+        textLength = 34;
+    }
+
+    offset = centered ? (34 - textLength) / 2 : 1;
+    if (offset + textLength > 34) {
+        textLength = 34 - offset;
+    }
+
+    memset(content, ' ', 34);
+    content[34] = '\0';
+    memcpy(content + offset, text, (size_t)textLength);
+
+    printf(SCR_CURSOR, row, column);
+    printf("%s|%s%s%s|%s",
+           scrDim(), scrReset(), content, scrDim(), scrReset());
+}
+
+void renderFloorTransition(const Game *game) {
+    const DealerInfo *dealerInfo;
+    char floorText[32];
+    char dealerText[64];
+    char minBetText[32];
+    int terminalWidth;
+    int terminalHeight;
+    int boxWidth;
+    int boxLeft;
+    int boxTop;
+
+    if (game == NULL || game->fastMode || !isatty(STDOUT_FILENO)) {
+        return;
+    }
+
+    initColors();
+    if (!renderTerminalSizeOk(&terminalWidth, &terminalHeight)) {
+        return;
+    }
+
+    boxWidth = 36;
+    boxLeft = (terminalWidth - boxWidth) / 2 + 1;
+    boxTop = (terminalHeight - 7) / 2 + 1;
+    dealerInfo = getDealerInfo(game->run.dealerId);
+
+    snprintf(floorText, sizeof(floorText), "FLOOR %02d", game->run.floor);
+    snprintf(dealerText, sizeof(dealerText), "Dealer: %.25s", dealerInfo->name);
+    snprintf(minBetText, sizeof(minBetText), "Min Bet: %d",
+             getMinBet(game, game->run.floor, game->mode));
+
+    printf("%s%s", scrReset(), SCR_CLEAR);
+    printf(SCR_CURSOR, boxTop, boxLeft);
+    printf("%s+----------------------------------+%s", scrDim(), scrReset());
+    printFloorTransitionLine(boxTop + 1, boxLeft, floorText, 1);
+    printFloorTransitionLine(boxTop + 2, boxLeft, "THE STAKES RISE", 1);
+    printFloorTransitionLine(boxTop + 3, boxLeft, "", 1);
+    printFloorTransitionLine(boxTop + 4, boxLeft, dealerText, 0);
+    printFloorTransitionLine(boxTop + 5, boxLeft, minBetText, 0);
+    printf(SCR_CURSOR, boxTop + 6, boxLeft);
+    printf("%s+----------------------------------+%s", scrDim(), scrReset());
+    fflush(stdout);
 }
 
 void renderTooSmallScreen(int currentWidth,
@@ -832,10 +912,65 @@ void renderResetScreen(void) {
     fflush(stdout);
 }
 
+static const char *dealerStatusFace(const Game *game,
+                                    int dealerCardHidden) {
+    int dealerValue;
+    int handIndex;
+    int hasPlayerHand;
+    int allPlayerHandsBust;
+
+    if (dealerCardHidden) {
+        return "[ -_- ]";
+    }
+
+    if (game->dealer.handCount < 1 ||
+        game->dealer.hands[0].count < 1) {
+        return "[o_o]";
+    }
+
+    dealerValue = calculateDealerHandValue(
+        game, &game->dealer.hands[0], game->run.dealerId);
+    if (dealerValue > 21) {
+        return "[>_<]";
+    }
+    if (game->dealer.hands[0].count == 2 && dealerValue == 21) {
+        return "[$_$]";
+    }
+
+    if (game->state == STATE_RESULT ||
+        game->state == STATE_QUIT ||
+        game->state == STATE_MENU) {
+        hasPlayerHand = 0;
+        allPlayerHandsBust = 1;
+        for (handIndex = 0;
+             handIndex < game->player.handCount &&
+             handIndex < MAX_PLAYER_HANDS;
+             handIndex++) {
+            if (game->player.hands[handIndex].count < 1) {
+                continue;
+            }
+
+            hasPlayerHand = 1;
+            if (calculatePlayerHandValueForIndex(game, handIndex) <= 21) {
+                allPlayerHandsBust = 0;
+                break;
+            }
+        }
+
+        if (hasPlayerHand && allPlayerHandsBust) {
+            return "[>_<]";
+        }
+        return "[^_^]";
+    }
+
+    return "[o_o]";
+}
+
 // Clears and redraws the complete table on fixed rows.
 static void drawStatusLine(const Game *game,
-                              int terminalWidth,
-                              int padding) {
+                           int terminalWidth,
+                           int padding,
+                           int dealerCardHidden) {
     const DealerInfo *dealerInfo;
     int prefixLength;
     int suffixLength;
@@ -843,6 +978,7 @@ static void drawStatusLine(const Game *game,
     int effectiveStatusWidth;
     int displayHandIndex;
     char dealerName[64];
+    const char *dealerFace;
     char statusText[256];
     char loanText[64];
 
@@ -858,10 +994,13 @@ static void drawStatusLine(const Game *game,
     }
 
     dealerInfo = getDealerInfo(game->run.dealerId);
+    dealerFace = dealerStatusFace(game, dealerCardHidden);
     if (game->bossRuleDisabled && dealerIsBoss(game->run.dealerId)) {
-        snprintf(dealerName, sizeof(dealerName), "%s [Rule 1 Disabled]", dealerInfo->name);
+        snprintf(dealerName, sizeof(dealerName), "%s [Rule 1 Disabled] %s",
+                     dealerInfo->name, dealerFace);
     } else {
-        snprintf(dealerName, sizeof(dealerName), "%s", dealerInfo->name);
+        snprintf(dealerName, sizeof(dealerName), "%s %s",
+                     dealerInfo->name, dealerFace);
     }
     displayHandIndex = game->player.activeHand;
     if (displayHandIndex >= game->player.handCount) {
@@ -925,9 +1064,11 @@ static void drawStatusLine(const Game *game,
                 }
             } else {
                 if (game->bossRuleDisabled && dealerIsBoss(game->run.dealerId)) {
-                    snprintf(dealerName, sizeof(dealerName), "%s [Rule 1 Disabled]", dealerInfo->name);
+                    snprintf(dealerName, sizeof(dealerName), "%s [Rule 1 Disabled] %s",
+                     dealerInfo->name, dealerFace);
                 } else {
-                    snprintf(dealerName, sizeof(dealerName), "%s", dealerInfo->name);
+                    snprintf(dealerName, sizeof(dealerName), "%s %s",
+                     dealerInfo->name, dealerFace);
                 }
                 snprintf(statusText,
                          sizeof(statusText),
@@ -1231,7 +1372,7 @@ void renderTable(const Game *game, int hideDealerCard) {
                         tableWidth);
         drawPlayerHands(game, tablePadding);
 
-        drawStatusLine(game, terminalWidth, tablePadding);
+        drawStatusLine(game, terminalWidth, tablePadding, dealerCardHidden);
 
         if (game->state == STATE_BET) {
             hintText = "Type a bet and press Enter.";
@@ -1471,7 +1612,7 @@ void renderMenuLogRefresh(const Game *game) {
         return;
     }
 
-    drawStatusLine(game, terminalWidth, tablePadding);
+    drawStatusLine(game, terminalWidth, tablePadding, 0);
     renderLog(game, tablePadding, terminalWidth);
 }
 
@@ -1734,6 +1875,7 @@ void renderShop(const Game *game,
     int prevGroup;
     int groupIndex;
     int isDisabled;
+    int isPurchased;
     int maxLabelWidth;
     int blockPadding;
     int blockWidth;
@@ -1789,10 +1931,24 @@ void renderShop(const Game *game,
             }
             itemRow = currentRow++;
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
+            isPurchased = strncmp(items[itemIndex].label,
+                                  "[ PURCHASED ]",
+                                  sizeof("[ PURCHASED ]") - 1) == 0;
 
             printf(SCR_CURSOR, itemRow, blockPadding + 1);
             printf(SCR_ERASE_EOL);
-            if (isDisabled) {
+            if (isPurchased) {
+                if (itemIndex == selectedIndex) {
+                    printf("%s> %s[%c]%s %s%s%s",
+                           scrBold(), scrDim(), items[itemIndex].hotkey,
+                           scrReset(), scrGreen(), items[itemIndex].label,
+                           scrReset());
+                } else {
+                    printf("  %s[%c]%s %s%s%s",
+                           scrDim(), items[itemIndex].hotkey, scrReset(),
+                           scrGreen(), items[itemIndex].label, scrReset());
+                }
+            } else if (isDisabled) {
                 printf("  %s[%c]%s %s%s%s",
                        scrDim(), items[itemIndex].hotkey, scrReset(),
                        scrDim(), items[itemIndex].label, scrReset());
@@ -1850,6 +2006,45 @@ void renderShop(const Game *game,
 }
 
 // Prints a message on a fixed row after erasing the rest of that line.
+void renderResultFlash(const Game *game,
+                       const char *message,
+                       MessageStyle style) {
+    const char *color;
+    int terminalWidth;
+    int terminalHeight;
+    int column;
+
+    if (game == NULL || message == NULL || game->fastMode ||
+        !isatty(STDOUT_FILENO)) {
+        return;
+    }
+
+    initColors();
+    if (!renderTerminalSizeOk(&terminalWidth, &terminalHeight)) {
+        return;
+    }
+
+    if (style == MSG_WIN) {
+        color = scrGreen();
+    } else if (style == MSG_LOSS) {
+        color = scrRed();
+    } else if (style == MSG_PUSH) {
+        color = scrYellow();
+    } else {
+        color = "";
+    }
+
+    column = (terminalWidth - (int)strlen(message)) / 2 + 1;
+    if (column < 1) {
+        column = 1;
+    }
+
+    printf(SCR_CURSOR, ROW_RESULT, column);
+    printf(SCR_ERASE_EOL);
+    printf("%s%s%s%s", scrBold(), color, message, scrReset());
+    fflush(stdout);
+}
+
 void renderMessage(const char *msg, int row, MessageStyle style) {
     const char *prefix;
     const char *suffix;
