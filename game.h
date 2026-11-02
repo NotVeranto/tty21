@@ -68,6 +68,7 @@ struct Game {
     Dealer dealer;
     GameState state;
     int roundNumber;
+    int roundInProgress; /* persisted marker for interrupted-round forfeits */
     Run run;
     GameMode mode;
     int peekActive;

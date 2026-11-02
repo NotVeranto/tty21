@@ -9,6 +9,7 @@
 #include "input.h"
 #include "input_map.h"
 #include "rng.h"
+#include "save.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -18,7 +19,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#define DECK_RESHUFFLE_MARGIN 15
+#define DECK_START_RESERVE 6
 #define FIRST_CARD_RETRY_LIMIT 50
 
 
@@ -35,11 +36,7 @@ void drawCard(Game *game, Hand *hand, int allowCurse) {
     char message[64];
 
     if (hand->count >= MAX_HAND_SIZE) return;
-    if (game->deck.top >= DECK_SIZE) {
-        initDeck(&game->deck);
-        shuffleDeck(&game->deck);
-        logPush(game, "Deck reshuffled.", MSG_INFO);
-    }
+    if (game->deck.top >= DECK_SIZE - DECK_BURN_SIZE) return;
 
     previousCount = hand->count;
     addCardToHand(hand, &game->deck.cards[game->deck.top]);
@@ -68,10 +65,7 @@ static void redrawFirstPlayerCard(Game *game, int requireHighCard) {
     accepted = 0;
 
     while (attemptCount < FIRST_CARD_RETRY_LIMIT && !accepted) {
-        if (game->deck.top >= DECK_SIZE) {
-            initDeck(&game->deck);
-            shuffleDeck(&game->deck);
-        }
+        if (game->deck.top >= DECK_SIZE - DECK_BURN_SIZE) break;
 
         replacementCard = game->deck.cards[game->deck.top];
         game->deck.top++;
@@ -158,15 +152,6 @@ void startRound(Game *game) {
 
     game->peekActive = 0;
 
-    if (twistActive(game, TWIST_SIX_DECK)) {
-        initDeck(&game->deck);
-        shuffleDeck(&game->deck);
-    } else if (!twistActive(game, TWIST_NO_RESHUFFLE) &&
-               game->deck.top > DECK_SIZE - DECK_RESHUFFLE_MARGIN) {
-        initDeck(&game->deck);
-        shuffleDeck(&game->deck);
-    }
-
     renderTable(game, 0);
 
     betAmount = readBet(game);
@@ -193,6 +178,17 @@ void startRound(Game *game) {
     resetHand(&game->dealer.hands[0]);
     resetHand(&game->dealer.hands[1]);
     game->dealer.handCount = 1;
+
+    if (twistActive(game, TWIST_SIX_DECK)) {
+        initDeck(&game->deck);
+        shuffleDeck(&game->deck);
+    } else if (!twistActive(game, TWIST_NO_RESHUFFLE) &&
+               game->deck.top >= DECK_SIZE - DECK_BURN_SIZE - DECK_START_RESERVE) {
+        initDeck(&game->deck);
+        shuffleDeck(&game->deck);
+        logPush(game, "Deck reshuffled.", MSG_INFO);
+    }
+
     game->player.bets[game->player.activeHand] = betAmount;
     memset(game->player.usedDouble, 0, sizeof(game->player.usedDouble));
     memset(game->player.usedSplit, 0, sizeof(game->player.usedSplit));
@@ -274,10 +270,7 @@ void startRound(Game *game) {
             attempts = 0;
             found = 0;
             while (attempts < 50 && !found) {
-                if (game->deck.top >= DECK_SIZE) {
-                    initDeck(&game->deck);
-                    shuffleDeck(&game->deck);
-                }
+                if (game->deck.top >= DECK_SIZE - DECK_BURN_SIZE) break;
                 drawn = game->deck.cards[game->deck.top];
                 game->deck.top++;
                 if (drawn.rank <= SIX) {
@@ -304,6 +297,12 @@ void startRound(Game *game) {
         logPush(game, betMsg, MSG_ACTION);
     }
 
+    game->roundInProgress = 1;
+    if (game->mode == MODE_ROGUELIKE && game->saveEnabled) {
+        game->rngCalls = rngGetCallCount();
+        (void)saveGame(game);
+    }
+
     upcardRank = game->dealer.hands[0].cards[0].rank;
     upcardIsAce = upcardRank == ACE;
     upcardIsTen = upcardRank >= TEN;
@@ -318,7 +317,9 @@ void startRound(Game *game) {
     }
     playerBJ = game->roundHadNaturalBj;
 
-    if (upcardIsAce) {
+    if (upcardIsAce &&
+        !twistActive(game, TWIST_ACES_LOW) &&
+        !effectiveDealerAcesCountAsOne(game, game->run.dealerId)) {
         if (playerBJ && dealerHandsCount(game->run.dealerId) == 1) {
             askEvenMoney(game);
             if (game->state == STATE_RESULT) {
@@ -348,12 +349,14 @@ void startRound(Game *game) {
             logPush(game, "Dealer peeks. Both have blackjack.", MSG_PUSH);
         else
             logPush(game, "Dealer peeks. Blackjack.", MSG_LOSS);
-        game->state = STATE_RESULT;
+        game->state = game->dealer.handCount > 1
+                          ? STATE_DEALER_TURN : STATE_RESULT;
         return;
     }
 
     if (playerValue >= 21) {
-        game->state = STATE_RESULT;
+        game->state = game->dealer.handCount > 1
+                          ? STATE_DEALER_TURN : STATE_RESULT;
         return;
     }
 

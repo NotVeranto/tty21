@@ -2,6 +2,7 @@
 #define CARD_H
 
 #define DECK_SIZE 52
+#define DECK_BURN_SIZE 15
 
 typedef enum {
     HEARTS,

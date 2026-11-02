@@ -101,6 +101,13 @@ static int calculateHandPayout(Game *game, const SettlementContext *ctx,
     payoutValue = basePayout;
     if (game->mode == MODE_ROGUELIKE && game->winStreak >= 3) payoutValue *= 2;
     payoutValue = payoutValue * ctx->currentFatigue / 100;
+    {
+        long long payoutCap = (long long)splitBet * 20LL;
+        if (payoutValue > payoutCap) {
+            payoutValue = payoutCap;
+            logPush(game, "Payout capped!", MSG_INFO);
+        }
+    }
     if (payoutValue > INT_MAX - game->player.chips) payout = INT_MAX - game->player.chips;
     else payout = (int)payoutValue;
     return payout;
@@ -471,6 +478,7 @@ void resolveRound(Game *game) {
                  "Surrender | half bet lost");
         game->player.surrendered = 0;
         game->roundHadNaturalBj = 0;
+        game->roundInProgress = 0;
         renderTable(game, 0);
         if (game->player.chips == 0) {
             game->state = STATE_QUIT;
@@ -576,6 +584,9 @@ void resolveRound(Game *game) {
     for (handIndex = 0;
          handIndex < game->player.handCount;
          handIndex++) {
+        if (game->player.hands[handIndex].count < 1) {
+            continue;
+        }
         handValue = calculatePlayerHandValueForIndex(game, handIndex);
         handBet = game->player.bets[handIndex];
         playerBlackjack = game->roundHadNaturalBj &&
@@ -978,4 +989,5 @@ void resolveRound(Game *game) {
         game->state = STATE_MENU;
     }
     game->roundHadNaturalBj = 0;
+    game->roundInProgress = 0;
 }

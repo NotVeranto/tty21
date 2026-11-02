@@ -207,6 +207,7 @@ int loadGame(Game *game) {
     if (temp.run.perkLockedUsed < 0 || temp.run.perkLockedUsed > 1) return -1;
     if (temp.saveEnabled < 0 || temp.saveEnabled > 1) return -1;
     if (temp.playerQuit < 0 || temp.playerQuit > 1) return -1;
+    if (temp.roundInProgress < 0 || temp.roundInProgress > 1) return -1;
     if (temp.deck.top < 0 || temp.deck.top > DECK_SIZE) return -1;
     if (temp.run.extraTwistCount < 0 ||
         temp.run.extraTwistCount > MAX_EXTRA_TWISTS) return -1;

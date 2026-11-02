@@ -28,6 +28,7 @@ void initGame(Game *game, GameMode mode) {
     game->player.chips = 100;
     game->state = STATE_BET;
     game->roundNumber = 0;
+    game->roundInProgress = 0;
     game->mode = mode;
     initRun(&game->run);
 
