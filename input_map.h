@@ -7,6 +7,7 @@ typedef enum {
     ACTION_DOUBLE,
     ACTION_SPLIT,
     ACTION_PEEK,
+    ACTION_SURRENDER,
     ACTION_QUIT
 } ActionId;
 

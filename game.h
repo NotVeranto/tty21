@@ -32,6 +32,7 @@ typedef struct {
     int perkCharges[PERK_COUNT];
     int usedDouble[MAX_PLAYER_HANDS];
     int usedSplit[MAX_PLAYER_HANDS];
+    int surrendered; /* current round ended by surrender */
     int insuranceBet; /* 0 if no insurance was placed */
     int evenMoneyTaken; /* prevents duplicate settlement after even money */
 } Player;

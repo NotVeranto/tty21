@@ -460,6 +460,28 @@ void resolveRound(Game *game) {
     char handMessage[64];
     char *payoutBreakdownText;
 
+    if (game->player.surrendered) {
+        applyRoundRewards(game, MSG_LOSS);
+        applyRoundRecovery(game);
+        game->tippedThisRound = 0;
+        game->player.insuranceBet = 0;
+        game->player.evenMoneyTaken = 0;
+        snprintf(game->lastPayoutBreakdown,
+                 sizeof(game->lastPayoutBreakdown),
+                 "Surrender | half bet lost");
+        game->player.surrendered = 0;
+        game->roundHadNaturalBj = 0;
+        renderTable(game, 0);
+        if (game->player.chips == 0) {
+            game->state = STATE_QUIT;
+        } else if (game->mode == MODE_CLASSIC) {
+            game->state = STATE_BET;
+        } else {
+            game->state = STATE_MENU;
+        }
+        return;
+    }
+
     captureSettlementContext(game, &ctx);
     payoutBreakdownText = game->lastPayoutBreakdown;
     game->lastPayoutBreakdown[0] = '\0';

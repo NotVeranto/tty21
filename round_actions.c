@@ -4,6 +4,7 @@
 #include "round.h"
 #include "round_rules.h"
 #include "round_cards.h"
+#include "round_economy.h"
 #include "round_input.h"
 #include "render.h"
 #include "input.h"
@@ -128,6 +129,12 @@ static int buildPlayerActions(const Game *game, ActionId *actions) {
          game->player.perkCharges[PERK_PEEK] > 0) ||
         game->freePeekReady) {
         actions[actionCount++] = ACTION_PEEK;
+    }
+
+    if (game->player.hands[game->player.activeHand].count == 2 &&
+        !game->player.usedDouble[game->player.activeHand] &&
+        !game->player.usedSplit[game->player.activeHand]) {
+        actions[actionCount++] = ACTION_SURRENDER;
     }
 
     actions[actionCount++] = ACTION_QUIT;
@@ -317,6 +324,14 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                     MSG_ACTION);
             renderTable(game, 1);
         }
+    } else if (action == ACTION_SURRENDER) {
+        int bet = game->player.bets[game->player.activeHand];
+        int startChips = game->player.chips;
+        (void)applyLoss(game, bet / 2);
+        animateChips(game, startChips, game->player.chips);
+        game->player.surrendered = 1;
+        logPush(game, "You surrendered. Half your bet is lost.", MSG_LOSS);
+        game->state = STATE_RESULT;
     } else if (action == ACTION_QUIT) {
         game->playerQuit = 1;
         game->state = STATE_QUIT;
@@ -410,7 +425,7 @@ void playerTurn(Game *game) {
             }
 
             renderTable(game, 1);
-            renderMessage("Choose action: [h/s/d/p/k/q]: ",
+            renderMessage("Choose action: [h/s/d/p/k/u/q]: ",
                           ROW_PROMPT,
                           MSG_DEFAULT);
             inputCharacter = getchar();

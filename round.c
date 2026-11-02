@@ -198,6 +198,7 @@ void startRound(Game *game) {
     memset(game->player.usedSplit, 0, sizeof(game->player.usedSplit));
     game->player.insuranceBet = 0;
     game->player.evenMoneyTaken = 0;
+    game->player.surrendered = 0;
     game->lastPayoutBreakdown[0] = '\0';
 
     game->roundNumber++;
@@ -312,7 +313,7 @@ void startRound(Game *game) {
     if (game->player.handCount == 1 &&
         game->player.hands[0].count == 2 &&
         playerValue == 21 &&
-        !game->player.usedSplit) {
+        !game->player.usedSplit[0]) {
         game->roundHadNaturalBj = 1;
     }
     playerBJ = game->roundHadNaturalBj;
@@ -363,7 +364,7 @@ void startRound(Game *game) {
                 (long long)game->player.bets[0] * 2) {
 
             game->player.bets[0] *= 2;
-            game->player.usedDouble = 1;
+            game->player.usedDouble[0] = 1;
             drawCard(game, &game->player.hands[0], 1);
 
             if (effectiveDealerMirrorsOnHit(game)) {
