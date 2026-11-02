@@ -343,6 +343,7 @@ int main(int argc, char **argv) {
     int noSaveFlag;
     int continueFlag;
 
+    (void)setvbuf(stdin, NULL, _IONBF, 0);
     seed = 0;
     seedProvided = 0;
     fastFlag = 0;

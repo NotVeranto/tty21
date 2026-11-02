@@ -147,7 +147,7 @@ int inputIsRaw(void) {
 
 void flushInput(void) {
     if (isatty(STDIN_FILENO)) {
-        tcflush(STDIN_FILENO, TCIFLUSH);
+        (void)tcflush(STDIN_FILENO, TCIFLUSH);
     }
 }
 

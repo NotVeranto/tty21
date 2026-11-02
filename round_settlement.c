@@ -78,22 +78,22 @@ static int calculateHandPayout(Game *game, const SettlementContext *ctx,
             numerator = 1; denominator = 1;
         }
         basePayout = ((long long)splitBet * numerator) / denominator;
-        if (twistActive(game, TWIST_DESPERATION) && game->player.usedDouble) basePayout *= 3;
+        if (twistActive(game, TWIST_DESPERATION) && game->player.usedDouble[playerHandIndex]) basePayout *= 3;
         if (twistActive(game, TWIST_HIGH_STAKES)) basePayout *= 2;
         if (twistActive(game, TWIST_BLOOD_PACT)) basePayout *= 2;
-        if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble && !game->player.usedSplit)
+        if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble[playerHandIndex] && !game->player.usedSplit[playerHandIndex])
             basePayout += splitBet / 2;
         if (game->player.perkOwned[PERK_COMPOUNDING])
             basePayout += game->winStreak < 10 ? game->winStreak : 10;
     } else if (outcome == HAND_OUTCOME_WIN) {
         basePayout = splitBet;
-        if (dealerPaysPureHandBonus(game->run.dealerId) && !game->player.usedSplit && !game->player.usedDouble) basePayout *= 2;
-        if (twistActive(game, TWIST_DESPERATION) && game->player.usedDouble) basePayout *= 3;
+        if (dealerPaysPureHandBonus(game->run.dealerId) && !game->player.usedSplit[playerHandIndex] && !game->player.usedDouble[playerHandIndex]) basePayout *= 2;
+        if (twistActive(game, TWIST_DESPERATION) && game->player.usedDouble[playerHandIndex]) basePayout *= 3;
         if (twistActive(game, TWIST_HIGH_STAKES)) basePayout *= 2;
         if (twistActive(game, TWIST_BLOOD_PACT)) basePayout *= 2;
         if (twistActive(game, TWIST_HALF_PAYOUT)) basePayout /= 2;
         if (twistActive(game, TWIST_JACKPOT) && rngRange(0, 99) < 5) basePayout *= 10;
-        if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble && !game->player.usedSplit)
+        if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble[playerHandIndex] && !game->player.usedSplit[playerHandIndex])
             basePayout += splitBet / 2;
         if (game->player.perkOwned[PERK_COMPOUNDING])
             basePayout += game->winStreak < 10 ? game->winStreak : 10;
@@ -116,7 +116,7 @@ static int calculateHandLoss(Game *game, const SettlementContext *ctx,
     (void)dealerHandIndex;
     baseLoss = ((long long)splitBet * effectiveDealerLossMultiplier(game)) / 100;
     if (outcome == HAND_OUTCOME_BUST) {
-        skipLossReduction = twistActive(game, TWIST_DESPERATION) && game->player.usedDouble;
+        skipLossReduction = twistActive(game, TWIST_DESPERATION) && game->player.usedDouble[playerHandIndex];
         if (!skipLossReduction && twistActive(game, TWIST_BUST_INSURANCE)) baseLoss /= 2;
         if (!skipLossReduction && twistActive(game, TWIST_CHARITY)) baseLoss /= 2;
         if (!skipLossReduction && twistActive(game, TWIST_HIGH_STAKES)) baseLoss *= 2;
@@ -310,6 +310,14 @@ static void appendModifierToken(char *out, size_t outSize,
              token);
 }
 
+static int anyHandUsed(const Game *game, const int flags[MAX_PLAYER_HANDS]) {
+    int handIndex;
+    for (handIndex = 0; handIndex < game->player.handCount && handIndex < MAX_PLAYER_HANDS; handIndex++) {
+        if (flags[handIndex]) return 1;
+    }
+    return 0;
+}
+
 static void buildModifierList(const Game *game,
                               int winStreakBefore,
                               int roundHadBlackjack,
@@ -355,7 +363,7 @@ static void buildModifierList(const Game *game,
     }
 
     if (twistActive(game, TWIST_DESPERATION) &&
-        game->player.usedDouble && isWin) {
+        anyHandUsed(game, game->player.usedDouble) && isWin) {
         APPEND_MODIFIER("Desp 3x");
     }
 
@@ -401,8 +409,8 @@ static void buildModifierList(const Game *game,
     }
 
     if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
-        game->player.usedDouble &&
-        !game->player.usedSplit && isWin) {
+        anyHandUsed(game, game->player.usedDouble) &&
+        !anyHandUsed(game, game->player.usedSplit) && isWin) {
         APPEND_MODIFIER("Dip +B/2");
     }
 
@@ -551,7 +559,7 @@ void resolveRound(Game *game) {
         playerBlackjack = game->roundHadNaturalBj &&
                           game->player.hands[handIndex].count == 2 &&
                           handValue == 21 &&
-                          !game->player.usedSplit;
+                          !game->player.usedSplit[handIndex];
         splitBet = handBet / dealerHandCount;
         ctx.handValue = handValue;
         ctx.playerBlackjack = playerBlackjack;
@@ -622,7 +630,11 @@ void resolveRound(Game *game) {
                                 MSG_INFO);
                     }
 
-                    lossAmount = applyLoss(game, baseLoss);
+                    {
+                        int startChips = game->player.chips;
+                        lossAmount = applyLoss(game, baseLoss);
+                        animateChips(game, startChips, game->player.chips);
+                    }
                     lossTotal += lossAmount;
                     handLossTotal += lossAmount;
 
@@ -657,7 +669,11 @@ void resolveRound(Game *game) {
             } else if (outcome == HAND_OUTCOME_BLACKJACK) {
                 ctx.roundHadBlackjack = 1;
                 payout = calculateHandPayout(game, &ctx, handIndex, dealerHandIndex);
-                creditChips(game, payout);
+                {
+                    int startChips = game->player.chips;
+                    creditChips(game, payout);
+                    animateChips(game, startChips, game->player.chips);
+                }
                 payoutTotal += payout;
                 handPayoutTotal += payout;
                 handWon = 1;
@@ -691,7 +707,11 @@ void resolveRound(Game *game) {
                 }
             } else if (outcome == HAND_OUTCOME_DEALER_BLACKJACK) {
                 baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
-                lossAmount = applyLoss(game, baseLoss);
+                {
+                    int startChips = game->player.chips;
+                    lossAmount = applyLoss(game, baseLoss);
+                    animateChips(game, startChips, game->player.chips);
+                }
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
 
@@ -751,7 +771,11 @@ void resolveRound(Game *game) {
                 }
             } else if (outcome == HAND_OUTCOME_WIN) {
                 payout = calculateHandPayout(game, &ctx, handIndex, dealerHandIndex);
-                creditChips(game, payout);
+                {
+                    int startChips = game->player.chips;
+                    creditChips(game, payout);
+                    animateChips(game, startChips, game->player.chips);
+                }
                 payoutTotal += payout;
                 handPayoutTotal += payout;
                 handWon = 1;
@@ -763,7 +787,11 @@ void resolveRound(Game *game) {
                 }
             } else {
                 baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
-                lossAmount = applyLoss(game, baseLoss);
+                {
+                    int startChips = game->player.chips;
+                    lossAmount = applyLoss(game, baseLoss);
+                    animateChips(game, startChips, game->player.chips);
+                }
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
 

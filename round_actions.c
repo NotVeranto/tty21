@@ -10,14 +10,21 @@
 #include "input_map.h"
 #include "rng.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
+
+static int getTotalExposure(const Game *game) {
+    long long exposure = game->player.insuranceBet;
+    int handIndex;
+    for (handIndex = 0; handIndex < game->player.handCount && handIndex < MAX_PLAYER_HANDS; handIndex++) exposure += game->player.bets[handIndex];
+    return exposure > INT_MAX ? INT_MAX : (int)exposure;
+}
 
 static int canDouble(const Game *game) {
     if (game->run.floor >= 10 && game->run.dealerId == DEALER_VOID) return 0;
     return game->player.hands[game->player.activeHand].count == 2 &&
-           (long long)game->player.chips >=
-               (long long)game->player.bets[game->player.activeHand] * 2;
+           (long long)game->player.chips - getTotalExposure(game) >= game->player.bets[game->player.activeHand];
 }
 
 static int canSplit(const Game *game) {
@@ -34,8 +41,7 @@ static int canSplit(const Game *game) {
            game->player.hands[game->player.activeHand].cards[0].rank ==
                game->player.hands[game->player.activeHand].cards[1].rank &&
            game->player.handCount < handLimit &&
-           (long long)game->player.chips >=
-               2LL * (long long)game->player.bets[game->player.activeHand] &&
+           (long long)game->player.chips - getTotalExposure(game) >= game->player.bets[game->player.activeHand] &&
            !game->player.isSplitAce[game->player.activeHand];
 }
 
@@ -54,7 +60,8 @@ static void splitHand(Game *game) {
 
     src = game->player.activeHand;
     dst = game->player.handCount;
-    game->player.usedSplit = 1;
+    game->player.usedSplit[src] = 1;
+    game->player.usedSplit[dst] = 1;
 
     game->player.hands[dst].cards[0] =
         game->player.hands[src].cards[1];
@@ -249,7 +256,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                      MSG_DEFAULT);
         } else {
             game->player.bets[game->player.activeHand] *= 2;
-            game->player.usedDouble = 1;
+            game->player.usedDouble[game->player.activeHand] = 1;
             drawCard(game, &game->player.hands[game->player.activeHand], 1);
 
             if (effectiveDealerMirrorsOnHit(game)) {
@@ -366,10 +373,10 @@ void playerTurn(Game *game) {
                                             actionCount,
                                             0,
                                             1);
-            } else if (event.type == KEY_ENTER) {
-                dispatchPlayerAction(game, actions[actionIndex]);
-            } else if (event.type == KEY_UP ||
-                       event.type == KEY_DOWN) {
+            } else if (event.type == KEY_ENTER || event.type == KEY_ESC ||
+                       event.type == KEY_UP || event.type == KEY_DOWN ||
+                       event.type == KEY_NONE) {
+                continue;
             } else if (event.type == KEY_CHAR) {
                 action = mapPlayerKey(event.ch);
                 matchedIndex = -1;
@@ -389,12 +396,9 @@ void playerTurn(Game *game) {
                         dispatchPlayerAction(game, action);
                     }
                 }
-            } else if (event.type == KEY_ESC) {
+            } else if (event.type == KEY_EOF) {
                 game->playerQuit = 1;
                 game->state = STATE_QUIT;
-            } else if (event.type == KEY_EOF ||
-                       event.type == KEY_NONE) {
-                continue;
             }
         }
     } else {

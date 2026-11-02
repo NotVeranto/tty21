@@ -935,8 +935,21 @@ static void printStyledStatusText(const char *statusText) {
         memcpy(segment, cursor, length);
         segment[length] = '\0';
 
-        if (strncmp(segment, "Floor:", 6) == 0) style = scrBold();
-        else if (strncmp(segment, "Marks:", 6) == 0) style = scrCyan();
+        if (strncmp(segment, "Floor:", 6) == 0) {
+            char *openBracket = strchr(segment, '[');
+            char *closeBracket = strchr(segment, ']');
+            if (openBracket != NULL && closeBracket != NULL && closeBracket > openBracket) {
+                *openBracket = '\0';
+                *closeBracket = '\0';
+                if (!first) printf(" %s|%s ", scrDim(), scrReset());
+                printf("%s%s%s%s[%s]%s", scrBold(), segment, scrReset(), scrDim(), openBracket + 1, scrReset());
+                first = 0;
+                if (separator == NULL) break;
+                cursor = separator + 3;
+                continue;
+            }
+            style = scrBold();
+        } else if (strncmp(segment, "Marks:", 6) == 0) style = scrCyan();
         else if (strncmp(segment, "Chips:", 6) == 0) style = scrYellow();
 
         if (!first) printf(" %s|%s ", scrDim(), scrReset());
@@ -961,8 +974,17 @@ static void drawStatusLine(const Game *game,
     char dealerName[64];
     char statusText[256];
     char loanText[64];
+    char progressEquals[11];
+    char progressDots[11];
+    int progress;
 
     (void)dealerCardHidden;
+    progress = game->run.floor % 10;
+    if (progress < 0) progress = 0;
+    memset(progressEquals, '=', (size_t)progress);
+    progressEquals[progress] = '\0';
+    memset(progressDots, '.', (size_t)(10 - progress));
+    progressDots[10 - progress] = '\0';
     loanText[0] = '\0';
 
     if (game->mode == MODE_ROGUELIKE &&
@@ -1003,8 +1025,8 @@ static void drawStatusLine(const Game *game,
         } else if (game->player.handCount == 1) {
             snprintf(statusText,
                      sizeof(statusText),
-                     "Floor: %d | %s | Marks: %d | Chips: %d | Bet: %d%s",
-                     game->run.floor,
+                     "Floor: %d [%s%s] | %s | Marks: %d | Chips: %d | Bet: %d%s",
+                     game->run.floor, progressEquals, progressDots,
                      dealerName,
                      game->run.marks,
                      game->player.chips,
@@ -1013,8 +1035,8 @@ static void drawStatusLine(const Game *game,
         } else {
             snprintf(statusText,
                      sizeof(statusText),
-                     "Floor: %d | %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)%s",
-                     game->run.floor,
+                     "Floor: %d [%s%s] | %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)%s",
+                     game->run.floor, progressEquals, progressDots,
                      dealerName,
                      game->run.marks,
                      game->player.chips,
@@ -1037,10 +1059,9 @@ static void drawStatusLine(const Game *game,
                     statusText[0] = '\0';
                 }
             } else {
-                snprintf(statusText,
-                         sizeof(statusText),
-                         "Floor: %d | ",
-                         game->run.floor);
+                snprintf(statusText, sizeof(statusText),
+                         "Floor: %d [%s%s] | ",
+                         game->run.floor, progressEquals, progressDots);
                 prefixLength = (int)strlen(statusText);
 
                 if (game->player.handCount == 1) {
@@ -1118,6 +1139,32 @@ static void drawStatusLine(const Game *game,
     moveToTableRow(ROW_STATUS, padding);
     printStyledStatusText(statusText);
     printf(SCR_ERASE_EOL);
+}
+
+void animateChips(Game *game, int startChips, int endChips) {
+    int terminalWidth;
+    int terminalHeight;
+    int savedChips;
+    int direction;
+    int value;
+    if (game == NULL || game->fastMode || !isatty(STDOUT_FILENO) || startChips == endChips) return;
+    getTerminalSize(&terminalWidth, &terminalHeight);
+    (void)terminalHeight;
+    savedChips = game->player.chips;
+    direction = endChips > startChips ? 1 : -1;
+    value = startChips;
+    while (value != endChips) {
+        int nextValue = value + direction * 5;
+        if ((direction > 0 && nextValue > endChips) || (direction < 0 && nextValue < endChips)) nextValue = endChips;
+        game->player.chips = nextValue;
+        drawStatusLine(game, terminalWidth, tablePadding, 0);
+        fflush(stdout);
+        usleep(15000);
+        value = nextValue;
+    }
+    game->player.chips = savedChips;
+    drawStatusLine(game, terminalWidth, tablePadding, 0);
+    fflush(stdout);
 }
 
 // Returns the strongest category among active twists for banner coloring.

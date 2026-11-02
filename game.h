@@ -30,8 +30,8 @@ typedef struct {
     int chips;
     int perkOwned[PERK_COUNT];
     int perkCharges[PERK_COUNT];
-    int usedSplit;   /* set if the player used split this round */
-    int usedDouble;  /* set if the player used double this round */
+    int usedDouble[MAX_PLAYER_HANDS];
+    int usedSplit[MAX_PLAYER_HANDS];
     int insuranceBet; /* 0 if no insurance was placed */
     int evenMoneyTaken; /* prevents duplicate settlement after even money */
 } Player;

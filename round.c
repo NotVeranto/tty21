@@ -194,8 +194,8 @@ void startRound(Game *game) {
     resetHand(&game->dealer.hands[1]);
     game->dealer.handCount = 1;
     game->player.bets[game->player.activeHand] = betAmount;
-    game->player.usedSplit = 0;
-    game->player.usedDouble = 0;
+    memset(game->player.usedDouble, 0, sizeof(game->player.usedDouble));
+    memset(game->player.usedSplit, 0, sizeof(game->player.usedSplit));
     game->player.insuranceBet = 0;
     game->player.evenMoneyTaken = 0;
     game->lastPayoutBreakdown[0] = '\0';

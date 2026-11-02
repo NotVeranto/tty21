@@ -46,6 +46,7 @@ void renderTooSmallScreen(int currentWidth,
 void renderTable(const Game *game, int hideDealerCard);
 void renderStatsScreen(const Game *game);
 void renderPause(const Game *game, int ms);
+void animateChips(Game *game, int startChips, int endChips);
 void renderFloorTransition(const Game *game);
 void renderResultFlash(const Game *game,
                        const char *message,
