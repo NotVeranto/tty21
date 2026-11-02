@@ -920,88 +920,6 @@ void renderResetScreen(void) {
     fflush(stdout);
 }
 
-static const char *dealerStatusFace(const Game *game,
-                                    int dealerCardHidden) {
-    int dealerValue;
-    int handIndex;
-    int hasPlayerHand;
-    int allPlayerHandsBust;
-
-    if (dealerCardHidden) {
-        return "[ -_- ]";
-    }
-
-    if (game->dealer.handCount < 1 ||
-        game->dealer.hands[0].count < 1) {
-        return "[o_o]";
-    }
-
-    dealerValue = calculateDealerHandValue(
-        game, &game->dealer.hands[0], game->run.dealerId);
-    if (dealerValue > 21) {
-        return "[>_<]";
-    }
-    if (game->dealer.hands[0].count == 2 && dealerValue == 21) {
-        return "[$_$]";
-    }
-
-    if (game->state == STATE_RESULT ||
-        game->state == STATE_QUIT ||
-        game->state == STATE_MENU) {
-        hasPlayerHand = 0;
-        allPlayerHandsBust = 1;
-        for (handIndex = 0;
-             handIndex < game->player.handCount &&
-             handIndex < MAX_PLAYER_HANDS;
-             handIndex++) {
-            if (game->player.hands[handIndex].count < 1) {
-                continue;
-            }
-
-            hasPlayerHand = 1;
-            if (calculatePlayerHandValueForIndex(game, handIndex) <= 21) {
-                allPlayerHandsBust = 0;
-                break;
-            }
-        }
-
-        if (hasPlayerHand && allPlayerHandsBust) {
-            return "[>_<]";
-        }
-        return "[^_^]";
-    }
-
-    return "[o_o]";
-}
-
-static void printStyledStatusText(const char *statusText) {
-    const char *cursor = statusText;
-    int first = 1;
-
-    while (*cursor != '\0') {
-        const char *separator = strstr(cursor, " | ");
-        size_t length = separator != NULL
-                            ? (size_t)(separator - cursor) : strlen(cursor);
-        char segment[256];
-        const char *style = "";
-
-        if (length >= sizeof(segment)) length = sizeof(segment) - 1;
-        memcpy(segment, cursor, length);
-        segment[length] = '\0';
-
-        if (strncmp(segment, "Floor:", 6) == 0) style = scrBold();
-        else if (strncmp(segment, "Marks:", 6) == 0) style = scrCyan();
-        else if (strncmp(segment, "Chips:", 6) == 0) style = scrYellow();
-
-        if (!first) printf(" %s|%s ", scrDim(), scrReset());
-        printf("%s%s%s", style, segment, scrReset());
-        first = 0;
-        if (separator == NULL) break;
-        cursor = separator + 3;
-    }
-}
-
-// Clears and redraws the complete table on fixed rows.
 static void drawStatusLine(const Game *game,
                            int terminalWidth,
                            int padding,
@@ -1013,7 +931,6 @@ static void drawStatusLine(const Game *game,
     int effectiveStatusWidth;
     int displayHandIndex;
     char dealerName[64];
-    const char *dealerFace;
     char statusText[256];
     char loanText[64];
 
@@ -1029,14 +946,7 @@ static void drawStatusLine(const Game *game,
     }
 
     dealerInfo = getDealerInfo(game->run.dealerId);
-    dealerFace = dealerStatusFace(game, dealerCardHidden);
-    if (game->bossRuleDisabled && dealerIsBoss(game->run.dealerId)) {
-        snprintf(dealerName, sizeof(dealerName), "%s [Rule 1 Disabled] %s",
-                     dealerInfo->name, dealerFace);
-    } else {
-        snprintf(dealerName, sizeof(dealerName), "%s %s",
-                     dealerInfo->name, dealerFace);
-    }
+    snprintf(dealerName, sizeof(dealerName), "%s", dealerInfo->name);
     displayHandIndex = game->player.activeHand;
     if (displayHandIndex >= game->player.handCount) {
         displayHandIndex = game->player.handCount - 1;
@@ -1064,7 +974,7 @@ static void drawStatusLine(const Game *game,
         } else if (game->player.handCount == 1) {
             snprintf(statusText,
                      sizeof(statusText),
-                     "Floor: %d | Dealer: %s | Marks: %d | Chips: %d | Bet: %d%s",
+                     "Floor: %d | %s | Marks: %d | Chips: %d | Bet: %d%s",
                      game->run.floor,
                      dealerName,
                      game->run.marks,
@@ -1074,7 +984,7 @@ static void drawStatusLine(const Game *game,
         } else {
             snprintf(statusText,
                      sizeof(statusText),
-                     "Floor: %d | Dealer: %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)%s",
+                     "Floor: %d | %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)%s",
                      game->run.floor,
                      dealerName,
                      game->run.marks,
@@ -1098,16 +1008,9 @@ static void drawStatusLine(const Game *game,
                     statusText[0] = '\0';
                 }
             } else {
-                if (game->bossRuleDisabled && dealerIsBoss(game->run.dealerId)) {
-                    snprintf(dealerName, sizeof(dealerName), "%s [Rule 1 Disabled] %s",
-                     dealerInfo->name, dealerFace);
-                } else {
-                    snprintf(dealerName, sizeof(dealerName), "%s %s",
-                     dealerInfo->name, dealerFace);
-                }
                 snprintf(statusText,
                          sizeof(statusText),
-                         "Floor: %d | Dealer: ",
+                         "Floor: %d | ",
                          game->run.floor);
                 prefixLength = (int)strlen(statusText);
 
@@ -1151,7 +1054,7 @@ static void drawStatusLine(const Game *game,
                 if (game->player.handCount == 1) {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "Floor: %d | Dealer: %s | Marks: %d | Chips: %d | Bet: %d",
+                             "Floor: %d | %s | Marks: %d | Chips: %d | Bet: %d",
                              game->run.floor,
                              dealerName,
                              game->run.marks,
@@ -1160,7 +1063,7 @@ static void drawStatusLine(const Game *game,
                 } else {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "Floor: %d | Dealer: %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)",
+                             "Floor: %d | %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)",
                              game->run.floor,
                              dealerName,
                              game->run.marks,
