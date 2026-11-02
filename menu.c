@@ -592,6 +592,7 @@ void runShop(Game *game) {
             case 'v':
                 game->player.chips -= 10;
                 game->run.marks += 2;
+                game->totalMarksEarned += 2;
                 logPush(game, "Converted 10 chips to 2 marks.", MSG_INFO);
                 break;
             case 'n':

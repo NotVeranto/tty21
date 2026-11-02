@@ -966,6 +966,28 @@ static const char *dealerStatusFace(const Game *game,
     return "[o_o]";
 }
 
+static const char *getDealerPortrait(DealerId id) {
+    switch (id) {
+        case DEALER_CROUPIER: return "  .----.  \n ( o  o )\n  \\_==_/ ";
+        case DEALER_ACCOUNTANT: return "  .----.  \n ( $  $ )\n  /|__|\\ ";
+        case DEALER_CLOCKMAKER: return "  .----.  \n ( @  @ )\n  /|--|\\ ";
+        case DEALER_BUTCHER: return "  .----.  \n ( >  < )\n  /|##|\\ ";
+        case DEALER_MIRROR: return "  .----.  \n ( .  . )\n  /|==|\\ ";
+        case DEALER_REAPER: return "  .----.  \n ( x  x )\n  /|~~|\\ ";
+        case DEALER_VOID: return "  .----.  \n (    ) \n  /|  |\\ ";
+        case DEALER_ORACLE: return "  .----.  \n ( *  * )\n  /|oo|\\ ";
+        case DEALER_DEVIL: return "  \\    /  \n ( ^  ^ )\n  /|\\/|\\ ";
+        case DEALER_SAINT: return "  .-||-.  \n ( -  - )\n  /|++|\\ ";
+        case DEALER_TWIN: return " .----. .----.\n( o  o )( o  o)\n \\_==_/ \\_==_/";
+        case DEALER_BOSS_PIT: return "  /\\__/\\ \n ( O  O )\n  /|##|\\ ";
+        case DEALER_BOSS_PRIME: return "  /\\__/\\ \n ( @  @ )\n  /|==|\\ ";
+        case DEALER_BOSS_SUPREME: return "  /\\__/\\ \n ( X  X )\n  /|##|\\ ";
+        case DEALER_BOSS_VOID: return "  /\\__/\\ \n (    ) \n  /|##|\\ ";
+        case DEALER_COUNT: break;
+    }
+    return "  .----.  \n ( o  o )\n  > ^ <  ";
+}
+
 // Clears and redraws the complete table on fixed rows.
 static void drawStatusLine(const Game *game,
                            int terminalWidth,
@@ -1228,6 +1250,7 @@ void renderTable(const Game *game, int hideDealerCard) {
     int displayHandValue;
     int dealerValue;
     int bossActive;
+    int cardsLeft;
     int i;
     int len;
     char rulesText[256];
@@ -1241,6 +1264,7 @@ void renderTable(const Game *game, int hideDealerCard) {
 
     dealerInfo = getDealerInfo(game->run.dealerId);
     bossActive = dealerIsBoss(game->run.dealerId);
+    cardsLeft = DECK_SIZE - game->deck.top;
     twistInfo = getTwistInfo(game->run.twistId);
     tableWidth = getDynamicTableWidth(game);
     dealerCardHidden = hideDealerCard &&
@@ -1364,6 +1388,24 @@ void renderTable(const Game *game, int hideDealerCard) {
                         tablePadding,
                         tableWidth);
         drawDealerHands(game, tablePadding, dealerCardHidden);
+
+        {
+            const char *portraitLines = getDealerPortrait(game->run.dealerId);
+            char portraitCopy[128];
+            char *portraitLine;
+            int portraitRow;
+
+            snprintf(portraitCopy, sizeof(portraitCopy), "%s", portraitLines);
+            portraitLine = strtok(portraitCopy, "\n");
+            portraitRow = DEALER_LABEL_ROW;
+            while (portraitLine != NULL && portraitRow < DEALER_LABEL_ROW + 3) {
+                printf(SCR_CURSOR, portraitRow,
+                       tablePadding + tableWidth - 17);
+                printf("%s%-16.16s%s", scrDim(), portraitLine, scrReset());
+                portraitLine = strtok(NULL, "\n");
+                portraitRow++;
+            }
+        }
 
         printHandHeader("PLAYER",
                         playerTotal,
@@ -1592,11 +1634,57 @@ void renderTable(const Game *game, int hideDealerCard) {
         }
 
         renderLog(game, tablePadding, terminalWidth);
+        printf(SCR_CURSOR, ROW_LOG_5 + 1, terminalWidth - 20);
+        printf("%sDeck: %d cards%s", cardsLeft < 15 ? scrRed() : scrDim(),
+               cardsLeft, scrReset());
 
         fflush(stdout);
     } else if (!isatty(STDOUT_FILENO)) {
         renderGameStateFallback(game, hideDealerCard);
     }
+}
+
+void renderStatsScreen(const Game *game) {
+    int width;
+    int height;
+    int startRow;
+    int padding;
+    int i;
+    char lines[9][80];
+
+    snprintf(lines[0], sizeof(lines[0]), "+------------------------------------+");
+    snprintf(lines[1], sizeof(lines[1]), "|             RUN SUMMARY            |");
+    snprintf(lines[2], sizeof(lines[2]), "|------------------------------------|");
+    snprintf(lines[3], sizeof(lines[3]), "| Floors Reached:   %-17d |",
+             game->totalFloorsReached);
+    snprintf(lines[4], sizeof(lines[4]), "| Bosses Defeated:  %-17d |",
+             game->totalBossesDefeated);
+    snprintf(lines[5], sizeof(lines[5]), "| Total Marks:      %-17d |",
+             game->totalMarksEarned);
+    snprintf(lines[6], sizeof(lines[6]), "+------------------------------------+");
+    snprintf(lines[7], sizeof(lines[7]), "|       Press any key to return      |");
+    snprintf(lines[8], sizeof(lines[8]), "+------------------------------------+");
+
+    initColors();
+    getTerminalSize(&width, &height);
+    if (isatty(STDOUT_FILENO)) {
+        printf("%s%s", SCR_CLEAR, SCR_HOME);
+    }
+    startRow = height > 0 ? (height - 9) / 2 + 1 : 1;
+    if (startRow < 1) {
+        startRow = 1;
+    }
+    for (i = 0; i < 9; i++) {
+        padding = width > (int)strlen(lines[i])
+                      ? (width - (int)strlen(lines[i])) / 2 : 0;
+        if (isatty(STDOUT_FILENO)) {
+            printf(SCR_CURSOR, startRow + i, padding + 1);
+        } else {
+            printf("%*s", padding, "");
+        }
+        printf("%s\n", lines[i]);
+    }
+    fflush(stdout);
 }
 
 void renderMenuLogRefresh(const Game *game) {

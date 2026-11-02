@@ -202,6 +202,10 @@ static void applyRoundRewards(Game *game, MessageStyle resultStyle) {
 
         reward = (int)rewardValue;
         game->run.marks += reward;
+        if (reward > 0) {
+            game->totalMarksEarned += reward;
+        }
+        game->totalBossesDefeated++;
         game->run.bossRewarded = 1;
         snprintf(bossMsg, sizeof(bossMsg),
                  "BOSS DEFEATED. +%d marks.", reward);

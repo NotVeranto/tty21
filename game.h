@@ -91,6 +91,9 @@ struct Game {
     int roundHadNaturalBj; /* 1 if 21 came from the initial deal */
     int bossRuleDisabled; /* 1 if player paid to disable the first boss rule */
     int bossRulePaid; /* cost in marks */
+    int totalFloorsReached;
+    int totalBossesDefeated;
+    int totalMarksEarned;
 };
 
 void initGame(Game *game, GameMode mode);

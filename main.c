@@ -528,6 +528,15 @@ int main(int argc, char **argv) {
 
             flushInput();
             runGame(&game);
+            renderStatsScreen(&game);
+
+            if (isatty(STDOUT_FILENO) && !fastFlag) {
+                if (inputIsRaw()) {
+                    (void)readKey();
+                } else {
+                    (void)getchar();
+                }
+            }
 
             if (!inputIsRaw()) {
                 break;

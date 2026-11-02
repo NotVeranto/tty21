@@ -44,6 +44,7 @@ int renderTerminalSizeOk(int *width, int *height);
 void renderTooSmallScreen(int currentWidth,
                           int currentHeight);
 void renderTable(const Game *game, int hideDealerCard);
+void renderStatsScreen(const Game *game);
 void renderPause(const Game *game, int ms);
 void renderFloorTransition(const Game *game);
 void renderResultFlash(const Game *game,

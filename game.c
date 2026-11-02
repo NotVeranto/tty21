@@ -58,6 +58,9 @@ void initGame(Game *game, GameMode mode) {
     game->roundHadNaturalBj = 0;
     game->bossRuleDisabled = 0;
     game->bossRulePaid = 0;
+    game->totalFloorsReached = 0;
+    game->totalBossesDefeated = 0;
+    game->totalMarksEarned = 0;
     memset(game->player.perkOwned, 0, sizeof(game->player.perkOwned));
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     game->player.usedSplit = 0;
@@ -159,6 +162,10 @@ void advanceFloor(Game *game) {
 
     earned = 4 + game->run.floor + bonus;
     game->run.marks += earned;
+    if (earned > 0) {
+        game->totalMarksEarned += earned;
+    }
+    game->totalFloorsReached++;
     game->run.previousDealerId = game->run.dealerId;
     game->run.previousTwistId = game->run.twistId;
     game->run.floor++;
@@ -264,6 +271,7 @@ void advanceFloor(Game *game) {
 
         if (eventId == 0) {
             game->run.marks += 25;
+            game->totalMarksEarned += 25;
             logPush(game,
                     "Floor event: Mark Cache (+25 marks).",
                     MSG_INFO);
