@@ -496,12 +496,12 @@ static void printHandHeader(const char *label,
 
     moveToTableRow(row, padding);
     if (strncmp(label, "DEALER", 6) == 0) {
-        printf("%s%s%s%*s%s%s%s%s",
+        printf("%s%s%s%s%*s%s%s%s%s",
                scrMagenta(), scrBold(), label, scrReset(),
                remainingWidth, "", scrMagenta(), scrBold(),
                totalText, scrReset());
     } else {
-        printf("%s%s%s%*s%s%s%s%s",
+        printf("%s%s%s%s%*s%s%s%s%s",
                scrGreen(), scrBold(), label, scrReset(),
                remainingWidth, "", scrGreen(), scrBold(),
                totalText, scrReset());
