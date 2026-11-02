@@ -920,6 +920,34 @@ void renderResetScreen(void) {
     fflush(stdout);
 }
 
+static void printStyledStatusText(const char *statusText) {
+    const char *cursor = statusText;
+    int first = 1;
+
+    while (*cursor != '\0') {
+        const char *separator = strstr(cursor, " | ");
+        size_t length = separator != NULL
+                            ? (size_t)(separator - cursor) : strlen(cursor);
+        char segment[256];
+        const char *style = "";
+
+        if (length >= sizeof(segment)) length = sizeof(segment) - 1;
+        memcpy(segment, cursor, length);
+        segment[length] = '\0';
+
+        if (strncmp(segment, "Floor:", 6) == 0) style = scrBold();
+        else if (strncmp(segment, "Marks:", 6) == 0) style = scrCyan();
+        else if (strncmp(segment, "Chips:", 6) == 0) style = scrYellow();
+
+        if (!first) printf(" %s|%s ", scrDim(), scrReset());
+        printf("%s%s%s", style, segment, scrReset());
+        first = 0;
+        if (separator == NULL) break;
+        cursor = separator + 3;
+    }
+}
+
+// Clears and redraws the complete table on fixed rows.
 static void drawStatusLine(const Game *game,
                            int terminalWidth,
                            int padding,
@@ -934,6 +962,7 @@ static void drawStatusLine(const Game *game,
     char statusText[256];
     char loanText[64];
 
+    (void)dealerCardHidden;
     loanText[0] = '\0';
 
     if (game->mode == MODE_ROGUELIKE &&
