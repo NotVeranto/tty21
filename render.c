@@ -495,13 +495,17 @@ static void printHandHeader(const char *label,
     }
 
     moveToTableRow(row, padding);
-    printf("%s%s%s%*s%s",
-           scrBold(),
-           label,
-           scrReset(),
-           remainingWidth,
-           "",
-           totalText);
+    if (strncmp(label, "DEALER", 6) == 0) {
+        printf("%s%s%s%*s%s%s%s%s",
+               scrMagenta(), scrBold(), label, scrReset(),
+               remainingWidth, "", scrMagenta(), scrBold(),
+               totalText, scrReset());
+    } else {
+        printf("%s%s%s%*s%s%s%s%s",
+               scrGreen(), scrBold(), label, scrReset(),
+               remainingWidth, "", scrGreen(), scrBold(),
+               totalText, scrReset());
+    }
 }
 
 // Prints one line from a face-down card.
@@ -524,31 +528,35 @@ static void printVisibleCardLine(const Card *card, int lineIndex) {
     rankName = CARD_RANKS[card->rank];
 
     if (lineIndex == 0) {
+        printf("%s|%s", scrDim(), scrReset());
+        printf("%s%-2s%s",
+               card->suit == HEARTS || card->suit == DIAMONDS
+                   ? scrRed() : scrBold(),
+               rankName, scrReset());
         if (card->cursed != CURSED_NONE) {
-            printf("|%-2s      %s*%s|",
-                   rankName,
-                   curseColor((CurseId)card->cursed),
-                   scrReset());
+            printf("      %s*%s", curseColor((CurseId)card->cursed), scrReset());
         } else {
-            printf("|%-2s       |", rankName);
+            printf("       ");
         }
+        printf("%s|%s", scrDim(), scrReset());
     } else if (lineIndex == 1 || lineIndex == 3) {
-        printf("|%*s|", CARD_CONTENT_WIDTH, "");
+        printf("%s|%s%*s%s|%s",
+               scrDim(), scrReset(), CARD_CONTENT_WIDTH, "",
+               scrDim(), scrReset());
     } else if (lineIndex == 2) {
-        printf("|    ");
-
-        if (card->suit == HEARTS || card->suit == DIAMONDS) {
-            printf("%s%s%s",
-                   scrRed(),
-                   CARD_SUITS[card->suit],
-                   scrReset());
-        } else {
-            printf("%s", CARD_SUITS[card->suit]);
-        }
-
-        printf("    |");
+        printf("%s|%s    ", scrDim(), scrReset());
+        printf("%s%s%s",
+               card->suit == HEARTS || card->suit == DIAMONDS
+                   ? scrRed() : scrBold(),
+               CARD_SUITS[card->suit], scrReset());
+        printf("    %s|%s", scrDim(), scrReset());
     } else {
-        printf("|       %2s|", rankName);
+        printf("%s|%s       ", scrDim(), scrReset());
+        printf("%s%2s%s",
+               card->suit == HEARTS || card->suit == DIAMONDS
+                   ? scrRed() : scrBold(),
+               rankName, scrReset());
+        printf("%s|%s", scrDim(), scrReset());
     }
 }
 
@@ -565,7 +573,7 @@ static void drawCards(const Hand *hand,
 
         for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
             if (lineIndex == 0 || lineIndex == CARD_HEIGHT - 1) {
-                printf("+---------+");
+                printf("%s+---------+%s", scrDim(), scrReset());
             } else if (hideFirstCard && cardIndex == 0) {
                 printFaceDownLine(lineIndex - 1);
             } else {
@@ -966,26 +974,31 @@ static const char *dealerStatusFace(const Game *game,
     return "[o_o]";
 }
 
-static const char *getDealerPortrait(DealerId id) {
-    switch (id) {
-        case DEALER_CROUPIER: return "  .----.  \n ( o  o )\n  \\_==_/ ";
-        case DEALER_ACCOUNTANT: return "  .----.  \n ( $  $ )\n  /|__|\\ ";
-        case DEALER_CLOCKMAKER: return "  .----.  \n ( @  @ )\n  /|--|\\ ";
-        case DEALER_BUTCHER: return "  .----.  \n ( >  < )\n  /|##|\\ ";
-        case DEALER_MIRROR: return "  .----.  \n ( .  . )\n  /|==|\\ ";
-        case DEALER_REAPER: return "  .----.  \n ( x  x )\n  /|~~|\\ ";
-        case DEALER_VOID: return "  .----.  \n (    ) \n  /|  |\\ ";
-        case DEALER_ORACLE: return "  .----.  \n ( *  * )\n  /|oo|\\ ";
-        case DEALER_DEVIL: return "  \\    /  \n ( ^  ^ )\n  /|\\/|\\ ";
-        case DEALER_SAINT: return "  .-||-.  \n ( -  - )\n  /|++|\\ ";
-        case DEALER_TWIN: return " .----. .----.\n( o  o )( o  o)\n \\_==_/ \\_==_/";
-        case DEALER_BOSS_PIT: return "  /\\__/\\ \n ( O  O )\n  /|##|\\ ";
-        case DEALER_BOSS_PRIME: return "  /\\__/\\ \n ( @  @ )\n  /|==|\\ ";
-        case DEALER_BOSS_SUPREME: return "  /\\__/\\ \n ( X  X )\n  /|##|\\ ";
-        case DEALER_BOSS_VOID: return "  /\\__/\\ \n (    ) \n  /|##|\\ ";
-        case DEALER_COUNT: break;
+static void printStyledStatusText(const char *statusText) {
+    const char *cursor = statusText;
+    int first = 1;
+
+    while (*cursor != '\0') {
+        const char *separator = strstr(cursor, " | ");
+        size_t length = separator != NULL
+                            ? (size_t)(separator - cursor) : strlen(cursor);
+        char segment[256];
+        const char *style = "";
+
+        if (length >= sizeof(segment)) length = sizeof(segment) - 1;
+        memcpy(segment, cursor, length);
+        segment[length] = '\0';
+
+        if (strncmp(segment, "Floor:", 6) == 0) style = scrBold();
+        else if (strncmp(segment, "Marks:", 6) == 0) style = scrCyan();
+        else if (strncmp(segment, "Chips:", 6) == 0) style = scrYellow();
+
+        if (!first) printf(" %s|%s ", scrDim(), scrReset());
+        printf("%s%s%s", style, segment, scrReset());
+        first = 0;
+        if (separator == NULL) break;
+        cursor = separator + 3;
     }
-    return "  .----.  \n ( o  o )\n  > ^ <  ";
 }
 
 // Clears and redraws the complete table on fixed rows.
@@ -1036,13 +1049,13 @@ static void drawStatusLine(const Game *game,
             if (game->player.handCount == 1) {
                 snprintf(statusText,
                          sizeof(statusText),
-                         "Chips: %d    Bet: %d",
+                         "Chips: %d | Bet: %d",
                          game->player.chips,
                          game->player.bets[displayHandIndex]);
             } else {
                 snprintf(statusText,
                          sizeof(statusText),
-                         "Chips: %d    Bet: %d (hand %d/%d)",
+                         "Chips: %d | Bet: %d (hand %d/%d)",
                          game->player.chips,
                          game->player.bets[displayHandIndex],
                          displayHandIndex + 1,
@@ -1051,7 +1064,7 @@ static void drawStatusLine(const Game *game,
         } else if (game->player.handCount == 1) {
             snprintf(statusText,
                      sizeof(statusText),
-                     "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d%s",
+                     "Floor: %d | Dealer: %s | Marks: %d | Chips: %d | Bet: %d%s",
                      game->run.floor,
                      dealerName,
                      game->run.marks,
@@ -1061,7 +1074,7 @@ static void drawStatusLine(const Game *game,
         } else {
             snprintf(statusText,
                      sizeof(statusText),
-                     "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)%s",
+                     "Floor: %d | Dealer: %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)%s",
                      game->run.floor,
                      dealerName,
                      game->run.marks,
@@ -1094,14 +1107,14 @@ static void drawStatusLine(const Game *game,
                 }
                 snprintf(statusText,
                          sizeof(statusText),
-                         "Floor: %d    Dealer: ",
+                         "Floor: %d | Dealer: ",
                          game->run.floor);
                 prefixLength = (int)strlen(statusText);
 
                 if (game->player.handCount == 1) {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "    Marks: %d    Chips: %d    Bet: %d%s",
+                             " | Marks: %d | Chips: %d | Bet: %d%s",
                              game->run.marks,
                              game->player.chips,
                              game->player.bets[displayHandIndex],
@@ -1109,7 +1122,7 @@ static void drawStatusLine(const Game *game,
                 } else {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)%s",
+                             " | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)%s",
                              game->run.marks,
                              game->player.chips,
                              game->player.bets[displayHandIndex],
@@ -1138,7 +1151,7 @@ static void drawStatusLine(const Game *game,
                 if (game->player.handCount == 1) {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d",
+                             "Floor: %d | Dealer: %s | Marks: %d | Chips: %d | Bet: %d",
                              game->run.floor,
                              dealerName,
                              game->run.marks,
@@ -1147,7 +1160,7 @@ static void drawStatusLine(const Game *game,
                 } else {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "Floor: %d    Dealer: %s    Marks: %d    Chips: %d    Bet: %d (hand %d/%d)",
+                             "Floor: %d | Dealer: %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)",
                              game->run.floor,
                              dealerName,
                              game->run.marks,
@@ -1171,7 +1184,7 @@ static void drawStatusLine(const Game *game,
         }
 
     moveToTableRow(ROW_STATUS, padding);
-    printf("%s", statusText);
+    printStyledStatusText(statusText);
     printf(SCR_ERASE_EOL);
 }
 
@@ -1388,24 +1401,6 @@ void renderTable(const Game *game, int hideDealerCard) {
                         tablePadding,
                         tableWidth);
         drawDealerHands(game, tablePadding, dealerCardHidden);
-
-        {
-            const char *portraitLines = getDealerPortrait(game->run.dealerId);
-            char portraitCopy[128];
-            char *portraitLine;
-            int portraitRow;
-
-            snprintf(portraitCopy, sizeof(portraitCopy), "%s", portraitLines);
-            portraitLine = strtok(portraitCopy, "\n");
-            portraitRow = DEALER_LABEL_ROW;
-            while (portraitLine != NULL && portraitRow < DEALER_LABEL_ROW + 3) {
-                printf(SCR_CURSOR, portraitRow,
-                       tablePadding + tableWidth - 17);
-                printf("%s%-16.16s%s", scrDim(), portraitLine, scrReset());
-                portraitLine = strtok(NULL, "\n");
-                portraitRow++;
-            }
-        }
 
         printHandHeader("PLAYER",
                         playerTotal,
@@ -1894,14 +1889,13 @@ void renderMenu(const char *title,
             printf(SCR_ERASE_EOL);
 
             if (isDisabled) {
-                printf("%s  [%c]  %s%s",
-                       scrDim(),
-                       items[itemIndex].hotkey,
-                       items[itemIndex].label,
-                       scrReset());
+                printf("%s%s  %s[%c]%s  %s%s",
+                       scrRed(), scrDim(), scrDim(),
+                       items[itemIndex].hotkey, scrReset(),
+                       items[itemIndex].label, scrReset());
             } else {
                 if (itemIndex == selectedIndex) {
-                    printf("%s> ", scrBold());
+                    printf("%s%s> %s", scrBold(), scrCyan(), scrReset());
                 } else {
                     printf("  ");
                 }
@@ -1912,10 +1906,9 @@ void renderMenu(const char *title,
                        scrReset());
 
                 if (itemIndex == selectedIndex) {
-                    printf("%s%s%s",
-                           scrBold(),
-                           items[itemIndex].label,
-                           scrReset());
+                    printf("%s%s%s%s",
+                           scrBold(), scrCyan(),
+                           items[itemIndex].label, scrReset());
                 } else {
                     printf("%s", items[itemIndex].label);
                 }
@@ -2544,12 +2537,12 @@ void renderHelpOverlay(const Game *game) {
 
         printf(SCR_CURSOR, bottomRow, leftColumn);
         if (game->mode == MODE_ROGUELIKE) {
-            printf("Floor: %d    Marks: %d    Chips: %d    Bet: %d",
+            printf("Floor: %d | Marks: %d | Chips: %d | Bet: %d",
                    game->run.floor, game->run.marks,
                    game->player.chips,
                    game->player.bets[game->player.activeHand]);
         } else {
-            printf("Chips: %d    Bet: %d", game->player.chips,
+            printf("Chips: %d | Bet: %d", game->player.chips,
                    game->player.bets[game->player.activeHand]);
         }
         bottomRow++;
@@ -2696,12 +2689,12 @@ void renderHelpOverlay(const Game *game) {
         }
 
         if (game->mode == MODE_ROGUELIKE) {
-            printf("\nFloor: %d    Marks: %d    Chips: %d    Bet: %d\n",
+            printf("\nFloor: %d | Marks: %d | Chips: %d | Bet: %d\n",
                    game->run.floor, game->run.marks,
                    game->player.chips,
                    game->player.bets[game->player.activeHand]);
         } else {
-            printf("\nChips: %d    Bet: %d\n", game->player.chips,
+            printf("\nChips: %d | Bet: %d\n", game->player.chips,
                    game->player.bets[game->player.activeHand]);
         }
         printf("Min bet: %d    Max bet: %d\n",
