@@ -1,5 +1,7 @@
 #include "input_map.h"
 
+#include <ctype.h>
+
 int moveSelection(int selectedIndex,
                    int itemCount,
                    int skippedMask,
@@ -30,14 +32,16 @@ int moveSelection(int selectedIndex,
 }
 
 ActionId mapPlayerKey(char ch) {
-    if (ch == 'h' || ch == 'H') return ACTION_HIT;
-    if (ch == 's' || ch == 'S') return ACTION_STAND;
-    if (ch == 'd' || ch == 'D') return ACTION_DOUBLE;
-    if (ch == 'p' || ch == 'P') return ACTION_SPLIT;
-    if (ch == 'k' || ch == 'K') return ACTION_PEEK;
-    if (ch == 'u' || ch == 'U') return ACTION_SURRENDER;
-    if (ch == 'q' || ch == 'Q') return ACTION_QUIT;
-    return (ActionId)-1;
+    switch (tolower((unsigned char)ch)) {
+        case 'h': return ACTION_HIT;
+        case 's': return ACTION_STAND;
+        case 'd': return ACTION_DOUBLE;
+        case 'p': return ACTION_SPLIT;
+        case 'k': return ACTION_PEEK;
+        case 'u': return ACTION_SURRENDER;
+        case 'q': return ACTION_QUIT;
+        default: return (ActionId)-1;
+    }
 }
 
 

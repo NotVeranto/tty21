@@ -149,6 +149,7 @@ void flushInput(void) {
     if (isatty(STDIN_FILENO)) {
         (void)tcflush(STDIN_FILENO, TCIFLUSH);
     }
+    clearerr(stdin);
 }
 
 int getch(void) {

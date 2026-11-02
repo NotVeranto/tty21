@@ -339,7 +339,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
 }
 
 void playerTurn(Game *game) {
-    ActionId actions[8];
+    ActionId actions[ACTION_COUNT + 1];
     KeyEvent event;
     int actionCount;
     int actionIndex;

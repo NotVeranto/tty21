@@ -8,7 +8,8 @@ typedef enum {
     ACTION_SPLIT,
     ACTION_PEEK,
     ACTION_SURRENDER,
-    ACTION_QUIT
+    ACTION_QUIT,
+    ACTION_COUNT
 } ActionId;
 
 ActionId mapPlayerKey(char ch);

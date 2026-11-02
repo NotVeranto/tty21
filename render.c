@@ -511,14 +511,19 @@ static void printHandHeader(const char *label,
 // Prints one line from a face-down card.
 static void printFaceDownLine(int lineIndex) {
     static const char *PATTERN_LINES[] = {
-        "| # # # # |",
-        "|  # # #  |",
-        "| # # # # |",
-        "|  # # #  |",
-        "| # # # # |"
+        "|#########|",
+        "|#########|",
+        "|#########|",
+        "|#########|",
+        "|#########|"
     };
 
-    printf("%s", PATTERN_LINES[lineIndex]);
+    if (lineIndex < 0 ||
+        lineIndex >= (int)(sizeof(PATTERN_LINES) / sizeof(PATTERN_LINES[0]))) {
+        return;
+    }
+
+    printf("%s%s%s", scrDim(), PATTERN_LINES[lineIndex], scrReset());
 }
 
 // Prints one line from a visible card.
@@ -2690,15 +2695,22 @@ void renderActionBar(const ActionId *actions,
                      int selectedIndex,
                      int row,
                      int showHelp) {
-    static const char *ACTION_NAMES[] = {
-        "Hit",
-        "Stand",
-        "Double",
-        "Split",
-        "Peek",
-        "Quit"
+    static const char *ACTION_NAMES[ACTION_COUNT] = {
+        [ACTION_HIT] = "Hit",
+        [ACTION_STAND] = "Stand",
+        [ACTION_DOUBLE] = "Double",
+        [ACTION_SPLIT] = "Split",
+        [ACTION_PEEK] = "Peek",
+        [ACTION_SURRENDER] = "Surrender",
+        [ACTION_QUIT] = "Quit"
     };
+    _Static_assert(sizeof(ACTION_NAMES) / sizeof(ACTION_NAMES[0]) ==
+                       ACTION_COUNT,
+                   "action labels must match ActionId");
     int actionIndex;
+    int actionId;
+    const char *actionName;
+    char actionKey;
     int terminalWidth;
     int terminalHeight;
 
@@ -2723,6 +2735,15 @@ void renderActionBar(const ActionId *actions,
     printf(SCR_CURSOR, row, tablePadding + 1);
     printf(SCR_ERASE_EOL);
     for (actionIndex = 0; actionIndex < actionCount; actionIndex++) {
+        actionId = (int)actions[actionIndex];
+        if (actionId >= 0 && actionId < ACTION_COUNT) {
+            actionName = ACTION_NAMES[actionId];
+            actionKey = (char)actionToChar(actions[actionIndex]);
+        } else {
+            actionName = "Unknown";
+            actionKey = '?';
+        }
+
         if (actionIndex > 0) {
             printf("   ");
         }
@@ -2731,17 +2752,17 @@ void renderActionBar(const ActionId *actions,
             printf("%s> %s[%c]%s %s%s%s",
                    scrBold(),
                    scrDim(),
-                   actionToChar(actions[actionIndex]),
+                   actionKey,
                    scrReset(),
                    scrBold(),
-                   ACTION_NAMES[actions[actionIndex]],
+                   actionName,
                    scrReset());
         } else {
             printf("  %s[%c]%s %s",
                    scrDim(),
-                   actionToChar(actions[actionIndex]),
+                   actionKey,
                    scrReset(),
-                   ACTION_NAMES[actions[actionIndex]]);
+                   actionName);
         }
     }
 
