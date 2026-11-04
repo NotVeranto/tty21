@@ -976,6 +976,7 @@ static void drawStatusLine(const Game *game,
     int availableNameWidth;
     int effectiveStatusWidth;
     int displayHandIndex;
+    int cardsLeft;
     char dealerName[64];
     char statusText[256];
     char loanText[64];
@@ -984,6 +985,7 @@ static void drawStatusLine(const Game *game,
     int progress;
 
     (void)dealerCardHidden;
+    cardsLeft = DECK_SIZE - game->deck.top;
     progress = game->run.floor % 10;
     if (progress < 0) progress = 0;
     memset(progressEquals, '=', (size_t)progress);
@@ -1015,32 +1017,35 @@ static void drawStatusLine(const Game *game,
             if (game->player.handCount == 1) {
                 snprintf(statusText,
                          sizeof(statusText),
-                         "Chips: %d | Bet: %d",
+                         "Chips: %d | Bet: %d | Deck: %d cards",
                          game->player.chips,
-                         game->player.bets[displayHandIndex]);
+                         game->player.bets[displayHandIndex],
+                         cardsLeft);
             } else {
                 snprintf(statusText,
                          sizeof(statusText),
-                         "Chips: %d | Bet: %d (hand %d/%d)",
+                         "Chips: %d | Bet: %d (hand %d/%d) | Deck: %d cards",
                          game->player.chips,
                          game->player.bets[displayHandIndex],
                          displayHandIndex + 1,
-                         game->player.handCount);
+                         game->player.handCount,
+                         cardsLeft);
             }
         } else if (game->player.handCount == 1) {
             snprintf(statusText,
                      sizeof(statusText),
-                     "Floor: %d [%s%s] | %s | Marks: %d | Chips: %d | Bet: %d%s",
+                     "Floor: %d [%s%s] | %s | Marks: %d | Chips: %d | Bet: %d | Deck: %d cards%s",
                      game->run.floor, progressEquals, progressDots,
                      dealerName,
                      game->run.marks,
                      game->player.chips,
                      game->player.bets[displayHandIndex],
+                     cardsLeft,
                      loanText);
         } else {
             snprintf(statusText,
                      sizeof(statusText),
-                     "Floor: %d [%s%s] | %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)%s",
+                     "Floor: %d [%s%s] | %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d) | Deck: %d cards%s",
                      game->run.floor, progressEquals, progressDots,
                      dealerName,
                      game->run.marks,
@@ -1048,6 +1053,7 @@ static void drawStatusLine(const Game *game,
                      game->player.bets[displayHandIndex],
                      displayHandIndex + 1,
                      game->player.handCount,
+                     cardsLeft,
                      loanText);
         }
 
@@ -1072,20 +1078,22 @@ static void drawStatusLine(const Game *game,
                 if (game->player.handCount == 1) {
                     snprintf(statusText,
                              sizeof(statusText),
-                             " | Marks: %d | Chips: %d | Bet: %d%s",
+                             " | Marks: %d | Chips: %d | Bet: %d | Deck: %d cards%s",
                              game->run.marks,
                              game->player.chips,
                              game->player.bets[displayHandIndex],
+                             cardsLeft,
                              loanText);
                 } else {
                     snprintf(statusText,
                              sizeof(statusText),
-                             " | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)%s",
+                             " | Marks: %d | Chips: %d | Bet: %d (hand %d/%d) | Deck: %d cards%s",
                              game->run.marks,
                              game->player.chips,
                              game->player.bets[displayHandIndex],
                              displayHandIndex + 1,
                              game->player.handCount,
+                             cardsLeft,
                              loanText);
                 }
 
@@ -1109,23 +1117,25 @@ static void drawStatusLine(const Game *game,
                 if (game->player.handCount == 1) {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "Floor: %d | %s | Marks: %d | Chips: %d | Bet: %d",
+                             "Floor: %d | %s | Marks: %d | Chips: %d | Bet: %d | Deck: %d",
                              game->run.floor,
                              dealerName,
                              game->run.marks,
                              game->player.chips,
-                             game->player.bets[displayHandIndex]);
+                             game->player.bets[displayHandIndex],
+                             cardsLeft);
                 } else {
                     snprintf(statusText,
                              sizeof(statusText),
-                             "Floor: %d | %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d)",
+                             "Floor: %d | %s | Marks: %d | Chips: %d | Bet: %d (hand %d/%d) | Deck: %d",
                              game->run.floor,
                              dealerName,
                              game->run.marks,
                              game->player.chips,
                              game->player.bets[displayHandIndex],
                              displayHandIndex + 1,
-                             game->player.handCount);
+                             game->player.handCount,
+                             cardsLeft);
                 }
 
                 if ((int)strlen(statusText) > effectiveStatusWidth) {
@@ -2727,6 +2737,8 @@ void renderActionBar(const ActionId *actions,
     char actionKey;
     int terminalWidth;
     int terminalHeight;
+    int visibleWidth;
+    int startColumn;
 
     getTerminalSize(&terminalWidth, &terminalHeight);
 
@@ -2746,7 +2758,22 @@ void renderActionBar(const ActionId *actions,
         return;
     }
 
-    printf(SCR_CURSOR, row, tablePadding + 1);
+    visibleWidth = showHelp ? 11 : 0;
+    for (actionIndex = 0; actionIndex < actionCount; actionIndex++) {
+        actionId = (int)actions[actionIndex];
+        if (actionId >= 0 && actionId < ACTION_COUNT) {
+            actionName = ACTION_NAMES[actionId];
+        } else {
+            actionName = "Unknown";
+        }
+        visibleWidth += (actionIndex > 0 ? 3 : 0) +
+                        (actionIndex == selectedIndex ? 6 : 7) +
+                        (int)strlen(actionName);
+    }
+    startColumn = (terminalWidth - visibleWidth) / 2 + 1;
+    if (startColumn < 1) startColumn = 1;
+
+    printf(SCR_CURSOR, row, startColumn);
     printf(SCR_ERASE_EOL);
     for (actionIndex = 0; actionIndex < actionCount; actionIndex++) {
         actionId = (int)actions[actionIndex];
