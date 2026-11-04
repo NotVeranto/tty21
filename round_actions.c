@@ -388,7 +388,9 @@ void playerTurn(Game *game) {
                                             actionCount,
                                             0,
                                             1);
-            } else if (event.type == KEY_ENTER || event.type == KEY_ESC ||
+            } else if (event.type == KEY_ENTER) {
+                dispatchPlayerAction(game, actions[actionIndex]);
+            } else if (event.type == KEY_ESC ||
                        event.type == KEY_UP || event.type == KEY_DOWN ||
                        event.type == KEY_NONE) {
                 continue;
