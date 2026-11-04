@@ -6,6 +6,7 @@ CFLAGS += -MMD -MP
 PREFIX  ?= /usr/local
 DESTDIR ?=
 BINDIR  = $(PREFIX)/bin
+MANDIR  = $(PREFIX)/share/man
 TARGET  = tty21
 SRCS    = main.c card.c hand.c game.c round.c round_cards.c round_economy.c round_rules.c round_input.c round_actions.c round_dealer.c round_settlement.c render.c menu.c input.c input_map.c dealers.c twists.c rng.c perks.c run.c save.c
 OBJS    = $(SRCS:.c=.o)
@@ -32,9 +33,10 @@ clean:
 
 install: $(TARGET)
 	install -Dm755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
+	install -Dm644 tty21.1 $(DESTDIR)$(MANDIR)/man1/tty21.1
 
 uninstall:
-	rm -f $(DESTDIR)$(BINDIR)/$(TARGET)
+	rm -f $(DESTDIR)$(BINDIR)/$(TARGET) $(DESTDIR)$(MANDIR)/man1/tty21.1
 
 .PHONY: all test clean install uninstall
 

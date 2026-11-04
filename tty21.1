@@ -1,0 +1,97 @@
+.TH TTY21 1 "2026-11-04" "tty21 0.1.0" "User Commands"
+.SH NAME
+tty21 \- terminal blackjack roguelike
+.SH SYNOPSIS
+.B tty21
+.RI [ OPTIONS ]
+.SH DESCRIPTION
+A roguelike deckbuilder based on blackjack, played in the terminal.
+Defeat dealers, descend through floors, acquire perks, and adapt to changing
+rules and boss encounters. A classic blackjack mode is also available.
+.SH OPTIONS
+.TP
+.B \-h, \-\-help
+Show command-line help and exit.
+.TP
+.B \-v, \-\-version
+Show the version and exit.
+.TP
+.B \-r, \-\-roguelike
+Start a new roguelike run (the default).
+.TP
+.B \-c, \-\-classic
+Start classic blackjack mode.
+.TP
+.B \-\-fast
+Skip animation pauses.
+.TP
+.B \-\-continue
+Load the last saved roguelike game.
+.TP
+.B \-\-seed
+.I N
+Use
+.I N
+as the RNG seed. The short form
+.B \-s
+is also supported; the long form may be written
+.BR \-\-seed=N .
+.TP
+.B \-\-no-save
+Disable autosaving for this session.
+.SH CONTROLS
+During the player's turn:
+.TP
+.B h
+Hit.
+.TP
+.B s
+Stand.
+.TP
+.B d
+Double down, when eligible.
+.TP
+.B p
+Split, when eligible.
+.TP
+.B u
+Surrender, when eligible; half the bet is lost.
+.TP
+.B k
+Peek at the dealer's hole card when the Peek perk or a free-peek event permits it.
+.TP
+.B q
+Quit the current run and return to the main menu.
+.PP
+Use the arrow keys and Enter to navigate menus and select actions.
+Press
+.B ?
+to display the in-game help overlay.
+.PP
+Between rounds, use
+.B c
+to continue,
+.B a
+to advance floors,
+.B w
+to save,
+.B s
+to open the shop, or
+.B q
+to quit the run.
+.SH SAVING
+Roguelike games are autosaved to
+.BR $XDG_DATA_HOME/tty21/save.dat ,
+or
+.BR ~/.local/share/tty21/save.dat
+when
+.B XDG_DATA_HOME
+is not set to an absolute path. Use
+.B \-\-continue
+to resume the saved game. Classic mode does not save. The
+.B \-\-no-save
+option disables saving for the session.
+.SH AUTHOR
+Written by NotVeranto.
+.SH SEE ALSO
+.BR make (1)

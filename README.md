@@ -2,42 +2,52 @@
 
 A terminal-based blackjack roguelike written in C.
 
-## Concept
+## Overview
 
-The player descends through floors of an underground casino, facing a
-different dealer on each floor. Winning a match lets you move deeper,
-where the dealers get stronger and the rules twist. Between floors,
-marks earned from victories can be spent on perks.
+tty21 combines familiar blackjack with roguelike deckbuilder progression. Play in a terminal, defeat increasingly dangerous dealers, and descend through casino floors where rules and challenges change.
 
 ## Features
 
-Implemented:
-- Classic blackjack: Hit, Stand, Double Down, Split.
-- Canonical dealer peek, insurance, and even money.
-- Classic blackjack mode (no roguelike layer).
-- Roguelike progression: floors, marks, advance menu.
-- Full-screen ASCII table with ANSI styling.
-- Raw terminal input via termios.
-- Twists: 16 floor rule modifiers with anti-farm pressure. Twist banner is colored by category: green favorable, dim neutral, red hostile.
-- Cold snap (floor 8+) and locked action (floor 10+): once per run, a low-card hand or a disabled perk.
-- No Reshuffle floors show a live deck countdown. Floor 10+ shows a 'running hot' hint when low cards are depleted.
-- Deterministic runs via --seed.
-- Perks and between-floor shop (rotating pool of 3 perks per floor, 13 in pool).
-- Dealer turn step-through with optional --fast mode.
-- Dealer taunts on losses.
-- Cursed cards (3% of drawn cards): Bleed (-1 chip per round), Frost (-2 to hand value), Echo (10% chance of an extra card on stand). Cursed markers are colored on the card (Bleed red, Frost cyan, Echo yellow).
-- Boss floors every 5 floors: two combined dealer rules, one-time marks reward on victory.
-- Quadratic minimum bets, late-floor bet caps, and an enraged dealer from floor 10 after three rounds.
-- Deep-floor dealer power rules from floor 10, including increased losses, restricted actions, and a chip toll on hits.
-- Forced hostile twists every third floor from floor 10, except boss floors.
-- Tighter roguelike economy: advance fees, 10 chips converted to 2 marks, and reduced floor-advance and boss marks rewards.
-- Autosave to `XDG_DATA_HOME/tty21/save.dat` (or `~/.local/share/tty21/save.dat`). Resume with `--continue` or the Continue menu entry. Classic mode does not save.
+### Blackjack
+
+- Hit, stand, double down, and split.
+- Surrender: give up an eligible hand and lose half its bet.
+- Dealer peek, insurance, and even money when applicable.
+- Multiple dealer hands and special dealer abilities.
+- Classic blackjack mode without roguelike progression.
+
+### Roguelike progression
+
+- Descend through floors with escalating minimum bets and dealer difficulty.
+- Face a boss every fifth floor. Bosses combine dealer rules and award marks for victory.
+- A Boss Preparation screen appears before boss encounters; spend marks to disable the first boss rule.
+- Visit the between-floor shop to buy perks, services, and twist tools.
+- Perks provide persistent run benefits; the shop rotates a selection of perks between floors.
+- Floor twists modify blackjack rules, sometimes helping the player and sometimes making a floor more dangerous.
+- Cursed cards can inflict Bleed, Frost, or Echo effects.
+- Deep floors introduce stronger dealer powers, hostile twists, and additional economic pressure.
+
+### Saving and loading
+
+- Roguelike runs autosave to `$XDG_DATA_HOME/tty21/save.dat`, or `~/.local/share/tty21/save.dat` when `XDG_DATA_HOME` is not set to an absolute path.
+- Choose **Continue saved run** from the startup menu or launch with `--continue`.
+- Use `w` in the between-round menu to save manually.
+- Saves are written to a temporary file and renamed into place, so an interrupted write does not replace the previous save.
+- `--no-save` disables saving for the current session. Classic mode does not save.
+- Save format v1 stores the in-memory game structure; it is not portable across architectures or compatible with saves made using a different game structure.
+
+### Terminal presentation
+
+- Full-screen ASCII table with ANSI styling and colored status feedback.
+- Card-deal and chip-change animations.
+- Dealer turn step-through; `--fast` skips animation pauses.
+- Raw terminal controls, keyboard-navigable menus, and an in-game help overlay.
 
 ## Requirements
 
 - GCC or Clang with C11 support.
-- A terminal with UTF-8 locale (for card suit symbols).
 - Linux (uses termios and ANSI escape codes).
+- A UTF-8 terminal for card suit symbols.
 - A terminal window of at least 80x50 characters.
 
 ## Build
@@ -52,67 +62,42 @@ Implemented:
     ./tty21 --seed 12345
     ./tty21 --continue
     ./tty21 --no-save
+    ./tty21 --fast
+
+## Command-line options
+
+- `-h`, `--help`: show usage.
+- `-v`, `--version`: show the version.
+- `-s N`, `--seed N`, `--seed=N`: use a specific RNG seed.
+- `-r`, `--roguelike`: start a new roguelike run (the default).
+- `-c`, `--classic`: start classic blackjack.
+- `--continue`: load the last saved roguelike run.
+- `--no-save`: disable autosaving for this session.
+- `--fast`: skip dealer animation pauses.
 
 ## Controls
 
-In-game (during the player's turn):
-- `h` — hit
-- `s` — stand
-- `d` — double down (first two cards only)
-- `p` — split (two cards of the same rank)
-- `k` — peek at dealer hole card (requires the Peek perk or a free-peek floor event)
-- `q` — quit the current run and return to the main menu
-- `?` — show help overlay (active twists, dealer rule, owned perks, current limits)
-- Arrow keys + Enter — navigate and confirm menus and player actions
-- `Ctrl+C` — force quit, terminal state restored
+During the player's turn:
 
-Betting:
-- Type a number and press Enter.
-- Insurance and even money prompts appear after the initial deal when applicable.
+- `h` — hit.
+- `s` — stand.
+- `d` — double down (when eligible).
+- `p` — split (when eligible).
+- `u` — surrender (when eligible).
+- `k` — peek at the dealer's hole card (requires the Peek perk or a free-peek event).
+- `q` — quit the current run and return to the main menu.
+- `?` — show the help overlay.
+- Arrow keys and Enter — navigate and select menu or action entries.
 
-### Between rounds
+Between rounds:
 
-- `c` — Continue on current floor
-- `a` — Advance to the next floor (advance fee plus the next floor's minimum bet must both be covered)
-- `s` — Open the shop (perks, services, twist tools; roguelike only)
-- Shop shows a rotating pool of 3 perks per floor. Services and twist tools are always available. Reroll costs 10 marks, once per floor.
-- `q` — Quit the current run and return to the main menu. Save is preserved; use Continue to resume.
+- `c` — continue on the current floor.
+- `a` — advance to the next floor (the advance fee and next minimum bet must be affordable).
+- `w` — save the current roguelike run.
+- `s` — open the shop.
+- `q` — quit the run; the save is preserved.
 
-## Project status
-
-- [x] Card deck, shuffle, basic structures.
-- [x] Hand logic and score calculation.
-- [x] Game loop.
-- [x] CLI flags, versioning and install targets.
-- [x] ASCII rendering.
-- [x] Persistent event log with colored events.
-- [x] Between-round card persistence.
-- [x] Raw terminal input.
-- [x] Floors and advance menu.
-- [x] Named dealers.
-- [x] Twists.
-- [x] Perks and shop.
-- [x] Split and Double Down.
-- [x] Classic blackjack mode.
-- [x] Difficulty expansion A: quadratic minimum bets, late-floor bet caps, and dealer enrage.
-- [x] Difficulty expansion B: tighter economy, advance fees, chip-to-mark conversion, and reduced marks rewards.
-- [x] Difficulty expansion C: deep-floor dealer power rules and forced hostile twists.
-- [x] Save and load (XDG).
-- [ ] Polish and animations.
-- [ ] Man page.
-- [ ] Packaging and release.
-
-## Known issues
-
-- Signal handlers call tcsetattr; not strictly async-signal-safe.
-- Second Wind does not rescue a busted doubled hand.
-- Even money is not offered against Twin dealers.
-- Save format is not portable across architectures (endianness, alignment). There is no cross-version migration; changing `Game` invalidates old saves.
-- Save format v1 is not stable until v0.1.0. Any Game struct change invalidates existing saves.
-- Second Wind hands can reach 21 but do not pay as natural blackjack (only the initial deal counts).
-- Save file is atomically written; a failed save leaves the previous save intact.
-- Save loader validates every index field before applying loaded state.
-- Advance forecast includes loan repayment.
+During betting, enter a numeric bet and press Enter. Answer yes/no prompts for insurance and even money when offered. `Ctrl+C` force-quits; the terminal state is restored.
 
 ## License
 
