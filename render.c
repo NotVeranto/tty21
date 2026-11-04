@@ -1641,11 +1641,11 @@ void renderStatsScreen(const Game *game) {
     snprintf(lines[0], sizeof(lines[0]), "+------------------------------------+");
     snprintf(lines[1], sizeof(lines[1]), "|             RUN SUMMARY            |");
     snprintf(lines[2], sizeof(lines[2]), "|------------------------------------|");
-    snprintf(lines[3], sizeof(lines[3]), "| Floors Reached:   %-17d |",
+    snprintf(lines[3], sizeof(lines[3]), "| Floors Reached:   %-16d |",
              game->totalFloorsReached);
-    snprintf(lines[4], sizeof(lines[4]), "| Bosses Defeated:  %-17d |",
+    snprintf(lines[4], sizeof(lines[4]), "| Bosses Defeated:  %-16d |",
              game->totalBossesDefeated);
-    snprintf(lines[5], sizeof(lines[5]), "| Total Marks:      %-17d |",
+    snprintf(lines[5], sizeof(lines[5]), "| Total Marks:      %-16d |",
              game->totalMarksEarned);
     snprintf(lines[6], sizeof(lines[6]), "+------------------------------------+");
     snprintf(lines[7], sizeof(lines[7]), "|       Press any key to return      |");
