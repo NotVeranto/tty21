@@ -1257,7 +1257,6 @@ void renderTable(const Game *game, int hideDealerCard) {
     int displayHandValue;
     int dealerValue;
     int bossActive;
-    int cardsLeft;
     int i;
     int len;
     char rulesText[256];
@@ -1271,7 +1270,6 @@ void renderTable(const Game *game, int hideDealerCard) {
 
     dealerInfo = getDealerInfo(game->run.dealerId);
     bossActive = dealerIsBoss(game->run.dealerId);
-    cardsLeft = DECK_SIZE - game->deck.top;
     twistInfo = getTwistInfo(game->run.twistId);
     tableWidth = getDynamicTableWidth(game);
     dealerCardHidden = hideDealerCard &&
