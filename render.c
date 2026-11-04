@@ -1412,6 +1412,21 @@ void renderTable(const Game *game, int hideDealerCard) {
             printf("%s%s%s", scrDim(), hintText, scrReset());
         }
 
+        {
+            char deckText[32];
+            int deckColumn;
+
+            snprintf(deckText, sizeof(deckText), "Deck: %d cards", cardsLeft);
+            deckColumn = terminalWidth - (int)strlen(deckText) + 1;
+            if (deckColumn > tablePadding + (int)strlen(hintText) + 3) {
+                printf(SCR_CURSOR, ROW_HINT, deckColumn);
+                printf("%s%s%s",
+                       cardsLeft < 15 ? scrRed() : scrDim(),
+                       deckText,
+                       scrReset());
+            }
+        }
+
         moveToTableRow(ROW_RULE, tablePadding);
         printf(SCR_ERASE_EOL);
 
@@ -1613,9 +1628,6 @@ void renderTable(const Game *game, int hideDealerCard) {
         }
 
         renderLog(game, tablePadding, terminalWidth);
-        printf(SCR_CURSOR, ROW_LOG_5 + 1, terminalWidth - 20);
-        printf("%sDeck: %d cards%s", cardsLeft < 15 ? scrRed() : scrDim(),
-               cardsLeft, scrReset());
 
         fflush(stdout);
     } else if (!isatty(STDOUT_FILENO)) {
@@ -1628,6 +1640,7 @@ void renderStatsScreen(const Game *game) {
     int height;
     int startRow;
     int padding;
+    int boxWidth;
     int i;
     char lines[9][80];
 
@@ -1653,9 +1666,10 @@ void renderStatsScreen(const Game *game) {
     if (startRow < 1) {
         startRow = 1;
     }
+    boxWidth = (int)strlen(lines[0]);
+    padding = width > boxWidth ? (width - boxWidth) / 2 : 0;
+
     for (i = 0; i < 9; i++) {
-        padding = width > (int)strlen(lines[i])
-                      ? (width - (int)strlen(lines[i])) / 2 : 0;
         if (isatty(STDOUT_FILENO)) {
             printf(SCR_CURSOR, startRow + i, padding + 1);
         } else {
