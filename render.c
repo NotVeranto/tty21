@@ -1422,20 +1422,6 @@ void renderTable(const Game *game, int hideDealerCard) {
             printf("%s%s%s", scrDim(), hintText, scrReset());
         }
 
-        {
-            char deckText[32];
-            int deckColumn;
-
-            snprintf(deckText, sizeof(deckText), "Deck: %d cards", cardsLeft);
-            deckColumn = terminalWidth - (int)strlen(deckText) + 1;
-            if (deckColumn > tablePadding + (int)strlen(hintText) + 3) {
-                printf(SCR_CURSOR, ROW_HINT, deckColumn);
-                printf("%s%s%s",
-                       cardsLeft < 15 ? scrRed() : scrDim(),
-                       deckText,
-                       scrReset());
-            }
-        }
 
         moveToTableRow(ROW_RULE, tablePadding);
         printf(SCR_ERASE_EOL);
@@ -2767,8 +2753,7 @@ void renderActionBar(const ActionId *actions,
             actionName = "Unknown";
         }
         visibleWidth += (actionIndex > 0 ? 3 : 0) +
-                        (actionIndex == selectedIndex ? 6 : 7) +
-                        (int)strlen(actionName);
+                        6 + (int)strlen(actionName);
     }
     startColumn = (terminalWidth - visibleWidth) / 2 + 1;
     if (startColumn < 1) startColumn = 1;
