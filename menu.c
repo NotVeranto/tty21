@@ -324,7 +324,7 @@ void runShop(Game *game) {
     const char *descriptions[24];
     MenuItem items[24];
     int itemGroups[24];
-    PerkId itemPerks[24];
+    int itemPerks[24]; // -1 marks service entries.
     KeyEvent event;
     int actionCharacter;
     int inputCharacter;
@@ -394,7 +394,7 @@ void runShop(Game *game) {
             snprintf(labels[itemCount], sizeof(labels[itemCount]), "%s", (labelText)); \
             items[itemCount].label = labels[itemCount]; \
             descriptions[itemCount] = (descriptionText); \
-            itemPerks[itemCount] = (PerkId)-1; \
+            itemPerks[itemCount] = -1; \
             itemGroups[itemCount] = (groupValue); \
             if (disabled) disabledMask |= 1 << itemCount; \
             itemCount++; \
