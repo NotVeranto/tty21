@@ -39,7 +39,7 @@ static void printUsage(FILE *stream) {
             "  --continue      Resume the last roguelike run.\n"
             "  --no-save       Disable autosave for this session.\n"
             "\n"
-            "Requires a terminal of at least 80x50.\n");
+            "Requires a terminal of at least 70x42.\n");
 }
 
 static const char *LOGO[] = {
@@ -168,7 +168,7 @@ static StartupChoice runStartupMenu(int showContinue) {
                 h = ws.ws_row;
             }
 
-            if (w < MIN_TERMINAL_WIDTH || h < MIN_TERMINAL_HEIGHT) {
+            if (!renderTerminalDimensionsOk(w, h)) {
                 renderTooSmallScreen(w, h);
 
                 if (inputIsRaw()) {

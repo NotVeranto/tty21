@@ -19,14 +19,14 @@
 
 #define TITLE_ROW 1
 #define SEPARATOR_ROW 2
-#define ROUND_ROW 4
-#define DEALER_LABEL_ROW 6
-#define DEALER_CARD_ROW 8
-#define PLAYER_LABEL_ROW 16
-#define PLAYER_CARD_ROW 18
-#define SHOP_ITEM_START_ROW 12
-#define SHOP_DESCRIPTION_ROW 31
-#define SHOP_HINT_ROW 32
+#define ROUND_ROW 3
+#define DEALER_LABEL_ROW 4
+#define DEALER_CARD_ROW 5
+#define PLAYER_LABEL_ROW 13
+#define PLAYER_CARD_ROW 14
+#define SHOP_ITEM_START_ROW 7
+#define SHOP_DESCRIPTION_ROW 24
+#define SHOP_HINT_ROW 25
 
 static const char *CARD_RANKS[] = {
     "", "A", "2", "3", "4", "5", "6",
@@ -224,10 +224,14 @@ static void printBoxSides(int row, int column, int width) {
     printf("%s|%s", scrDim(), scrReset());
 }
 
+int renderTerminalDimensionsOk(int width, int height) {
+    return width >= MIN_TERMINAL_WIDTH &&
+           height >= MIN_TERMINAL_HEIGHT;
+}
+
 int renderTerminalSizeOk(int *width, int *height) {
     getTerminalSize(width, height);
-    return *width >= MIN_TERMINAL_WIDTH &&
-           *height >= MIN_TERMINAL_HEIGHT;
+    return renderTerminalDimensionsOk(*width, *height);
 }
 
 static void printFloorTransitionLine(int row,
@@ -1623,7 +1627,11 @@ void renderTable(const Game *game, int hideDealerCard) {
         renderLog(game, tablePadding, terminalWidth);
 
         fflush(stdout);
-    } else if (!isatty(STDOUT_FILENO)) {
+    } else if (isatty(STDOUT_FILENO)) {
+        printf("%s%s%s", scrReset(), SCR_CLEAR, SCR_HOME);
+        renderGameStateFallback(game, hideDealerCard);
+        fflush(stdout);
+    } else {
         renderGameStateFallback(game, hideDealerCard);
     }
 }
