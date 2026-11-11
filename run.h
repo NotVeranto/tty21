@@ -26,16 +26,16 @@ typedef struct {
     TwistId extraTwists[MAX_EXTRA_TWISTS];
     int extraTwistCount;
     int roundsOnFloor;
-    int twistBlocked;          int twistBlocked;      // 1 if current twist is neutralized
-    int twistRerolled;         int twistRerolled;     // 1 if reroll used this floor
-    int bossRewarded;          int bossRewarded;      // 1 if current boss floor already paid
+    int twistBlocked;      // 1 if current twist is neutralized
+    int twistRerolled;     // 1 if reroll used this floor
+    int bossRewarded;      // 1 if current boss floor already paid
     PerkId shopPerks[SHOP_POOL_SIZE];
     int shopPerkCount;
     int shopPerksRerolled;
-    int coldSnapUsed;          int coldSnapUsed;      // 1 if triggered this run
-    int coldSnapActive;        int coldSnapActive;    // 1 if next round is low-only
-    int perkLockedUsed;        int perkLockedUsed;    // 1 if triggered this run
-    int perkLockedId;          int perkLockedId;      // perk id, -1 if none
+    int coldSnapUsed;      // 1 if triggered this run
+    int coldSnapActive;    // 1 if next round is low-only
+    int perkLockedUsed;    // 1 if triggered this run
+    int perkLockedId;      // perk id, -1 if none
 } Run;
 
 void initRun(Run *run);

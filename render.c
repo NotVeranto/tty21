@@ -352,7 +352,7 @@ void renderTooSmallScreen(int currentWidth,
     }
 
     {
-                // Split sized on '\n' and center each line.
+        // Split sized on '\n' and center each line.
         char *cursor;
         char *start;
         int lineNo;
@@ -1239,7 +1239,7 @@ static int isDeckRunningHot(const Game *game) {
         }
     }
 
-        // Hot when lows outnumber highs by more than 1.5x. Avoid floating point: lowCount * 2 > highCount * 3.
+    // Hot when lows outnumber highs by more than 1.5x. Avoid floating point: lowCount * 2 > highCount * 3.
     return lowCount * 2 > highCount * 3;
 }
 

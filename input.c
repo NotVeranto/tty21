@@ -186,7 +186,9 @@ void flushInput(void) {
     clearerr(stdin);
 }
 
-static int waitForInputByte(void);\n\nint getch(void) {
+static int waitForInputByte(void);
+
+int getch(void) {
     unsigned char character;
     ssize_t bytesRead;
     int selectResult;
