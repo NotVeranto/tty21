@@ -66,6 +66,7 @@ void initGame(Game *game, GameMode mode) {
     memset(game->player.perkCharges, 0, sizeof(game->player.perkCharges));
     memset(game->player.usedDouble, 0, sizeof(game->player.usedDouble));
     memset(game->player.usedSplit, 0, sizeof(game->player.usedSplit));
+    game->player.surrendered = 0;
     game->player.insuranceBet = 0;
     game->player.evenMoneyTaken = 0;
     game->log.count = 0;

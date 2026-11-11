@@ -13,7 +13,7 @@ OBJS    = $(SRCS:.c=.o)
 TESTS_SRCS = tests/run_tests.c tests/test_hand.c \
              tests/test_card.c tests/test_rng.c tests/test_twists.c \
              tests/test_dealers.c tests/test_perks.c tests/test_run.c \
-             tests/test_settlement.c
+             tests/test_settlement.c tests/test_save.c
 TEST_LIB_SRCS = $(filter-out main.c,$(SRCS))
 
 all: $(TARGET)

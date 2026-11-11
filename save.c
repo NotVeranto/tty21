@@ -25,6 +25,127 @@ static uint32_t checksumBytes(const void *data, size_t length) {
     return sum;
 }
 
+static int isBoolean(int value) {
+    return value == 0 || value == 1;
+}
+
+static int isValidCard(const Card *card) {
+    return card->suit >= HEARTS && card->suit <= SPADES &&
+           card->rank >= ACE && card->rank <= KING &&
+           card->cursed >= CURSED_NONE && card->cursed <= CURSED_ECHO;
+}
+
+static int isValidHand(const Hand *hand) {
+    int cardIndex;
+
+    if (hand->count < 0 || hand->count > MAX_HAND_SIZE) {
+        return 0;
+    }
+
+    for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
+        if (!isValidCard(&hand->cards[cardIndex])) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+static int isValidGame(const Game *game) {
+    int i;
+
+    if (game->mode != MODE_ROGUELIKE) return 0;
+    if (game->state != STATE_BET && game->state != STATE_MENU) return 0;
+    if (game->player.chips < 0) return 0;
+    if (game->player.handCount < 1 ||
+        game->player.handCount > MAX_PLAYER_HANDS) return 0;
+    if (game->player.activeHand < 0 ||
+        game->player.activeHand > game->player.handCount) return 0;
+    if (game->dealer.handCount < 1 || game->dealer.handCount > 2) return 0;
+    if (game->run.floor < 1 || game->run.marks < 0) return 0;
+    if (game->run.dealerId < 0 || game->run.dealerId >= DEALER_COUNT) return 0;
+    if (game->run.previousDealerId < 0 ||
+        game->run.previousDealerId >= DEALER_COUNT) return 0;
+    if (game->run.twistId < 0 || game->run.twistId >= TWIST_COUNT) return 0;
+    if (game->run.previousTwistId < 0 ||
+        game->run.previousTwistId >= TWIST_COUNT) return 0;
+    if (game->run.perkLockedId < -1 ||
+        game->run.perkLockedId >= PERK_COUNT) return 0;
+    if (game->log.count < 0 || game->log.count > LOG_SIZE) return 0;
+    if (game->run.shopPerkCount < 0 ||
+        game->run.shopPerkCount > SHOP_POOL_SIZE) return 0;
+    if (game->loanDueFloor < 0 || game->loanAmount < 0) return 0;
+    if (game->run.roundsOnFloor < 0 || game->roundNumber < 0) return 0;
+    if (game->winStreak < 0 || game->lossStreak < 0) return 0;
+    if (game->deck.top < 0 || game->deck.top > DECK_SIZE) return 0;
+    if (game->run.extraTwistCount < 0 ||
+        game->run.extraTwistCount > MAX_EXTRA_TWISTS) return 0;
+    if (game->minBetMultiplier < 1 || game->minBetMultiplier > 2) return 0;
+    if (game->fatigueTier < 0 || game->fatigueTier > 100) return 0;
+    if (game->bossRulePaid < 0 || game->totalFloorsReached < 0 ||
+        game->totalBossesDefeated < 0 || game->totalMarksEarned < 0) return 0;
+    if (game->player.insuranceBet < 0) return 0;
+
+    if (!isBoolean(game->run.twistBlocked) ||
+        !isBoolean(game->run.twistRerolled) ||
+        !isBoolean(game->run.bossRewarded) ||
+        !isBoolean(game->run.shopPerksRerolled) ||
+        !isBoolean(game->run.coldSnapUsed) ||
+        !isBoolean(game->run.coldSnapActive) ||
+        !isBoolean(game->run.perkLockedUsed) ||
+        !isBoolean(game->saveEnabled) ||
+        !isBoolean(game->playerQuit) ||
+        !isBoolean(game->roundInProgress) ||
+        !isBoolean(game->peekActive) ||
+        !isBoolean(game->fastMode) ||
+        !isBoolean(game->dealerEnraged) ||
+        !isBoolean(game->freePeekReady) ||
+        !isBoolean(game->safetyNetArmed) ||
+        !isBoolean(game->tippedThisRound) ||
+        !isBoolean(game->roundHadNaturalBj) ||
+        !isBoolean(game->bossRuleDisabled) ||
+        !isBoolean(game->player.surrendered) ||
+        !isBoolean(game->player.evenMoneyTaken)) return 0;
+
+    for (i = 0; i < DECK_SIZE; i++) {
+        if (!isValidCard(&game->deck.cards[i])) return 0;
+    }
+
+    for (i = 0; i < MAX_PLAYER_HANDS; i++) {
+        if (!isValidHand(&game->player.hands[i])) return 0;
+        if (game->player.bets[i] < 0) return 0;
+        if (!isBoolean(game->player.isSplitAce[i]) ||
+            !isBoolean(game->player.usedDouble[i]) ||
+            !isBoolean(game->player.usedSplit[i])) return 0;
+    }
+
+    for (i = 0; i < 2; i++) {
+        if (!isValidHand(&game->dealer.hands[i])) return 0;
+    }
+
+    for (i = 0; i < PERK_COUNT; i++) {
+        if (!isBoolean(game->player.perkOwned[i]) ||
+            game->player.perkCharges[i] < 0) return 0;
+    }
+
+    for (i = 0; i < game->run.extraTwistCount; i++) {
+        if (game->run.extraTwists[i] < 0 ||
+            game->run.extraTwists[i] >= TWIST_COUNT) return 0;
+    }
+
+    for (i = 0; i < game->run.shopPerkCount; i++) {
+        if (game->run.shopPerks[i] < 0 ||
+            game->run.shopPerks[i] >= PERK_COUNT) return 0;
+    }
+
+    for (i = 0; i < game->log.count; i++) {
+        if (game->log.styles[i] < MSG_DEFAULT ||
+            game->log.styles[i] > MSG_DEALER) return 0;
+    }
+
+    return 1;
+}
+
 static int makeDirs(const char *path) {
     char buf[SAVE_PATH_BUFFER];
     size_t len;
@@ -170,72 +291,7 @@ int loadGame(Game *game) {
     if (bytesRead != sizeof(Game) || extra != EOF) return -1;
     if (checksumBytes(&temp, sizeof(Game)) != checksum) return -1;
 
-    if (temp.mode != MODE_ROGUELIKE) return -1;
-    if (temp.state != STATE_BET && temp.state != STATE_MENU) return -1;
-    if (temp.player.chips < 0) return -1;
-    if (temp.player.handCount < 1 ||
-        temp.player.handCount > MAX_PLAYER_HANDS) return -1;
-    if (temp.player.activeHand < 0 ||
-        temp.player.activeHand >= MAX_PLAYER_HANDS) return -1;
-    if (temp.dealer.handCount < 1 || temp.dealer.handCount > 2) return -1;
-    if (temp.run.floor < 1) return -1;
-    if (temp.run.dealerId < 0 || temp.run.dealerId >= DEALER_COUNT) return -1;
-    if (temp.run.previousDealerId < 0 ||
-        temp.run.previousDealerId >= DEALER_COUNT) return -1;
-    if (temp.run.twistId < 0 || temp.run.twistId >= TWIST_COUNT) return -1;
-    if (temp.run.previousTwistId < 0 ||
-        temp.run.previousTwistId >= TWIST_COUNT) return -1;
-    if (temp.run.perkLockedId < -1 ||
-        temp.run.perkLockedId >= PERK_COUNT) return -1;
-    if (temp.log.count < 0 || temp.log.count > LOG_SIZE) return -1;
-    if (temp.run.shopPerkCount < 0 ||
-        temp.run.shopPerkCount > SHOP_POOL_SIZE) return -1;
-    if (temp.loanDueFloor < 0) return -1;
-    if (temp.loanAmount < 0) return -1;
-    if (temp.run.roundsOnFloor < 0) return -1;
-    if (temp.winStreak < 0) return -1;
-    if (temp.lossStreak < 0) return -1;
-    if (temp.run.bossRewarded < 0 || temp.run.bossRewarded > 1) return -1;
-    if (temp.run.shopPerksRerolled < 0 ||
-        temp.run.shopPerksRerolled > 1) return -1;
-    if (temp.run.coldSnapUsed < 0 || temp.run.coldSnapUsed > 1) return -1;
-    if (temp.run.coldSnapActive < 0 || temp.run.coldSnapActive > 1) return -1;
-    if (temp.run.perkLockedUsed < 0 || temp.run.perkLockedUsed > 1) return -1;
-    if (temp.saveEnabled < 0 || temp.saveEnabled > 1) return -1;
-    if (temp.playerQuit < 0 || temp.playerQuit > 1) return -1;
-    if (temp.roundInProgress < 0 || temp.roundInProgress > 1) return -1;
-    if (temp.deck.top < 0 || temp.deck.top > DECK_SIZE) return -1;
-    if (temp.run.extraTwistCount < 0 ||
-        temp.run.extraTwistCount > MAX_EXTRA_TWISTS) return -1;
-
-    {
-        int h;
-        for (h = 0; h < MAX_PLAYER_HANDS; h++) {
-            if (temp.player.hands[h].count < 0 ||
-                temp.player.hands[h].count > MAX_HAND_SIZE) return -1;
-            if (temp.player.bets[h] < 0) return -1;
-        }
-        for (h = 0; h < 2; h++) {
-            if (temp.dealer.hands[h].count < 0 ||
-                temp.dealer.hands[h].count > MAX_HAND_SIZE) return -1;
-        }
-    }
-
-    {
-        int t;
-        for (t = 0; t < temp.run.extraTwistCount; t++) {
-            if (temp.run.extraTwists[t] < 0 ||
-                temp.run.extraTwists[t] >= TWIST_COUNT) return -1;
-        }
-    }
-
-    {
-        int p;
-        for (p = 0; p < temp.run.shopPerkCount; p++) {
-            if (temp.run.shopPerks[p] < 0 ||
-                temp.run.shopPerks[p] >= PERK_COUNT) return -1;
-        }
-    }
+    if (!isValidGame(&temp)) return -1;
 
     *game = temp;
     return 0;

@@ -11,6 +11,7 @@ void run_dealers_tests(void);
 void run_perks_tests(void);
 void run_run_tests(void);
 void run_settlement_tests(void);
+void run_save_tests(void);
 
 int main(void) {
     printf("tty21 unit tests\n");
@@ -24,6 +25,7 @@ int main(void) {
     run_perks_tests();
     run_run_tests();
     run_settlement_tests();
+    run_save_tests();
 
     TEST_SUMMARY();
 }
