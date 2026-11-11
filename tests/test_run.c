@@ -133,6 +133,23 @@ TEST(shop_reroll_is_unavailable_without_alternatives) {
     }
 }
 
+TEST(perk_lock_requires_an_active_late_floor_event) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.run.floor = 1;
+    game.run.perkLockedId = PERK_SECOND_WIND;
+
+    ASSERT_EQ_INT(0, isPerkLockedThisFloor(&game, PERK_SECOND_WIND));
+
+    game.run.floor = 10;
+    game.run.perkLockedUsed = 1;
+    ASSERT_EQ_INT(1, isPerkLockedThisFloor(&game, PERK_SECOND_WIND));
+
+    game.player.perkOwned[PERK_SECOND_WIND] = 1;
+    ASSERT_EQ_INT(0, isPerkLockedThisFloor(&game, PERK_SECOND_WIND));
+}
+
 void run_run_tests(void) {
     RUN_TEST(run_classic_minimum_bet_is_always_one);
     RUN_TEST(run_roguelike_minimum_bet_by_floor);
@@ -141,6 +158,7 @@ void run_run_tests(void) {
     RUN_TEST(run_greed_doubles_minimum_bet);
     RUN_TEST(run_blocked_greed_does_not_double_minimum_bet);
     RUN_TEST(run_minimum_bet_multiplier_is_applied);
+    RUN_TEST(perk_lock_requires_an_active_late_floor_event);
     RUN_TEST(shop_reroll_replaces_every_offered_perk);
     RUN_TEST(shop_reroll_is_unavailable_without_alternatives);
 }

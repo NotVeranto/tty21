@@ -84,6 +84,17 @@ void initGame(Game *game, GameMode mode) {
     }
 }
 
+int isPerkLockedThisFloor(const Game *game, PerkId perkId) {
+    if (perkId < PERK_SECOND_WIND || perkId >= PERK_COUNT) {
+        return 0;
+    }
+
+    return game->run.perkLockedUsed &&
+           game->run.floor >= 10 &&
+           game->run.perkLockedId == (int)perkId &&
+           !game->player.perkOwned[perkId];
+}
+
 void generateShopPool(Game *game) {
     PerkId candidates[PERK_COUNT];
     int candidateCount;
@@ -94,7 +105,7 @@ void generateShopPool(Game *game) {
     for (i = 0; i < PERK_COUNT; i++) {
         if (perkIsSold((PerkId)i) &&
             !game->player.perkOwned[i] &&
-            i != game->run.perkLockedId) {
+            !isPerkLockedThisFloor(game, (PerkId)i)) {
             candidates[candidateCount++] = (PerkId)i;
         }
     }
@@ -125,7 +136,7 @@ int canRerollShopPool(const Game *game) {
     for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
         if (!perkIsSold((PerkId)perkIndex) ||
             game->player.perkOwned[perkIndex] ||
-            perkIndex == game->run.perkLockedId) {
+            isPerkLockedThisFloor(game, (PerkId)perkIndex)) {
             continue;
         }
 
@@ -159,7 +170,7 @@ int rerollShopPool(Game *game) {
     for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
         if (!perkIsSold((PerkId)perkIndex) ||
             game->player.perkOwned[perkIndex] ||
-            perkIndex == game->run.perkLockedId) {
+            isPerkLockedThisFloor(game, (PerkId)perkIndex)) {
             continue;
         }
 
@@ -292,7 +303,7 @@ void advanceFloor(Game *game) {
     }
 
     // Restore a perk locked on a previous floor before charge refills.
-    if (game->run.perkLockedId >= 0) {
+    if (isPerkLockedThisFloor(game, (PerkId)game->run.perkLockedId)) {
         game->player.perkOwned[game->run.perkLockedId] = 1;
         game->run.perkLockedId = -1;
     }

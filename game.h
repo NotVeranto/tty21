@@ -100,6 +100,7 @@ struct Game {
 
 void initGame(Game *game, GameMode mode);
 void generateShopPool(Game *game);
+int isPerkLockedThisFloor(const Game *game, PerkId perkId);
 int canRerollShopPool(const Game *game);
 int rerollShopPool(Game *game);
 void advanceFloor(Game *game);
