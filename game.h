@@ -32,12 +32,12 @@ typedef struct {
     int perkCharges[PERK_COUNT];
     int usedDouble[MAX_PLAYER_HANDS];
     int usedSplit[MAX_PLAYER_HANDS];
-    int surrendered; /* current round ended by surrender */
-    int insuranceBet; /* 0 if no insurance was placed */
-    int evenMoneyTaken; /* prevents duplicate settlement after even money */
+    int surrendered;     int surrendered; // current round ended by surrender
+    int insuranceBet;     int insuranceBet; // 0 if no insurance was placed
+    int evenMoneyTaken;     int evenMoneyTaken; // prevents duplicate settlement after even money
 } Player;
 
-/* handCount is 1 for every dealer except Twin (Stage 9.5c-2). */
+// handCount is 1 for every dealer except Twin (Stage 9.5c-2).
 typedef struct {
     Hand hands[2];
     int handCount;
@@ -68,7 +68,7 @@ struct Game {
     Dealer dealer;
     GameState state;
     int roundNumber;
-    int roundInProgress; /* persisted marker for interrupted-round forfeits */
+    int roundInProgress;     int roundInProgress; // persisted marker for interrupted-round forfeits
     Run run;
     GameMode mode;
     int peekActive;
@@ -77,22 +77,22 @@ struct Game {
     int dealerEnraged;
     int winStreak;
     int lossStreak;
-    int loanAmount;        /* chips owed, 0 if no loan */
-    int loanDueFloor;      /* floor by which loan must be repaid */
+    int loanAmount;            int loanAmount;        // chips owed, 0 if no loan
+    int loanDueFloor;          int loanDueFloor;      // floor by which loan must be repaid
     int freePeekReady;
     int minBetMultiplier;
     GameLog log;
-    int safetyNetArmed; /* 1 if a safety net is active */
+    int safetyNetArmed;     int safetyNetArmed; // 1 if a safety net is active
     int tippedThisRound;
     char lastPayoutBreakdown[256];
-    unsigned int rngSeed; /* seed used to start the run, for save round-trip */
-    int saveEnabled; /* 1 = autosave on */
-    unsigned long rngCalls; /* RNG draws consumed since rngInit */
-    int lastAutosavedRound; /* round number at last successful autosave, 0 if never */
-    int playerQuit; /* 1 if player quit to menu, not if the run ended */
-    int roundHadNaturalBj; /* 1 if 21 came from the initial deal */
-    int bossRuleDisabled; /* 1 if player paid to disable the first boss rule */
-    int bossRulePaid; /* cost in marks */
+    unsigned int rngSeed;     unsigned int rngSeed; // seed used to start the run, for save round-trip
+    int saveEnabled;     int saveEnabled; // 1 = autosave on
+    unsigned long rngCalls;     unsigned long rngCalls; // RNG draws consumed since rngInit
+    int lastAutosavedRound;     int lastAutosavedRound; // round number at last successful autosave, 0 if never
+    int playerQuit;     int playerQuit; // 1 if player quit to menu, not if the run ended
+    int roundHadNaturalBj;     int roundHadNaturalBj; // 1 if 21 came from the initial deal
+    int bossRuleDisabled;     int bossRuleDisabled; // 1 if player paid to disable the first boss rule
+    int bossRulePaid;     int bossRulePaid; // cost in marks
     int totalFloorsReached;
     int totalBossesDefeated;
     int totalMarksEarned;

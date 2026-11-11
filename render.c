@@ -169,7 +169,7 @@ static int getCenteredColumn(int contentWidth) {
 }
 
 
-/* Prints a consistent centered title, optional subtitle, and dim separator. */
+// Prints a consistent centered title, optional subtitle, and dim separator.
 void renderScreenHeader(const char *title,
                         const char *subtitle,
                         int row) {
@@ -205,7 +205,7 @@ void renderScreenHeader(const char *title,
     printf("%s", scrReset());
 }
 
-/* Draws the shared dim box border used by framed screens. */
+// Draws the shared dim box border used by framed screens.
 static void printBoxBorder(int row, int column, int width) {
     int index;
 
@@ -352,7 +352,7 @@ void renderTooSmallScreen(int currentWidth,
     }
 
     {
-        /* Split sized on '\n' and center each line. */
+                // Split sized on '\n' and center each line.
         char *cursor;
         char *start;
         int lineNo;
@@ -1239,8 +1239,7 @@ static int isDeckRunningHot(const Game *game) {
         }
     }
 
-    /* Hot when lows outnumber highs by more than 1.5x.
-       Avoid floating point: lowCount * 2 > highCount * 3. */
+        // Hot when lows outnumber highs by more than 1.5x. Avoid floating point: lowCount * 2 > highCount * 3.
     return lowCount * 2 > highCount * 3;
 }
 

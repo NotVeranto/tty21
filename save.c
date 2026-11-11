@@ -94,11 +94,7 @@ int saveGame(const Game *game) {
     }
     if (makeDirs(dir) != 0) return -1;
 
-    /*
-     * v1 stores raw Game bytes. This is intentionally not portable across
-     * architectures with different struct alignment or endianness, and a
-     * Game layout change invalidates existing saves.
-     */
+        // v1 stores raw Game bytes. This is intentionally not portable across architectures with different struct alignment or endianness, and a Game layout change invalidates existing saves.
     bodySize = (uint32_t)sizeof(Game);
     checksum = checksumBytes(game, sizeof(Game));
     memcpy(header, SAVE_MAGIC, SAVE_MAGIC_LEN);

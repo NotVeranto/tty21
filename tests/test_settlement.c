@@ -139,7 +139,7 @@ TEST(settlement_insurance_pays_three_times_the_stake) {
 
     roundSettleInsurance(&game);
 
-    /* The 5-chip stake was already deducted; 15 back is a net 2:1 win. */
+        // The 5-chip stake was already deducted; 15 back is a net 2:1 win.
     ASSERT_EQ_INT(110, game.player.chips);
     ASSERT_EQ_INT(0, game.player.insuranceBet);
 }

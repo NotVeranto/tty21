@@ -39,9 +39,7 @@ static const PerkInfo PERK_INFO[] = {
      "Once per run, a loss that would end the run is forgiven.", 100}
 };
 
-/* All perks in the current catalogue are sold. The
-   function is retained so future unsold perks can be
-   gated here without changing callers. */
+// All perks in the current catalogue are sold. The function is retained so future unsold perks can be gated here without changing callers.
 int perkIsSold(PerkId id) {
     (void)id;
     return 1;

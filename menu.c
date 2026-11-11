@@ -531,7 +531,7 @@ void runShop(Game *game) {
         }
 
         menuIndex = -1;
-        /* Prefer exact uppercase perk shortcuts over case-insensitive service keys. */
+                // Prefer exact uppercase perk shortcuts over case-insensitive service keys.
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             if (actionCharacter == items[itemIndex].hotkey) {
                 menuIndex = itemIndex;

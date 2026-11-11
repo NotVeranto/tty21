@@ -121,7 +121,7 @@ TEST(hand_three_aces_and_nine_downgrades_all_aces) {
     addCardToHand(&hand, &ace);
     addCardToHand(&hand, &nine);
 
-    /* All three aces can downgrade: 1 + 1 + 1 + 9 = 12. */
+        // All three aces can downgrade: 1 + 1 + 1 + 9 = 12.
     ASSERT_EQ_INT(12, calculateHandValue(&hand));
 }
 

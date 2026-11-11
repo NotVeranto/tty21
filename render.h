@@ -36,8 +36,8 @@
 #include "input_map.h"
 
 typedef struct {
-    char hotkey;          /* single character shortcut */
-    const char *label;    /* description shown next to hotkey */
+    char hotkey;              char hotkey;          // single character shortcut
+    const char *label;        const char *label;    // description shown next to hotkey
 } MenuItem;
 
 int renderTerminalSizeOk(int *width, int *height);

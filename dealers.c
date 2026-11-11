@@ -101,7 +101,7 @@ DealerId selectDealerForFloor(int floor, DealerId previousDealer) {
     return candidates[randomIndex];
 }
 
-/* Returns the dealer's standing target value. */
+// Returns the dealer's standing target value.
 int dealerTargetValue(DealerId id) {
     return id == DEALER_CLOCKMAKER || id == DEALER_BOSS_PRIME ? 18 : 17;
 }
@@ -132,52 +132,52 @@ int dealerPowerLossMultiplier(DealerId id, int floor) {
     return 100;
 }
 
-/* Returns the dealer's loss multiplier in percent. */
+// Returns the dealer's loss multiplier in percent.
 int dealerLossMultiplierPercent(DealerId id) {
     return id == DEALER_BUTCHER || id == DEALER_BOSS_PIT ? 150 : 100;
 }
 
-/* Returns the numerator for a natural blackjack payout. */
+// Returns the numerator for a natural blackjack payout.
 int dealerBlackjackNumerator(DealerId id) {
     return id == DEALER_VOID || id == DEALER_BOSS_VOID ? 1 : 3;
 }
 
-/* Returns the denominator for a natural blackjack payout. */
+// Returns the denominator for a natural blackjack payout.
 int dealerBlackjackDenominator(DealerId id) {
     return id == DEALER_VOID || id == DEALER_BOSS_VOID ? 1 : 2;
 }
 
-/* Returns whether the dealer total is always hidden. */
+// Returns whether the dealer total is always hidden.
 int dealerHidesTotal(DealerId id) {
     return id == DEALER_REAPER || id == DEALER_BOSS_PIT;
 }
 
-/* Returns whether the dealer draws when the player hits. */
+// Returns whether the dealer draws when the player hits.
 int dealerMirrorsOnHit(DealerId id) {
     return id == DEALER_MIRROR || id == DEALER_BOSS_PRIME;
 }
 
-/* Returns whether the next deck card is shown during the player turn. */
+// Returns whether the next deck card is shown during the player turn.
 int dealerShowsNextCard(DealerId id) {
     return id == DEALER_ORACLE;
 }
 
-/* Returns whether dealer aces always count as one. */
+// Returns whether dealer aces always count as one.
 int dealerAcesCountAsOne(DealerId id) {
     return id == DEALER_ACCOUNTANT || id == DEALER_BOSS_SUPREME;
 }
 
-/* Returns whether the dealer forces the opening double down. */
+// Returns whether the dealer forces the opening double down.
 int dealerForcesDouble(DealerId id) {
     return id == DEALER_DEVIL || id == DEALER_BOSS_SUPREME;
 }
 
-/* Returns whether the dealer pays the pure-hand bonus. */
+// Returns whether the dealer pays the pure-hand bonus.
 int dealerPaysPureHandBonus(DealerId id) {
     return id == DEALER_SAINT || id == DEALER_BOSS_VOID;
 }
 
-/* Returns the number of active dealer hands. */
+// Returns the number of active dealer hands.
 int dealerHandsCount(DealerId id) {
     return id == DEALER_TWIN ? 2 : 1;
 }

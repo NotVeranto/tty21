@@ -208,7 +208,7 @@ void advanceFloor(Game *game) {
         logPush(game, message, MSG_LOSS);
     }
 
-    /* Restore a perk locked on a previous floor before charge refills. */
+        // Restore a perk locked on a previous floor before charge refills.
     if (game->run.perkLockedId >= 0) {
         game->player.perkOwned[game->run.perkLockedId] = 1;
         game->run.perkLockedId = -1;
@@ -332,7 +332,7 @@ void advanceFloor(Game *game) {
     resetHand(&game->dealer.hands[1]);
     game->dealer.handCount = 1;
 
-    /* Trigger run-limited floor hazards before the floor summary. */
+        // Trigger run-limited floor hazards before the floor summary.
     if (!game->run.coldSnapUsed &&
         game->run.floor >= 8 &&
         rngRange(0, 99) < 25) {

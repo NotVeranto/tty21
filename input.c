@@ -16,49 +16,82 @@ static struct termios rawTermios;
 static struct sigaction signalAction;
 static int rawModeEnabled;
 static int exitHandlerRegistered;
+static volatile sig_atomic_t pendingExitSignal;
+static volatile sig_atomic_t pendingSuspend;
+static volatile sig_atomic_t pendingContinue;
 static volatile sig_atomic_t wasRawMode;
 
-// Restores the terminal and exits with a signal-specific status.
 static void handleSignal(int signalNumber) {
-    int exitStatus;
-
-    disableRawMode();
-    exitStatus = signalNumber == SIGTERM ? 143 : 130;
-    _exit(exitStatus);
+    pendingExitSignal = signalNumber;
 }
 
-// Restores cooked mode before the process is suspended by the shell.
 static void handleSigTstp(int signalNumber) {
     (void)signalNumber;
-
-    wasRawMode = rawModeEnabled != 0;
-
-    if (rawModeEnabled) {
-        tcsetattr(STDIN_FILENO, TCSAFLUSH, &originalTermios);
-        rawModeEnabled = 0;
-    }
-
-    signalAction.sa_handler = SIG_DFL;
-    sigemptyset(&signalAction.sa_mask);
-    signalAction.sa_flags = 0;
-    sigaction(SIGTSTP, &signalAction, NULL);
-    raise(SIGTSTP);
+    pendingSuspend = 1;
 }
 
-// Restores raw mode after the shell resumes the process.
 static void handleSigCont(int signalNumber) {
     (void)signalNumber;
+    pendingContinue = 1;
+}
 
-    if (wasRawMode) {
-        tcsetattr(STDIN_FILENO, TCSAFLUSH, &rawTermios);
-        rawModeEnabled = 1;
-        wasRawMode = 0;
-    }
-
-    signalAction.sa_handler = handleSigTstp;
+static void installSignalAction(int signalNumber, void (*handler)(int)) {
+    signalAction.sa_handler = handler;
     sigemptyset(&signalAction.sa_mask);
     signalAction.sa_flags = 0;
-    sigaction(SIGTSTP, &signalAction, NULL);
+    sigaction(signalNumber, &signalAction, NULL);
+}
+
+static void processPendingSignals(void) {
+    sigset_t blockedSignals;
+    sigset_t previousMask;
+    sig_atomic_t exitSignal;
+    sig_atomic_t suspendRequested;
+    sig_atomic_t continueRequested;
+
+    sigemptyset(&blockedSignals);
+    sigaddset(&blockedSignals, SIGINT);
+    sigaddset(&blockedSignals, SIGTERM);
+    sigaddset(&blockedSignals, SIGTSTP);
+    sigaddset(&blockedSignals, SIGCONT);
+    sigprocmask(SIG_BLOCK, &blockedSignals, &previousMask);
+
+    exitSignal = pendingExitSignal;
+    suspendRequested = pendingSuspend;
+    continueRequested = pendingContinue;
+    pendingExitSignal = 0;
+    pendingSuspend = 0;
+    pendingContinue = 0;
+
+    sigprocmask(SIG_SETMASK, &previousMask, NULL);
+
+    if (exitSignal != 0) {
+        disableRawMode();
+        _exit(exitSignal == SIGTERM ? 143 : 130);
+    }
+
+    if (suspendRequested) {
+        wasRawMode = rawModeEnabled != 0;
+
+        if (rawModeEnabled &&
+            tcsetattr(STDIN_FILENO, TCSAFLUSH, &originalTermios) == 0) {
+            rawModeEnabled = 0;
+        }
+
+        renderShowCursor();
+        installSignalAction(SIGTSTP, SIG_DFL);
+        raise(SIGTSTP);
+        installSignalAction(SIGTSTP, handleSigTstp);
+        processPendingSignals();
+    }
+
+    if (continueRequested && wasRawMode) {
+        if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &rawTermios) == 0) {
+            rawModeEnabled = 1;
+            wasRawMode = 0;
+            renderHideCursor();
+        }
+    }
 }
 
 int inputInit(void) {
@@ -153,30 +186,58 @@ void flushInput(void) {
     clearerr(stdin);
 }
 
-int getch(void) {
+static int waitForInputByte(void);\n\nint getch(void) {
     unsigned char character;
     ssize_t bytesRead;
+    int selectResult;
 
-    do {
+    while (1) {
+        processPendingSignals();
+        selectResult = waitForInputByte();
+
+        if (selectResult == -1) {
+            if (errno == EINTR) {
+                continue;
+            }
+
+            return -1;
+        }
+
+        if (selectResult == 0) {
+            continue;
+        }
+
         bytesRead = read(STDIN_FILENO, &character, 1);
-    } while (bytesRead == -1 && errno == EINTR);
 
-    if (bytesRead == 1) {
-        return (int)character;
+        if (bytesRead == 1) {
+            return (int)character;
+        }
+
+        if (bytesRead == -1 && errno == EINTR) {
+            continue;
+        }
+
+        return -1;
     }
-
-    return -1;
 }
 
 static int waitForInputByte(void) {
     fd_set readSet;
     struct timeval timeout;
+    int result;
+    int savedErrno;
 
-    FD_ZERO(&readSet);
-    FD_SET(STDIN_FILENO, &readSet);
-    timeout = (struct timeval){0, 100000};
+    do {
+        FD_ZERO(&readSet);
+        FD_SET(STDIN_FILENO, &readSet);
+        timeout = (struct timeval){0, 100000};
+        result = select(STDIN_FILENO + 1, &readSet, NULL, NULL, &timeout);
+        savedErrno = errno;
+        processPendingSignals();
+        errno = savedErrno;
+    } while (result == -1 && errno == EINTR);
 
-    return select(STDIN_FILENO + 1, &readSet, NULL, NULL, &timeout);
+    return result;
 }
 
 KeyEvent readKey(void) {

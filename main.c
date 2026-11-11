@@ -554,7 +554,7 @@ int main(int argc, char **argv) {
                 break;
             }
 
-            /* CLI mode and continue options apply only to the first run. */
+                        // CLI mode and continue options apply only to the first run.
             forced = 0;
             continueFlag = 0;
             firstRun = 0;
