@@ -643,15 +643,6 @@ void resolveRound(Game *game) {
                                  "Dealer's Favor: bust pushed.");
                     }
                 } else {
-                    if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
-                        game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
-                        baseLoss > 0) {
-                        baseLoss /= 2;
-                        game->player.perkCharges[PERK_INSURANCE_PERK]--;
-                        logPush(game,
-                                "Insurance used: loss halved.",
-                                MSG_INFO);
-                    }
 
                     if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
                         game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
