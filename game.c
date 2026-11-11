@@ -117,6 +117,88 @@ void generateShopPool(Game *game) {
     }
 }
 
+int canRerollShopPool(const Game *game) {
+    int perkIndex;
+    int shopIndex;
+    int alreadyOffered;
+
+    for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+        if (!perkIsSold((PerkId)perkIndex) ||
+            game->player.perkOwned[perkIndex] ||
+            perkIndex == game->run.perkLockedId) {
+            continue;
+        }
+
+        alreadyOffered = 0;
+        for (shopIndex = 0; shopIndex < game->run.shopPerkCount;
+             shopIndex++) {
+            if (game->run.shopPerks[shopIndex] == (PerkId)perkIndex) {
+                alreadyOffered = 1;
+                break;
+            }
+        }
+
+        if (!alreadyOffered) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+int rerollShopPool(Game *game) {
+    PerkId candidates[PERK_COUNT];
+    int candidateCount;
+    int perkIndex;
+    int shopIndex;
+    int alreadyOffered;
+    int i;
+    int j;
+
+    candidateCount = 0;
+    for (perkIndex = 0; perkIndex < PERK_COUNT; perkIndex++) {
+        if (!perkIsSold((PerkId)perkIndex) ||
+            game->player.perkOwned[perkIndex] ||
+            perkIndex == game->run.perkLockedId) {
+            continue;
+        }
+
+        alreadyOffered = 0;
+        for (shopIndex = 0; shopIndex < game->run.shopPerkCount;
+             shopIndex++) {
+            if (game->run.shopPerks[shopIndex] == (PerkId)perkIndex) {
+                alreadyOffered = 1;
+                break;
+            }
+        }
+
+        if (!alreadyOffered) {
+            candidates[candidateCount++] = (PerkId)perkIndex;
+        }
+    }
+
+    if (candidateCount == 0) {
+        return 0;
+    }
+
+    for (i = candidateCount - 1; i > 0; i--) {
+        PerkId temporary;
+
+        j = rngRange(0, i);
+        temporary = candidates[i];
+        candidates[i] = candidates[j];
+        candidates[j] = temporary;
+    }
+
+    game->run.shopPerkCount =
+        candidateCount < SHOP_POOL_SIZE ? candidateCount : SHOP_POOL_SIZE;
+    for (i = 0; i < game->run.shopPerkCount; i++) {
+        game->run.shopPerks[i] = candidates[i];
+    }
+
+    return 1;
+}
+
 void logPush(Game *game, const char *msg, MessageStyle style) {
     int i;
 

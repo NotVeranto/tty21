@@ -3,6 +3,7 @@
 #include "game.h"
 #include "round.h"
 #include "round_rules.h"
+#include "rng.h"
 
 #include <string.h>
 
@@ -80,6 +81,58 @@ TEST(run_minimum_bet_multiplier_is_applied) {
     ASSERT_EQ_INT(20, getMinBet(&game, 5, MODE_ROGUELIKE));
 }
 
+TEST(shop_reroll_replaces_every_offered_perk) {
+    Game game;
+    PerkId previous[SHOP_POOL_SIZE];
+    int i;
+    int j;
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_ROGUELIKE;
+    game.minBetMultiplier = 1;
+    game.run.perkLockedId = -1;
+    rngInit(12345U, 1);
+    generateShopPool(&game);
+    ASSERT_EQ_INT(SHOP_POOL_SIZE, game.run.shopPerkCount);
+    for (i = 0; i < game.run.shopPerkCount; i++) {
+        previous[i] = game.run.shopPerks[i];
+    }
+
+    ASSERT_TRUE(canRerollShopPool(&game));
+    ASSERT_EQ_INT(1, rerollShopPool(&game));
+    for (i = 0; i < game.run.shopPerkCount; i++) {
+        for (j = 0; j < SHOP_POOL_SIZE; j++) {
+            ASSERT_TRUE(game.run.shopPerks[i] != previous[j]);
+        }
+    }
+}
+
+TEST(shop_reroll_is_unavailable_without_alternatives) {
+    Game game;
+    PerkId previous[SHOP_POOL_SIZE];
+    int i;
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_ROGUELIKE;
+    game.minBetMultiplier = 1;
+    game.run.perkLockedId = -1;
+    rngInit(54321U, 1);
+    generateShopPool(&game);
+    for (i = 0; i < PERK_COUNT; i++) {
+        game.player.perkOwned[i] = 1;
+    }
+    for (i = 0; i < game.run.shopPerkCount; i++) {
+        previous[i] = game.run.shopPerks[i];
+        game.player.perkOwned[game.run.shopPerks[i]] = 0;
+    }
+
+    ASSERT_EQ_INT(0, canRerollShopPool(&game));
+    ASSERT_EQ_INT(0, rerollShopPool(&game));
+    for (i = 0; i < game.run.shopPerkCount; i++) {
+        ASSERT_EQ_INT(previous[i], game.run.shopPerks[i]);
+    }
+}
+
 void run_run_tests(void) {
     RUN_TEST(run_classic_minimum_bet_is_always_one);
     RUN_TEST(run_roguelike_minimum_bet_by_floor);
@@ -88,4 +141,6 @@ void run_run_tests(void) {
     RUN_TEST(run_greed_doubles_minimum_bet);
     RUN_TEST(run_blocked_greed_does_not_double_minimum_bet);
     RUN_TEST(run_minimum_bet_multiplier_is_applied);
+    RUN_TEST(shop_reroll_replaces_every_offered_perk);
+    RUN_TEST(shop_reroll_is_unavailable_without_alternatives);
 }

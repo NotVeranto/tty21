@@ -4,10 +4,12 @@ This roadmap orders work by risk and player impact. It is the project-wide plan;
 
 ## Guiding priorities
 
+- The game has no meta-progression: nothing unlocks, upgrades, or carries over as a permanent player benefit between runs. Progression and power growth exist only inside the current run.
+
 1. Correctness and run integrity before adding more complexity.
 2. Tests and reproducibility before broad refactors.
 3. Maintainable architecture before large content expansions.
-4. Gameplay balance and progression before presentation polish.
+4. Gameplay balance and within-run progression before presentation polish.
 5. Responsive, coherent UX after the underlying flows are dependable.
 6. Release quality is verified continuously, not postponed to the final day.
 
@@ -60,7 +62,7 @@ Refactor only where it reduces real coupling or makes future work safer.
 
 **Exit criteria:** core rules can be tested without depending on terminal rendering; presentation changes do not require edits throughout game logic; no behavior regressions.
 
-## Stage 4 — Gameplay balance and progression
+## Stage 4 — Gameplay balance and within-run progression
 
 - Review the difficulty curve across floors, including minimum bets, dealer strength, boss frequency, and economic pressure.
 - Evaluate perk strength, shop prices, services, twist tools, cursed cards, and rewards as one connected economy.

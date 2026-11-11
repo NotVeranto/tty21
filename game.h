@@ -100,6 +100,8 @@ struct Game {
 
 void initGame(Game *game, GameMode mode);
 void generateShopPool(Game *game);
+int canRerollShopPool(const Game *game);
+int rerollShopPool(Game *game);
 void advanceFloor(Game *game);
 void bossPrepTurn(Game *game);
 void logPush(Game *game, const char *msg, MessageStyle style);

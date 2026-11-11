@@ -434,7 +434,8 @@ void runShop(Game *game) {
         ADD_SHOP_ITEM('z', serviceLabels[serviceLabelCount++],
                       "Roll a new set of perks for this floor.",
                       game->run.shopPerksRerolled != 0 ||
-                      game->run.marks < 10, 1);
+                      game->run.marks < 10 ||
+                      !canRerollShopPool(game), 1);
         if (game->loanAmount == 0) {
             {
                 char loanEffect[32];
@@ -610,11 +611,14 @@ void runShop(Game *game) {
                         MSG_INFO);
                 break;
             case 'z':
-                game->run.marks -= 10;
-                game->run.shopPerksRerolled = 1;
-                generateShopPool(game);
-                selectedIndex = 0;
-                logPush(game, "Shop rerolled. -10 marks.", MSG_INFO);
+                if (rerollShopPool(game)) {
+                    game->run.marks -= 10;
+                    game->run.shopPerksRerolled = 1;
+                    selectedIndex = 0;
+                    logPush(game, "Shop rerolled. -10 marks.", MSG_INFO);
+                } else {
+                    logPush(game, "No new perks available.", MSG_DEFAULT);
+                }
                 break;
             case 'l':
                 creditChips(game, 50);
