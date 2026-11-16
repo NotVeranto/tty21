@@ -43,6 +43,16 @@ static int tablePadding;
 static int colorEnabled = 1;
 static int cursorHidden;
 
+// Pauses visible round presentation without delaying fast or non-interactive runs.
+void renderPause(const Game *game, int ms) {
+    if (game == NULL || game->fastMode || ms <= 0 ||
+        !isatty(STDOUT_FILENO)) {
+        return;
+    }
+
+    usleep((unsigned int)ms * 1000U);
+}
+
 // Returns the color associated with a cursed card marker.
 static const char *curseColor(CurseId id) {
     switch (id) {
