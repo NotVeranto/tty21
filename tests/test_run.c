@@ -233,17 +233,17 @@ TEST(shop_chip_services_reject_unaffordable_actions_without_mutation) {
     memset(&game, 0, sizeof(game));
     game.player.chips = 9;
     game.run.marks = 7;
-    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 'v', 2));
+    ASSERT_EQ_INT(0, purchaseShopService(&game, 'v', 2));
     ASSERT_EQ_INT(9, game.player.chips);
     ASSERT_EQ_INT(7, game.run.marks);
 
     game.player.chips = 49;
-    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 'n', 2));
+    ASSERT_EQ_INT(0, purchaseShopService(&game, 'n', 2));
     ASSERT_EQ_INT(49, game.player.chips);
     ASSERT_EQ_INT(0, game.safetyNetArmed);
 
     game.player.chips = 9;
-    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 't', 2));
+    ASSERT_EQ_INT(0, purchaseShopService(&game, 't', 2));
     ASSERT_EQ_INT(9, game.player.chips);
     ASSERT_EQ_INT(0, game.tippedThisRound);
 }
@@ -254,12 +254,12 @@ TEST(shop_chip_services_preserve_minimum_bet) {
     memset(&game, 0, sizeof(game));
     game.player.chips = 12;
     game.run.marks = 3;
-    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 'v', 3));
+    ASSERT_EQ_INT(0, purchaseShopService(&game, 'v', 3));
     ASSERT_EQ_INT(12, game.player.chips);
     ASSERT_EQ_INT(3, game.run.marks);
 
     game.player.chips = 52;
-    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 'n', 3));
+    ASSERT_EQ_INT(0, purchaseShopService(&game, 'n', 3));
     ASSERT_EQ_INT(52, game.player.chips);
     ASSERT_EQ_INT(0, game.safetyNetArmed);
 }
@@ -269,21 +269,108 @@ TEST(shop_chip_services_apply_effects_after_payment) {
 
     memset(&game, 0, sizeof(game));
     game.player.chips = 22;
-    ASSERT_EQ_INT(1, purchaseShopChipService(&game, 'v', 2));
+    ASSERT_EQ_INT(1, purchaseShopService(&game, 'v', 2));
     ASSERT_EQ_INT(12, game.player.chips);
     ASSERT_EQ_INT(2, game.run.marks);
     ASSERT_EQ_INT(2, game.totalMarksEarned);
 
-    ASSERT_EQ_INT(1, purchaseShopChipService(&game, 't', 2));
+    ASSERT_EQ_INT(1, purchaseShopService(&game, 't', 2));
     ASSERT_EQ_INT(2, game.player.chips);
     ASSERT_EQ_INT(1, game.tippedThisRound);
 
     game.player.chips = 60;
-    ASSERT_EQ_INT(1, purchaseShopChipService(&game, 'n', 2));
+    ASSERT_EQ_INT(1, purchaseShopService(&game, 'n', 2));
     ASSERT_EQ_INT(10, game.player.chips);
     ASSERT_EQ_INT(1, game.safetyNetArmed);
-    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 'n', 2));
+    ASSERT_EQ_INT(0, purchaseShopService(&game, 'n', 2));
     ASSERT_EQ_INT(10, game.player.chips);
+}
+
+ 
+TEST(shop_mark_services_reject_invalid_purchases_without_mutation) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_ROGUELIKE;
+    game.run.floor = 3;
+    game.run.marks = 9;
+    ASSERT_EQ_INT(0, canPurchaseShopService(&game, 'z', 2));
+    ASSERT_EQ_INT(0, purchaseShopService(&game, 'z', 2));
+    ASSERT_EQ_INT(9, game.run.marks);
+    ASSERT_EQ_INT(0, game.run.shopPerksRerolled);
+
+    game.run.floor = 3;
+    game.run.marks = 100;
+    game.run.twistId = TWIST_GREED;
+    ASSERT_EQ_INT(0, canPurchaseShopService(&game, 'r', 2));
+    ASSERT_EQ_INT(0, purchaseShopService(&game, 'r', 2));
+    ASSERT_EQ_INT(100, game.run.marks);
+    ASSERT_EQ_INT(0, game.run.twistRerolled);
+
+    game.run.floor = 4;
+    game.run.marks = 39;
+    ASSERT_EQ_INT(0, canPurchaseShopService(&game, 'b', 2));
+    ASSERT_EQ_INT(0, purchaseShopService(&game, 'b', 2));
+    ASSERT_EQ_INT(39, game.run.marks);
+    ASSERT_EQ_INT(0, game.run.twistBlocked);
+}
+
+TEST(shop_perk_reroll_service_charges_only_after_replacement) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_ROGUELIKE;
+    game.run.floor = 1;
+    game.run.marks = 10;
+    game.run.shopPerkCount = 1;
+    game.run.shopPerks[0] = PERK_PEEK;
+    game.run.perkLockedId = -1;
+    rngInit(24680U, 1);
+
+    ASSERT_EQ_INT(1, canPurchaseShopService(&game, 'z', 2));
+    ASSERT_EQ_INT(1, purchaseShopService(&game, 'z', 2));
+    ASSERT_EQ_INT(0, game.run.marks);
+    ASSERT_EQ_INT(1, game.run.shopPerksRerolled);
+    ASSERT_TRUE(game.run.shopPerkCount > 0);
+    ASSERT_TRUE(game.run.shopPerks[0] != PERK_PEEK);
+}
+
+TEST(shop_loan_service_applies_credit_and_repayment_terms) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_ROGUELIKE;
+    game.run.floor = 4;
+    game.player.chips = 10;
+    ASSERT_EQ_INT(1, canPurchaseShopService(&game, 'l', 2));
+    ASSERT_EQ_INT(1, purchaseShopService(&game, 'l', 2));
+    ASSERT_EQ_INT(60, game.player.chips);
+    ASSERT_EQ_INT(75, game.loanAmount);
+    ASSERT_EQ_INT(7, game.loanDueFloor);
+    ASSERT_EQ_INT(0, canPurchaseShopService(&game, 'l', 2));
+    ASSERT_EQ_INT(60, game.player.chips);
+}
+
+TEST(shop_mark_services_charge_only_after_success) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_ROGUELIKE;
+    game.run.floor = 4;
+    game.run.marks = 30;
+    game.run.twistId = TWIST_GREED;
+    rngInit(12345U, 1);
+    ASSERT_EQ_INT(1, canPurchaseShopService(&game, 'r', 2));
+    ASSERT_EQ_INT(1, purchaseShopService(&game, 'r', 2));
+    ASSERT_EQ_INT(0, game.run.marks);
+    ASSERT_EQ_INT(1, game.run.twistRerolled);
+
+    game.run.marks = 40;
+    game.run.twistRerolled = 0;
+    game.run.twistBlocked = 0;
+    ASSERT_EQ_INT(1, purchaseShopService(&game, 'b', 2));
+    ASSERT_EQ_INT(0, game.run.marks);
+    ASSERT_EQ_INT(1, game.run.twistBlocked);
 }
 
 void run_run_tests(void) {
@@ -305,4 +392,8 @@ void run_run_tests(void) {
     RUN_TEST(shop_chip_services_reject_unaffordable_actions_without_mutation);
     RUN_TEST(shop_chip_services_preserve_minimum_bet);
     RUN_TEST(shop_chip_services_apply_effects_after_payment);
+    RUN_TEST(shop_mark_services_reject_invalid_purchases_without_mutation);
+    RUN_TEST(shop_loan_service_applies_credit_and_repayment_terms);
+    RUN_TEST(shop_perk_reroll_service_charges_only_after_replacement);
+    RUN_TEST(shop_mark_services_charge_only_after_success);
 }

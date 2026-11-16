@@ -57,6 +57,7 @@ Add a regression test for every confirmed defect.
 Refactor only where it reduces real coupling or makes future work safer.
 
 - Keep game rules and state changes separate from rendering and terminal effects.
+- Keep shop availability and purchase transactions in the game layer; menus should only present options and dispatch player choices.
 - Reduce oversized modules (especially rendering) into cohesive responsibilities without changing visible behavior.
 - Centralize repeated terminal, input, and screen-layout behavior.
 - Make ownership and lifetime of shared state explicit; avoid hidden file-scope state where it creates coupling.

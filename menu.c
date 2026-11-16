@@ -90,6 +90,7 @@ void floorMenu(Game *game) {
     }
 
     nextMinBet = getMinBet(game, game->run.floor + 1, game->mode);
+    nextMinBet = getMinBet(game, game->run.floor + 1, game->mode);
     advanceFee = game->mode == MODE_ROGUELIKE ? 2 * nextMinBet : 0;
     selectedIndex = 0;
 
@@ -297,7 +298,6 @@ void runShop(Game *game) {
     int itemIndex;
     int nextMinBet;
     int currentMinBet;
-    char message[128];
     char costBuf[16];
     char serviceLabels[7][128];
     int serviceLabelCount;
@@ -312,7 +312,6 @@ void runShop(Game *game) {
     while (game->state == STATE_SHOP) {
         itemCount = 0;
         disabledMask = 0;
-        nextMinBet = getMinBet(game, game->run.floor + 1, game->mode);
         currentMinBet = getMinBet(game, game->run.floor, game->mode);
 
         for (perkIndex = 0;
@@ -366,8 +365,7 @@ void runShop(Game *game) {
                  "Convert chips", "10 chips", "-> 2 marks");
         ADD_SHOP_ITEM('v', serviceLabels[serviceLabelCount++],
                       "Trade 10 chips for 2 marks.",
-                      game->player.chips < 10 ||
-                      (long long)game->player.chips - 10 < currentMinBet, 1);
+                      !canPurchaseShopService(game, 'v', currentMinBet), 1);
         if (game->safetyNetArmed == 0) {
             snprintf(serviceLabels[serviceLabelCount],
                      sizeof(serviceLabels[serviceLabelCount]),
@@ -375,8 +373,7 @@ void runShop(Game *game) {
                      "Safety net", "50 chips", "survive wipe");
             ADD_SHOP_ITEM('n', serviceLabels[serviceLabelCount++],
                           "Next wipe leaves you with 20 chips.",
-                          game->player.chips < 50 ||
-                          (long long)game->player.chips - 50 < currentMinBet, 1);
+                          !canPurchaseShopService(game, 'n', currentMinBet), 1);
         }
         snprintf(serviceLabels[serviceLabelCount],
                  sizeof(serviceLabels[serviceLabelCount]),
@@ -384,17 +381,14 @@ void runShop(Game *game) {
                  "Tip dealer", "10 chips", "hole card next round");
         ADD_SHOP_ITEM('t', serviceLabels[serviceLabelCount++],
                       "Hole card visible next round.",
-                      game->player.chips < 10 ||
-                      (long long)game->player.chips - 10 < currentMinBet, 1);
+                      !canPurchaseShopService(game, 't', currentMinBet), 1);
         snprintf(serviceLabels[serviceLabelCount],
                  sizeof(serviceLabels[serviceLabelCount]),
                  "%-13s  %-9s  %s",
                  "Reroll shop", "10 marks", "new perk pool");
         ADD_SHOP_ITEM('z', serviceLabels[serviceLabelCount++],
                       "Roll a new set of perks for this floor.",
-                      game->run.shopPerksRerolled != 0 ||
-                      game->run.marks < 10 ||
-                      !canRerollShopPool(game), 1);
+                      !canPurchaseShopService(game, 'z', currentMinBet), 1);
         if (game->loanAmount == 0) {
             {
                 char loanEffect[32];
@@ -409,7 +403,7 @@ void runShop(Game *game) {
             }
             ADD_SHOP_ITEM('l', serviceLabels[serviceLabelCount++],
                           "Repay on the due floor or the run ends.",
-                          game->player.chips >= nextMinBet, 1);
+                          !canPurchaseShopService(game, 'l', currentMinBet), 1);
         }
         if (game->run.floor >= 4 && game->run.twistRerolled == 0) {
             snprintf(serviceLabels[serviceLabelCount],
@@ -418,7 +412,7 @@ void runShop(Game *game) {
                      "Reroll twist", "30 marks", "new twist");
             ADD_SHOP_ITEM('r', serviceLabels[serviceLabelCount++],
                           "Roll a new twist for the current floor.",
-                          game->run.marks < 30, 2);
+                          !canPurchaseShopService(game, 'r', currentMinBet), 2);
         }
         if (game->run.floor >= 4 && game->run.twistBlocked == 0 &&
             game->run.twistId != TWIST_NONE) {
@@ -428,7 +422,7 @@ void runShop(Game *game) {
                      "Block twist", "40 marks", "neutralize");
             ADD_SHOP_ITEM('b', serviceLabels[serviceLabelCount++],
                           "Neutralize the current twist.",
-                          game->run.marks < 40, 2);
+                          !canPurchaseShopService(game, 'b', currentMinBet), 2);
         }
 #undef ADD_SHOP_ITEM
 
@@ -548,44 +542,11 @@ void runShop(Game *game) {
             continue;
         }
 
-        switch (items[menuIndex].hotkey) {
-            case 'v':
-            case 'n':
-            case 't':
-                (void)purchaseShopChipService(game,
-                                              items[menuIndex].hotkey,
-                                              currentMinBet);
-                break;
-            case 'z':
-                if (rerollShopPool(game)) {
-                    game->run.marks -= 10;
-                    game->run.shopPerksRerolled = 1;
-                    selectedIndex = 0;
-                    logPush(game, "Shop rerolled. -10 marks.", MSG_INFO);
-                } else {
-                    logPush(game, "No new perks available.", MSG_DEFAULT);
-                }
-                break;
-            case 'l':
-                creditChips(game, 50);
-                game->loanAmount = 75;
-                game->loanDueFloor = game->run.floor + 3;
-                snprintf(message, sizeof(message),
-                         "Loan taken: +50 chips, repay 75 by floor %d.",
-                         game->loanDueFloor);
-                logPush(game, message, MSG_INFO);
-                break;
-            case 'r':
-                game->run.twistId = selectTwistForFloor(game);
-                game->run.twistRerolled = 1;
-                game->run.marks -= 30;
-                logPush(game, "Twist rerolled.", MSG_INFO);
-                break;
-            case 'b':
-                game->run.twistBlocked = 1;
-                game->run.marks -= 40;
-                logPush(game, "Twist blocked this floor.", MSG_INFO);
-                break;
+        if (purchaseShopService(game,
+                               items[menuIndex].hotkey,
+                               currentMinBet) &&
+            items[menuIndex].hotkey == 'z') {
+            selectedIndex = 0;
         }
     }
 }

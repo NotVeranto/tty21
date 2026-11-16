@@ -259,40 +259,113 @@ int purchasePerk(Game *game, int perkIndex) {
     return 1;
 }
 
-int purchaseShopChipService(Game *game, char serviceId, int currentMinBet) {
-    int cost;
+int canPurchaseShopService(const Game *game,
+                            char serviceId,
+                            int currentMinBet) {
+    if (serviceId == 'v' || serviceId == 't' || serviceId == 'n') {
+        int cost = serviceId == 'n' ? 50 : 10;
 
-    if (serviceId == 'n') {
-        cost = 50;
-    } else if (serviceId == 'v' || serviceId == 't') {
-        cost = 10;
-    } else {
-        return 0;
+        return game->player.chips >= cost &&
+               (long long)game->player.chips - cost >= currentMinBet &&
+               !(serviceId == 'n' && game->safetyNetArmed);
     }
 
-    if (game->player.chips < cost ||
-        (long long)game->player.chips - cost < currentMinBet ||
-        (serviceId == 'n' && game->safetyNetArmed)) {
+    if (serviceId == 'z') {
+        return !game->run.shopPerksRerolled &&
+               game->run.marks >= 10 &&
+               canRerollShopPool(game);
+    }
+
+    if (serviceId == 'l') {
+        return game->loanAmount == 0 &&
+               game->player.chips >= getMinBet(
+                   game, game->run.floor + 1, game->mode);
+    }
+
+    if (serviceId == 'r') {
+        return game->run.floor >= 4 &&
+               !game->run.twistRerolled &&
+               game->run.marks >= 30;
+    }
+
+    if (serviceId == 'b') {
+        return game->run.floor >= 4 &&
+               !game->run.twistBlocked &&
+               game->run.twistId != TWIST_NONE &&
+               game->run.marks >= 40;
+    }
+
+    return 0;
+}
+
+int purchaseShopService(Game *game,
+                        char serviceId,
+                        int currentMinBet) {
+    char message[128];
+
+    if (!canPurchaseShopService(game, serviceId, currentMinBet)) {
         logPush(game, "Item unavailable.", MSG_DEFAULT);
         return 0;
     }
 
-    game->player.chips -= cost;
-    if (serviceId == 'v') {
-        game->run.marks += 2;
-        game->totalMarksEarned += 2;
-        logPush(game, "Converted 10 chips to 2 marks.", MSG_INFO);
-    } else if (serviceId == 'n') {
-        game->safetyNetArmed = 1;
-        logPush(game, "Safety net armed. Next wipe leaves 20 chips.",
-                MSG_INFO);
-    } else {
-        game->tippedThisRound = 1;
-        logPush(game, "Dealer tipped. Hole card visible next round.",
-                MSG_INFO);
+    if (serviceId == 'v' || serviceId == 'n' || serviceId == 't') {
+        int cost = serviceId == 'n' ? 50 : 10;
+
+        game->player.chips -= cost;
+        if (serviceId == 'v') {
+            game->run.marks += 2;
+            game->totalMarksEarned += 2;
+            logPush(game, "Converted 10 chips to 2 marks.", MSG_INFO);
+        } else if (serviceId == 'n') {
+            game->safetyNetArmed = 1;
+            logPush(game, "Safety net armed. Next wipe leaves 20 chips.",
+                    MSG_INFO);
+        } else {
+            game->tippedThisRound = 1;
+            logPush(game, "Dealer tipped. Hole card visible next round.",
+                    MSG_INFO);
+        }
+        return 1;
     }
 
-    return 1;
+    if (serviceId == 'z') {
+        if (!rerollShopPool(game)) {
+            logPush(game, "No new perks available.", MSG_DEFAULT);
+            return 0;
+        }
+        game->run.marks -= 10;
+        game->run.shopPerksRerolled = 1;
+        logPush(game, "Shop rerolled. -10 marks.", MSG_INFO);
+        return 1;
+    }
+
+    if (serviceId == 'l') {
+        creditChips(game, 50);
+        game->loanAmount = 75;
+        game->loanDueFloor = game->run.floor + 3;
+        snprintf(message, sizeof(message),
+                 "Loan taken: +50 chips, repay 75 by floor %d.",
+                 game->loanDueFloor);
+        logPush(game, message, MSG_INFO);
+        return 1;
+    }
+
+    if (serviceId == 'r') {
+        game->run.twistId = selectTwistForFloor(game);
+        game->run.twistRerolled = 1;
+        game->run.marks -= 30;
+        logPush(game, "Twist rerolled.", MSG_INFO);
+        return 1;
+    }
+
+    if (serviceId == 'b') {
+        game->run.twistBlocked = 1;
+        game->run.marks -= 40;
+        logPush(game, "Twist blocked this floor.", MSG_INFO);
+        return 1;
+    }
+
+    return 0;
 }
 
 void logPush(Game *game, const char *msg, MessageStyle style) {
