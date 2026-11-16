@@ -2,6 +2,7 @@
 #include "render.h"
 #include "render_style.h"
 #include "render_layout.h"
+#include "round_rules.h"
 #include "round_economy.h"
 #include "dealers.h"
 #include "twists.h"
