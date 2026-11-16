@@ -193,10 +193,60 @@ TEST(save_rejects_incompatible_version) {
     endSaveTest(root);
 }
 
+
+TEST(save_recovers_interrupted_round_after_load_once) {
+    char root[128];
+    Game game;
+    Game loaded;
+
+    ASSERT_EQ_INT(0, beginSaveTest(root, sizeof(root)));
+    initGame(&game, MODE_ROGUELIKE);
+    game.state = STATE_BET;
+    game.roundInProgress = 1;
+    game.player.chips = 90;
+    game.player.bets[0] = 10;
+
+    ASSERT_EQ_INT(0, saveGame(&game));
+    ASSERT_EQ_INT(0, loadGame(&loaded));
+    ASSERT_EQ_INT(1, loaded.roundInProgress);
+    ASSERT_EQ_INT(90, loaded.player.chips);
+
+    recoverInterruptedRound(&loaded);
+
+    ASSERT_EQ_INT(80, loaded.player.chips);
+    ASSERT_EQ_INT(0, loaded.roundInProgress);
+    ASSERT_EQ_INT(STATE_BET, loaded.state);
+    ASSERT_TRUE(strstr(loaded.log.lines[loaded.log.count - 1],
+                       "Bet forfeited") != NULL);
+
+    recoverInterruptedRound(&loaded);
+    ASSERT_EQ_INT(80, loaded.player.chips);
+    ASSERT_EQ_INT(0, loaded.roundInProgress);
+    endSaveTest(root);
+}
+
+TEST(save_recovery_leaves_completed_round_unchanged) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.state = STATE_MENU;
+    game.player.chips = 75;
+    game.player.bets[0] = 25;
+
+    recoverInterruptedRound(&game);
+
+    ASSERT_EQ_INT(75, game.player.chips);
+    ASSERT_EQ_INT(25, game.player.bets[0]);
+    ASSERT_EQ_INT(0, game.roundInProgress);
+    ASSERT_EQ_INT(STATE_MENU, game.state);
+}
+
 void run_save_tests(void) {
     RUN_TEST(save_round_trip_accepts_completed_five_hand_split);
     RUN_TEST(save_rejects_invalid_card_rank_even_with_valid_checksum);
     RUN_TEST(save_rejects_truncated_header);
     RUN_TEST(save_rejects_truncated_body);
     RUN_TEST(save_rejects_incompatible_version);
+    RUN_TEST(save_recovers_interrupted_round_after_load_once);
+    RUN_TEST(save_recovery_leaves_completed_round_unchanged);
 }

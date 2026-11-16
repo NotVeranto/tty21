@@ -16,14 +16,6 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-static void forfeitInterruptedRound(Game *game) {
-    if (!game->roundInProgress) return;
-    (void)applyLoss(game, game->player.bets[0]);
-    logPush(game, "You quit mid-round. Bet forfeited.", MSG_LOSS);
-    game->roundInProgress = 0;
-    game->state = STATE_BET;
-}
-
 static void printUsage(FILE *stream) {
     fprintf(stream,
             "Usage: tty21 [OPTIONS]\n"
@@ -486,7 +478,7 @@ int main(int argc, char **argv) {
                     fprintf(stderr, "error: cannot load save.\n");
                     return 1;
                 }
-                forfeitInterruptedRound(&game);
+                recoverInterruptedRound(&game);
                 renderResetScreen();
                 rngInit(game.rngSeed, 1);
                 {
@@ -513,7 +505,7 @@ int main(int argc, char **argv) {
                         fprintf(stderr, "error: cannot load save.\n");
                         return 1;
                     }
-                    forfeitInterruptedRound(&game);
+                    recoverInterruptedRound(&game);
                     renderResetScreen();
                     rngInit(game.rngSeed, 1);
                     {

@@ -106,6 +106,7 @@ int rerollShopPool(Game *game);
 void advanceFloor(Game *game);
 void bossPrepTurn(Game *game);
 void logPush(Game *game, const char *msg, MessageStyle style);
+void recoverInterruptedRound(Game *game);
 int runGame(Game *game);
 
 #endif

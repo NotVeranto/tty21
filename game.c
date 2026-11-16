@@ -210,6 +210,15 @@ int rerollShopPool(Game *game) {
     return 1;
 }
 
+void recoverInterruptedRound(Game *game) {
+    if (!game->roundInProgress) return;
+
+    (void)applyLoss(game, game->player.bets[0]);
+    logPush(game, "You quit mid-round. Bet forfeited.", MSG_LOSS);
+    game->roundInProgress = 0;
+    game->state = STATE_BET;
+}
+
 void logPush(Game *game, const char *msg, MessageStyle style) {
     int i;
 
