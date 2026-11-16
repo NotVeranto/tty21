@@ -644,6 +644,33 @@ void advanceFloor(Game *game) {
     }
 }
 
+int advanceToNextFloor(Game *game) {
+    AdvanceForecast forecast;
+    char feeMsg[64];
+
+    if (game->mode != MODE_ROGUELIKE) {
+        return 0;
+    }
+
+    computeAdvanceForecast(game, &forecast);
+    if (!forecast.affordable) {
+        return 0;
+    }
+
+    game->player.chips -= forecast.fee;
+    snprintf(feeMsg, sizeof(feeMsg),
+             "Advance cost: -%d chips.", forecast.fee);
+    logPush(game, feeMsg, MSG_LOSS);
+    advanceFloor(game);
+
+    if (game->state != STATE_QUIT &&
+        game->state != STATE_BOSS_PREP) {
+        game->state = STATE_BET;
+    }
+
+    return 1;
+}
+
 void bossPrepTurn(Game *game) {
     KeyEvent event;
     int answer;

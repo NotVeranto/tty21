@@ -2,6 +2,7 @@
 #include "run.h"
 #include "game.h"
 #include "round.h"
+#include "round_economy.h"
 #include "round_rules.h"
 #include "rng.h"
 
@@ -373,8 +374,67 @@ TEST(shop_mark_services_charge_only_after_success) {
     ASSERT_EQ_INT(1, game.run.twistBlocked);
 }
 
+TEST(run_floor_advance_rejects_unaffordable_forecast_without_mutation) {
+    Game game;
+    AdvanceForecast forecast;
+    int chipsBefore;
+    int marksBefore;
+    int floorBefore;
+    int logCountBefore;
+
+    rngInit(13579U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    computeAdvanceForecast(&game, &forecast);
+    game.player.chips = forecast.fee + forecast.nextMinBet - 1;
+    chipsBefore = game.player.chips;
+    marksBefore = game.run.marks;
+    floorBefore = game.run.floor;
+    logCountBefore = game.log.count;
+
+    ASSERT_EQ_INT(0, advanceToNextFloor(&game));
+    ASSERT_EQ_INT(chipsBefore, game.player.chips);
+    ASSERT_EQ_INT(marksBefore, game.run.marks);
+    ASSERT_EQ_INT(floorBefore, game.run.floor);
+    ASSERT_EQ_INT(logCountBefore, game.log.count);
+}
+
+TEST(run_floor_advance_charges_forecast_fee_and_advances_once) {
+    Game game;
+    AdvanceForecast forecast;
+    int chipsBefore;
+
+    rngInit(97531U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.fastMode = 1;
+    game.player.chips = 100;
+    computeAdvanceForecast(&game, &forecast);
+    chipsBefore = game.player.chips;
+
+    ASSERT_EQ_INT(1, advanceToNextFloor(&game));
+    ASSERT_EQ_INT(2, game.run.floor);
+    ASSERT_EQ_INT(chipsBefore - forecast.fee, game.player.chips);
+    ASSERT_EQ_INT(1, game.totalFloorsReached);
+    ASSERT_EQ_INT(STATE_BET, game.state);
+    ASSERT_TRUE(game.run.marks > 0);
+}
+
+TEST(run_classic_floor_advance_is_rejected) {
+    Game game;
+
+    rngInit(11223U, 1);
+    initGame(&game, MODE_CLASSIC);
+    game.player.chips = 100;
+
+    ASSERT_EQ_INT(0, advanceToNextFloor(&game));
+    ASSERT_EQ_INT(1, game.run.floor);
+    ASSERT_EQ_INT(100, game.player.chips);
+}
+
 void run_run_tests(void) {
     RUN_TEST(run_classic_minimum_bet_is_always_one);
+    RUN_TEST(run_floor_advance_rejects_unaffordable_forecast_without_mutation);
+    RUN_TEST(run_floor_advance_charges_forecast_fee_and_advances_once);
+    RUN_TEST(run_classic_floor_advance_is_rejected);
     RUN_TEST(run_roguelike_minimum_bet_by_floor);
     RUN_TEST(run_roguelike_quadratic_minimum_bet_late_floors);
     RUN_TEST(run_roguelike_minimum_bet_floor_two);

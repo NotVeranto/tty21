@@ -16,30 +16,13 @@
 
 static void dispatchFloorMenuAction(Game *game,
                                     char actionCharacter,
-                                    int currentMinBet,
-                                    int advanceFee) {
+                                    int currentMinBet) {
     if ((actionCharacter == 'c' || actionCharacter == 'C') &&
         game->player.chips >= currentMinBet) {
         game->state = STATE_BET;
     } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
                game->mode == MODE_ROGUELIKE) {
-        AdvanceForecast forecast;
-        char feeMsg[64];
-
-        computeAdvanceForecast(game, &forecast);
-        if (!forecast.affordable) {
-            return;
-        }
-
-        game->player.chips -= advanceFee;
-        snprintf(feeMsg, sizeof(feeMsg),
-                 "Advance cost: -%d chips.", advanceFee);
-        logPush(game, feeMsg, MSG_LOSS);
-        advanceFloor(game);
-        if (game->state != STATE_QUIT &&
-            game->state != STATE_BOSS_PREP) {
-            game->state = STATE_BET;
-        }
+        (void)advanceToNextFloor(game);
     } else if ((actionCharacter == 'w' || actionCharacter == 'W') &&
                game->mode == MODE_ROGUELIKE) {
         game->rngCalls = rngGetCallCount();
@@ -65,8 +48,6 @@ void floorMenu(Game *game) {
     char shopLabel[128];
     char input[64];
     KeyEvent event;
-    int nextMinBet;
-    int advanceFee;
     int disabledMask;
     int selectedIndex;
     int actionCharacter;
@@ -89,9 +70,6 @@ void floorMenu(Game *game) {
         return;
     }
 
-    nextMinBet = getMinBet(game, game->run.floor + 1, game->mode);
-    nextMinBet = getMinBet(game, game->run.floor + 1, game->mode);
-    advanceFee = game->mode == MODE_ROGUELIKE ? 2 * nextMinBet : 0;
     selectedIndex = 0;
 
     while (game->state == STATE_MENU) {
@@ -204,8 +182,7 @@ void floorMenu(Game *game) {
                 actionCharacter = menuItems[selectedIndex].hotkey;
                 dispatchFloorMenuAction(game,
                                         actionCharacter,
-                                        currentMinBet,
-                                        advanceFee);
+                                        currentMinBet);
                 renderMenuLogRefresh(game);
             } else if (event.type == KEY_CHAR) {
                 if (event.ch == '?') {
@@ -223,8 +200,7 @@ void floorMenu(Game *game) {
                         dispatchFloorMenuAction(
                             game,
                             menuItems[menuIndex].hotkey,
-                            currentMinBet,
-                            advanceFee);
+                            currentMinBet);
                         renderMenuLogRefresh(game);
                         break;
                     }
@@ -266,8 +242,7 @@ void floorMenu(Game *game) {
                             dispatchFloorMenuAction(
                                 game,
                                 menuItems[menuIndex].hotkey,
-                                currentMinBet,
-                                advanceFee);
+                                currentMinBet);
                             renderMenuLogRefresh(game);
                             break;
                         }

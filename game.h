@@ -109,6 +109,7 @@ int isPerkLockedThisFloor(const Game *game, PerkId perkId);
 int canRerollShopPool(const Game *game);
 int rerollShopPool(Game *game);
 void advanceFloor(Game *game);
+int advanceToNextFloor(Game *game);
 void bossPrepTurn(Game *game);
 void logPush(Game *game, const char *msg, MessageStyle style);
 void recoverInterruptedRound(Game *game);
