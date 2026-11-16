@@ -1,4 +1,5 @@
 #include "game.h"
+#include "controller.h"
 #include "input.h"
 #include "render.h"
 #include "round_economy.h"

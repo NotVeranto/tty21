@@ -124,9 +124,7 @@ FloorMenuActionResult handleFloorMenuAction(Game *game,
                                             char actionCharacter,
                                             int currentMinBet);
 int handleShopMenuAction(Game *game, int actionCharacter);
-void bossPrepTurn(Game *game);
 void logPush(Game *game, const char *msg, MessageStyle style);
 void recoverInterruptedRound(Game *game);
-int runGame(Game *game);
 
 #endif
