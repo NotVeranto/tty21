@@ -43,6 +43,13 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 - Dealer turn step-through; `--fast` skips animation pauses.
 - Raw terminal controls, keyboard-navigable menus, and an in-game help overlay.
 
+## Architecture
+
+- `game.c` and the round modules own game state and rules; `render.c` owns presentation.
+- `terminal.c` centralizes terminal dimension detection and the minimum full-screen layout requirements.
+- `input.c` and `input_map.c` handle terminal input and key mapping.
+- `make test-unit`, `make test-smoke`, and `make test-sanitize` provide separate logic, CLI, and sanitizer checks.
+
 ## Requirements
 
 - GCC or Clang with C11 support.

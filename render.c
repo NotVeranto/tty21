@@ -1,5 +1,6 @@
 #define _DEFAULT_SOURCE
 #include "render.h"
+#include "terminal.h"
 
 #include "round_cards.h"
 #include "round_rules.h"
@@ -7,7 +8,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
 #include "round_economy.h"
 
@@ -133,31 +133,13 @@ static const char *curseColor(CurseId id) {
     }
 }
 
-// Reads terminal dimensions and falls back to a standard terminal size.
-static void getTerminalSize(int *width, int *height) {
-    struct winsize windowSize;
-
-    *width = 80;
-    *height = 24;
-
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &windowSize) == 0) {
-        if (windowSize.ws_col > 0) {
-            *width = windowSize.ws_col;
-        }
-
-        if (windowSize.ws_row > 0) {
-            *height = windowSize.ws_row;
-        }
-    }
-}
-
 // Returns the 1-based column that centers content within the terminal.
 static int getCenteredColumn(int contentWidth) {
     int terminalWidth;
     int terminalHeight;
     int column;
 
-    getTerminalSize(&terminalWidth, &terminalHeight);
+    terminalGetSize(&terminalWidth, &terminalHeight);
     (void)terminalHeight;
 
     column = (terminalWidth - contentWidth) / 2 + 1;
@@ -178,7 +160,7 @@ void renderScreenHeader(const char *title,
     int separatorWidth;
     int titleColumn;
 
-    getTerminalSize(&terminalWidth, &terminalHeight);
+    terminalGetSize(&terminalWidth, &terminalHeight);
     (void)terminalHeight;
 
     titleColumn = getCenteredColumn((int)strlen(title));
@@ -225,12 +207,11 @@ static void printBoxSides(int row, int column, int width) {
 }
 
 int renderTerminalDimensionsOk(int width, int height) {
-    return width >= MIN_TERMINAL_WIDTH &&
-           height >= MIN_TERMINAL_HEIGHT;
+    return terminalDimensionsOk(width, height);
 }
 
 int renderTerminalSizeOk(int *width, int *height) {
-    getTerminalSize(width, height);
+    terminalGetSize(width, height);
     return renderTerminalDimensionsOk(*width, *height);
 }
 
@@ -870,7 +851,7 @@ void renderBossPrep(const Game *game) {
     }
 
     initColors();
-    getTerminalSize(&terminalWidth, &terminalHeight);
+    terminalGetSize(&terminalWidth, &terminalHeight);
     (void)terminalWidth;
     boxColumn = getCenteredColumn(BOX_WIDTH);
     boxRow = (terminalHeight - BOX_HEIGHT) / 2 + 1;
@@ -1167,7 +1148,7 @@ void animateChips(Game *game, int startChips, int endChips) {
     int direction;
     int value;
     if (game == NULL || game->fastMode || !isatty(STDOUT_FILENO) || startChips == endChips) return;
-    getTerminalSize(&terminalWidth, &terminalHeight);
+    terminalGetSize(&terminalWidth, &terminalHeight);
     (void)terminalHeight;
     savedChips = game->player.chips;
     direction = endChips > startChips ? 1 : -1;
@@ -1289,7 +1270,7 @@ void renderTable(const Game *game, int hideDealerCard) {
         displayHandIndex = 0;
     }
 
-    getTerminalSize(&terminalWidth, &terminalHeight);
+    terminalGetSize(&terminalWidth, &terminalHeight);
 
     if (isatty(STDOUT_FILENO) &&
         !renderTerminalSizeOk(&terminalWidth,
@@ -1659,7 +1640,7 @@ void renderStatsScreen(const Game *game) {
     snprintf(lines[8], sizeof(lines[8]), "+------------------------------------+");
 
     initColors();
-    getTerminalSize(&width, &height);
+    terminalGetSize(&width, &height);
     if (isatty(STDOUT_FILENO)) {
         printf("%s%s", SCR_CLEAR, SCR_HOME);
     }
@@ -1858,7 +1839,7 @@ void renderMenu(const char *title,
     int rowPadding;
 
     initColors();
-    getTerminalSize(&terminalWidth, &terminalHeight);
+    terminalGetSize(&terminalWidth, &terminalHeight);
 
     if (isatty(STDOUT_FILENO) &&
         !renderTerminalSizeOk(&terminalWidth,
@@ -1961,7 +1942,7 @@ void renderShop(const Game *game,
     int blockWidth;
 
     initColors();
-    getTerminalSize(&terminalWidth, &terminalHeight);
+    terminalGetSize(&terminalWidth, &terminalHeight);
     if (isatty(STDOUT_FILENO) &&
         !renderTerminalSizeOk(&terminalWidth, &terminalHeight)) {
         renderTooSmallScreen(terminalWidth, terminalHeight);
@@ -2160,7 +2141,7 @@ void renderMessage(const char *msg, int row, MessageStyle style) {
         suffix = scrReset();
     }
 
-    getTerminalSize(&terminalWidth, &terminalHeight);
+    terminalGetSize(&terminalWidth, &terminalHeight);
 
     if (isatty(STDOUT_FILENO) &&
         !renderTerminalSizeOk(&terminalWidth,
@@ -2276,7 +2257,7 @@ void renderHelpOverlay(const Game *game) {
     const char *payoutBreakdownText;
 
     payoutBreakdownText = game->lastPayoutBreakdown;
-    getTerminalSize(&terminalWidth, &terminalHeight);
+    terminalGetSize(&terminalWidth, &terminalHeight);
     initColors();
 
     if (isatty(STDOUT_FILENO) &&
@@ -2731,7 +2712,7 @@ void renderActionBar(const ActionId *actions,
     int visibleWidth;
     int startColumn;
 
-    getTerminalSize(&terminalWidth, &terminalHeight);
+    terminalGetSize(&terminalWidth, &terminalHeight);
 
     if (isatty(STDOUT_FILENO) &&
         !renderTerminalSizeOk(&terminalWidth,

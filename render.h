@@ -1,9 +1,6 @@
 #ifndef RENDER_H
 #define RENDER_H
 
-#define MIN_TERMINAL_WIDTH  70
-#define MIN_TERMINAL_HEIGHT 42
-
 #define SCR_CLEAR "\033[2J"
 #define SCR_HOME "\033[H"
 #define SCR_CURSOR "\033[%d;%dH"
@@ -31,6 +28,7 @@
 #define ROW_SHOP_CHIPS 5
 #define ROW_SHOP_HINT 25
 
+#include "terminal.h"
 #include "game.h"
 #include "round.h"
 #include "input_map.h"

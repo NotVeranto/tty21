@@ -42,6 +42,8 @@ Add a regression test for every confirmed defect.
 
 ## Stage 2 — Test coverage and verification
 
+**Status:** complete. The regression suite covers the listed rule combinations, malformed and interrupted saves, constrained shop and purchase failures, and deterministic initialization. Unit and CLI smoke tests are separated; CI passes GCC, Clang, and AddressSanitizer/UndefinedBehaviorSanitizer jobs.
+
 - Cover currently under-tested blackjack actions and combinations: Even Money, Surrender, Twin/multiple dealer hands, payout caps, Split/Double/Insurance interactions, and interrupted-round recovery.
 - Test malformed, truncated, and incompatible save files.
 - Test empty or constrained shop inventories and failed purchase paths.
