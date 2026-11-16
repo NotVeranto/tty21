@@ -36,7 +36,7 @@ void renderEventLog(const Game *game,
     }
 
     for (rowIndex = 0; rowIndex < LOG_SIZE; rowIndex++) {
-        moveToTableRow(ROW_LOG_0 + rowIndex, padding);
+        printf(SCR_CURSOR, ROW_LOG_0 + rowIndex, padding + 1);
         printf(SCR_ERASE_EOL);
 
         sourceIndex = rowIndex - (LOG_SIZE - game->log.count);
