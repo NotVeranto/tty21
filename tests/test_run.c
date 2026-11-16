@@ -522,7 +522,7 @@ TEST(shop_service_offer_visibility_uses_game_state) {
     ASSERT_EQ_INT(1, isShopServiceOffered(&game, 'v'));
     ASSERT_EQ_INT(1, isShopServiceOffered(&game, 't'));
     ASSERT_EQ_INT(1, isShopServiceOffered(&game, 'z'));
-    ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'n'));
+    ASSERT_EQ_INT(1, isShopServiceOffered(&game, 'n'));
     ASSERT_EQ_INT(1, isShopServiceOffered(&game, 'l'));
     ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'r'));
     ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'b'));
@@ -543,8 +543,36 @@ TEST(shop_service_offer_visibility_uses_game_state) {
     ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'x'));
 }
 
+TEST(shop_service_offer_list_matches_run_state) {
+    Game game;
+    char serviceIds[7];
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_ROGUELIKE;
+    game.run.floor = 1;
+    game.run.twistId = TWIST_NONE;
+
+    ASSERT_EQ_INT(5, getShopServiceOffers(&game, serviceIds, 7));
+    ASSERT_TRUE(memcmp(serviceIds, "vntzl", 5) == 0);
+    ASSERT_EQ_INT(0, getShopServiceOffers(&game, serviceIds, 0));
+    ASSERT_EQ_INT(0, getShopServiceOffers(&game, NULL, 7));
+
+    game.safetyNetArmed = 1;
+    game.loanAmount = 75;
+    game.run.floor = 4;
+    game.run.twistId = TWIST_GREED;
+    ASSERT_EQ_INT(5, getShopServiceOffers(&game, serviceIds, 7));
+    ASSERT_TRUE(memcmp(serviceIds, "vtzrb", 5) == 0);
+
+    game.run.twistRerolled = 1;
+    game.run.twistBlocked = 1;
+    ASSERT_EQ_INT(3, getShopServiceOffers(&game, serviceIds, 7));
+    ASSERT_TRUE(memcmp(serviceIds, "vtz", 3) == 0);
+}
+
 void run_run_tests(void) {
     RUN_TEST(shop_service_offer_visibility_uses_game_state);
+    RUN_TEST(shop_service_offer_list_matches_run_state);
     RUN_TEST(floor_menu_continue_requires_minimum_bet);
     RUN_TEST(floor_menu_shop_and_save_are_roguelike_only);
     RUN_TEST(shop_menu_exit_returns_to_floor_menu);

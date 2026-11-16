@@ -108,6 +108,9 @@ void initGame(Game *game, GameMode mode);
 void generateShopPool(Game *game);
 int purchasePerk(Game *game, int perkIndex);
 int isShopServiceOffered(const Game *game, char serviceId);
+int getShopServiceOffers(const Game *game,
+                         char *serviceIds,
+                         int capacity);
 int canPurchaseShopService(const Game *game,
                            char serviceId,
                            int currentMinBet);

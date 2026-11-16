@@ -57,7 +57,7 @@ Add a regression test for every confirmed defect.
 Refactor only where it reduces real coupling or makes future work safer.
 
 - Keep game rules and state changes separate from rendering and terminal effects.
-- Keep shop offer visibility and availability, purchase transactions, floor-advance economy, and menu-driven state transitions (including shop exit) in the game layer; menus should only present options, collect input, and perform presentation/persistence work.
+- Keep the ordered shop-service offer catalog, offer visibility and purchase availability, purchase transactions, floor-advance economy, and menu-driven state transitions (including shop exit) in the game layer; menus should only format/present options, collect input, and perform presentation/persistence work.
 - Reduce oversized modules (especially rendering) into cohesive responsibilities without changing visible behavior.
 - Centralize repeated terminal, input, and screen-layout behavior.
 - Make ownership and lifetime of shared state explicit; avoid hidden file-scope state where it creates coupling.

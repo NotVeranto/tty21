@@ -264,7 +264,11 @@ void runShop(Game *game) {
     int currentMinBet;
     char costBuf[16];
     char serviceLabels[7][128];
+    char offeredServiceIds[7];
     int serviceLabelCount;
+    int serviceOfferCount;
+    int serviceIndex;
+    char serviceId;
 
     if (handleShopMenuAction(game, 0)) {
         return;
@@ -322,69 +326,81 @@ void runShop(Game *game) {
         } while (0)
 
         serviceLabelCount = 0;
-        snprintf(serviceLabels[serviceLabelCount],
-                 sizeof(serviceLabels[serviceLabelCount]),
-                 "%-13s  %-9s  %s",
-                 "Convert chips", "10 chips", "-> 2 marks");
-        ADD_SHOP_ITEM('v', serviceLabels[serviceLabelCount++],
-                      "Trade 10 chips for 2 marks.",
-                      !canPurchaseShopService(game, 'v', currentMinBet), 1);
-        if (isShopServiceOffered(game, 'n')) {
-            snprintf(serviceLabels[serviceLabelCount],
-                     sizeof(serviceLabels[serviceLabelCount]),
-                     "%-13s  %-9s  %s",
-                     "Safety net", "50 chips", "survive wipe");
-            ADD_SHOP_ITEM('n', serviceLabels[serviceLabelCount++],
-                          "Next wipe leaves you with 20 chips.",
-                          !canPurchaseShopService(game, 'n', currentMinBet), 1);
-        }
-        snprintf(serviceLabels[serviceLabelCount],
-                 sizeof(serviceLabels[serviceLabelCount]),
-                 "%-13s  %-9s  %s",
-                 "Tip dealer", "10 chips", "hole card next round");
-        ADD_SHOP_ITEM('t', serviceLabels[serviceLabelCount++],
-                      "Hole card visible next round.",
-                      !canPurchaseShopService(game, 't', currentMinBet), 1);
-        snprintf(serviceLabels[serviceLabelCount],
-                 sizeof(serviceLabels[serviceLabelCount]),
-                 "%-13s  %-9s  %s",
-                 "Reroll shop", "10 marks", "new perk pool");
-        ADD_SHOP_ITEM('z', serviceLabels[serviceLabelCount++],
-                      "Roll a new set of perks for this floor.",
-                      !canPurchaseShopService(game, 'z', currentMinBet), 1);
-        if (isShopServiceOffered(game, 'l')) {
-            {
+        serviceOfferCount = getShopServiceOffers(
+            game, offeredServiceIds, 7);
+        for (serviceIndex = 0;
+             serviceIndex < serviceOfferCount;
+             serviceIndex++) {
+            serviceId = offeredServiceIds[serviceIndex];
+
+            if (serviceId == 'v') {
+                snprintf(serviceLabels[serviceLabelCount],
+                         sizeof(serviceLabels[serviceLabelCount]),
+                         "%-13s  %-9s  %s",
+                         "Convert chips", "10 chips", "-> 2 marks");
+                ADD_SHOP_ITEM('v', serviceLabels[serviceLabelCount++],
+                              "Trade 10 chips for 2 marks.",
+                              !canPurchaseShopService(game, 'v',
+                                                      currentMinBet), 1);
+            } else if (serviceId == 'n') {
+                snprintf(serviceLabels[serviceLabelCount],
+                         sizeof(serviceLabels[serviceLabelCount]),
+                         "%-13s  %-9s  %s",
+                         "Safety net", "50 chips", "survive wipe");
+                ADD_SHOP_ITEM('n', serviceLabels[serviceLabelCount++],
+                              "Next wipe leaves you with 20 chips.",
+                              !canPurchaseShopService(game, 'n',
+                                                      currentMinBet), 1);
+            } else if (serviceId == 't') {
+                snprintf(serviceLabels[serviceLabelCount],
+                         sizeof(serviceLabels[serviceLabelCount]),
+                         "%-13s  %-9s  %s",
+                         "Tip dealer", "10 chips", "hole card next round");
+                ADD_SHOP_ITEM('t', serviceLabels[serviceLabelCount++],
+                              "Hole card visible next round.",
+                              !canPurchaseShopService(game, 't',
+                                                      currentMinBet), 1);
+            } else if (serviceId == 'z') {
+                snprintf(serviceLabels[serviceLabelCount],
+                         sizeof(serviceLabels[serviceLabelCount]),
+                         "%-13s  %-9s  %s",
+                         "Reroll shop", "10 marks", "new perk pool");
+                ADD_SHOP_ITEM('z', serviceLabels[serviceLabelCount++],
+                              "Roll a new set of perks for this floor.",
+                              !canPurchaseShopService(game, 'z',
+                                                      currentMinBet), 1);
+            } else if (serviceId == 'l') {
                 char loanEffect[32];
 
                 snprintf(loanEffect, sizeof(loanEffect),
-                         "repay 75 by F%d",
-                         game->run.floor + 3);
+                         "repay 75 by F%d", game->run.floor + 3);
                 snprintf(serviceLabels[serviceLabelCount],
                          sizeof(serviceLabels[serviceLabelCount]),
                          "%-13s  %-9s  %s",
                          "Loan", "+50 chips", loanEffect);
+                ADD_SHOP_ITEM('l', serviceLabels[serviceLabelCount++],
+                              "Repay on the due floor or the run ends.",
+                              !canPurchaseShopService(game, 'l',
+                                                      currentMinBet), 1);
+            } else if (serviceId == 'r') {
+                snprintf(serviceLabels[serviceLabelCount],
+                         sizeof(serviceLabels[serviceLabelCount]),
+                         "%-13s  %-9s  %s",
+                         "Reroll twist", "30 marks", "new twist");
+                ADD_SHOP_ITEM('r', serviceLabels[serviceLabelCount++],
+                              "Roll a new twist for the current floor.",
+                              !canPurchaseShopService(game, 'r',
+                                                      currentMinBet), 2);
+            } else if (serviceId == 'b') {
+                snprintf(serviceLabels[serviceLabelCount],
+                         sizeof(serviceLabels[serviceLabelCount]),
+                         "%-13s  %-9s  %s",
+                         "Block twist", "40 marks", "neutralize");
+                ADD_SHOP_ITEM('b', serviceLabels[serviceLabelCount++],
+                              "Neutralize the current twist.",
+                              !canPurchaseShopService(game, 'b',
+                                                      currentMinBet), 2);
             }
-            ADD_SHOP_ITEM('l', serviceLabels[serviceLabelCount++],
-                          "Repay on the due floor or the run ends.",
-                          !canPurchaseShopService(game, 'l', currentMinBet), 1);
-        }
-        if (isShopServiceOffered(game, 'r')) {
-            snprintf(serviceLabels[serviceLabelCount],
-                     sizeof(serviceLabels[serviceLabelCount]),
-                     "%-13s  %-9s  %s",
-                     "Reroll twist", "30 marks", "new twist");
-            ADD_SHOP_ITEM('r', serviceLabels[serviceLabelCount++],
-                          "Roll a new twist for the current floor.",
-                          !canPurchaseShopService(game, 'r', currentMinBet), 2);
-        }
-        if (isShopServiceOffered(game, 'b')) {
-            snprintf(serviceLabels[serviceLabelCount],
-                     sizeof(serviceLabels[serviceLabelCount]),
-                     "%-13s  %-9s  %s",
-                     "Block twist", "40 marks", "neutralize");
-            ADD_SHOP_ITEM('b', serviceLabels[serviceLabelCount++],
-                          "Neutralize the current twist.",
-                          !canPurchaseShopService(game, 'b', currentMinBet), 2);
         }
 #undef ADD_SHOP_ITEM
 

@@ -280,6 +280,29 @@ int isShopServiceOffered(const Game *game, char serviceId) {
     }
 }
 
+int getShopServiceOffers(const Game *game,
+                         char *serviceIds,
+                         int capacity) {
+    static const char SERVICE_IDS[] = {'v', 'n', 't', 'z', 'l', 'r', 'b'};
+    int count = 0;
+    int index;
+
+    if (serviceIds == NULL || capacity <= 0) {
+        return 0;
+    }
+
+    for (index = 0;
+         index < (int)(sizeof(SERVICE_IDS) / sizeof(SERVICE_IDS[0])) &&
+         count < capacity;
+         index++) {
+        if (isShopServiceOffered(game, SERVICE_IDS[index])) {
+            serviceIds[count++] = SERVICE_IDS[index];
+        }
+    }
+
+    return count;
+}
+
 int canPurchaseShopService(const Game *game,
                             char serviceId,
                             int currentMinBet) {
