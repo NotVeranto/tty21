@@ -1,5 +1,6 @@
 #define _DEFAULT_SOURCE
 #include "render_status.h"
+#include "render.h"
 #include "render_style.h"
 #include "render_layout.h"
 #include "terminal.h"
@@ -9,6 +10,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+static void moveToTableRow(int row, int padding) {
+    printf(SCR_CURSOR, row, padding + 1);
+}
 
 static void printStyledStatusText(const char *statusText) {
     const char *cursor = statusText;
@@ -139,7 +144,7 @@ void renderStatusLine(const Game *game,
                      loanText);
         }
 
-        effectiveStatusWidth = terminalWidth - tablePadding;
+        effectiveStatusWidth = terminalWidth - padding;
 
         if ((int)strlen(statusText) > effectiveStatusWidth) {
             if (game->mode == MODE_CLASSIC) {
@@ -260,6 +265,8 @@ void animateChips(Game *game, int startChips, int endChips) {
         value = nextValue;
     }
     game->player.chips = savedChips;
-    drawStatusLine(game, terminalWidth, tablePadding, 0);
+    renderStatusLine(game,
+                     terminalWidth,
+                     (terminalWidth - getDynamicTableWidth(game)) / 2);
     fflush(stdout);
 }
