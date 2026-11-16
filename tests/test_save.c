@@ -78,6 +78,40 @@ static int rewriteSaveWithInvalidDeckRank(const char *root) {
     return fclose(file) == 0 ? 0 : -1;
 }
 
+
+static int rewriteSaveVersion(const char *root, uint32_t version) {
+    char path[512];
+    unsigned char header[TEST_SAVE_HEADER_SIZE];
+    FILE *file;
+    snprintf(path, sizeof(path), "%s/tty21/save.dat", root);
+    file = fopen(path, "r+b");
+    if (file == NULL) return -1;
+    if (fread(header, 1, sizeof(header), file) != sizeof(header)) {
+        fclose(file);
+        return -1;
+    }
+    memcpy(header + 8, &version, sizeof(version));
+    if (fseek(file, 0, SEEK_SET) != 0 ||
+        fwrite(header, 1, sizeof(header), file) != sizeof(header)) {
+        fclose(file);
+        return -1;
+    }
+    return fclose(file) == 0 ? 0 : -1;
+}
+
+static int truncateSaveFile(const char *root, long size) {
+    char path[512];
+    FILE *file;
+    snprintf(path, sizeof(path), "%s/tty21/save.dat", root);
+    file = fopen(path, "r+b");
+    if (file == NULL) return -1;
+    if (ftruncate(fileno(file), size) != 0) {
+        fclose(file);
+        return -1;
+    }
+    return fclose(file) == 0 ? 0 : -1;
+}
+
 TEST(save_round_trip_accepts_completed_five_hand_split) {
     char root[128];
     Game game;
@@ -122,7 +156,47 @@ TEST(save_rejects_invalid_card_rank_even_with_valid_checksum) {
     endSaveTest(root);
 }
 
+
+TEST(save_rejects_truncated_header) {
+    char root[128];
+    Game game;
+    Game loaded;
+    ASSERT_EQ_INT(0, beginSaveTest(root, sizeof(root)));
+    initGame(&game, MODE_ROGUELIKE);
+    ASSERT_EQ_INT(0, saveGame(&game));
+    ASSERT_EQ_INT(0, truncateSaveFile(root, 8));
+    ASSERT_EQ_INT(-1, loadGame(&loaded));
+    endSaveTest(root);
+}
+
+TEST(save_rejects_truncated_body) {
+    char root[128];
+    Game game;
+    Game loaded;
+    ASSERT_EQ_INT(0, beginSaveTest(root, sizeof(root)));
+    initGame(&game, MODE_ROGUELIKE);
+    ASSERT_EQ_INT(0, saveGame(&game));
+    ASSERT_EQ_INT(0, truncateSaveFile(root, TEST_SAVE_HEADER_SIZE + 4));
+    ASSERT_EQ_INT(-1, loadGame(&loaded));
+    endSaveTest(root);
+}
+
+TEST(save_rejects_incompatible_version) {
+    char root[128];
+    Game game;
+    Game loaded;
+    ASSERT_EQ_INT(0, beginSaveTest(root, sizeof(root)));
+    initGame(&game, MODE_ROGUELIKE);
+    ASSERT_EQ_INT(0, saveGame(&game));
+    ASSERT_EQ_INT(0, rewriteSaveVersion(root, 2U));
+    ASSERT_EQ_INT(-1, loadGame(&loaded));
+    endSaveTest(root);
+}
+
 void run_save_tests(void) {
     RUN_TEST(save_round_trip_accepts_completed_five_hand_split);
     RUN_TEST(save_rejects_invalid_card_rank_even_with_valid_checksum);
+    RUN_TEST(save_rejects_truncated_header);
+    RUN_TEST(save_rejects_truncated_body);
+    RUN_TEST(save_rejects_incompatible_version);
 }

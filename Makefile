@@ -29,6 +29,10 @@ test: $(TESTS_SRCS) $(TEST_LIB_SRCS)
 	$(CC) $(filter-out -MMD -MP,$(CFLAGS)) -I. -o tests/tty21_tests $(TESTS_SRCS) $(TEST_LIB_SRCS)
 	./tests/tty21_tests
 
+test-sanitize:
+	$(MAKE) clean
+	$(MAKE) CFLAGS='$(filter-out -MMD -MP,$(CFLAGS)) -fsanitize=address,undefined -fno-omit-frame-pointer' test
+
 clean:
 	rm -f $(OBJS) $(TARGET) *.d tests/tty21_tests tests/tty21_tests.d
 
@@ -39,6 +43,6 @@ install: $(TARGET)
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/$(TARGET) $(DESTDIR)$(MANDIR)/man1/tty21.1
 
-.PHONY: all test clean install uninstall
+.PHONY: all test test-sanitize clean install uninstall
 
 -include $(OBJS:.o=.d)

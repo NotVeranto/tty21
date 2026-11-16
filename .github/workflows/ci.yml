@@ -9,11 +9,23 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc clang make
+      - name: Build
+        run: make clean && make CC=${{ matrix.compiler }}
+      - name: Test
+        run: make CC=${{ matrix.compiler }} test
+
+  sanitizers:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install toolchain
         run: sudo apt-get update && sudo apt-get install -y gcc make
-      - name: Build
-        run: make clean && make
-      - name: Test
-        run: make test
+      - name: Address and undefined behavior sanitizers
+        run: make test-sanitize
