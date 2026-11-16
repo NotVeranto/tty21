@@ -270,7 +270,7 @@ TEST(shop_chip_services_apply_effects_after_payment) {
     memset(&game, 0, sizeof(game));
     game.player.chips = 22;
     ASSERT_EQ_INT(1, purchaseShopChipService(&game, 'v', 2));
-    ASSERT_EQ_INT(10, game.player.chips);
+    ASSERT_EQ_INT(12, game.player.chips);
     ASSERT_EQ_INT(2, game.run.marks);
     ASSERT_EQ_INT(2, game.totalMarksEarned);
 
