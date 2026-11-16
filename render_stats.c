@@ -1,4 +1,5 @@
 #include "render.h"
+#include "render_style.h"
 #include "terminal.h"
 
 #include <stdio.h>
