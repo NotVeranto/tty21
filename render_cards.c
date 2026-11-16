@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define CARD_CONTENT_WIDTH 9
+#define CARD_CONTENT_WIDTH (CARD_WIDTH - 2)
 #define CARD_HEIGHT 7
 #define DEALER_CARD_ROW 5
 #define PLAYER_CARD_ROW 14
