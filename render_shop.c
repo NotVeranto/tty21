@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define SHOP_ITEM_START_ROW 7
 #define SHOP_DESCRIPTION_ROW 24
