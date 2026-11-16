@@ -177,6 +177,11 @@ void renderTooSmallScreen(int currentWidth,
 // Calculates the table width from the largest hand with a stable minimum.
 
 
+// Moves the cursor to a table row and left-aligns content with the table.
+static void moveToTableRow(int row, int padding) {
+    printf(SCR_CURSOR, row, padding + 1);
+}
+
 // Prints a centered line at a fixed row.
 static void printCenteredAtRow(const char *text, int row, int width) {
     int textWidth;
