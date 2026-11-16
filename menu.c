@@ -296,7 +296,6 @@ void runShop(Game *game) {
     int characterIndex;
     int menuIndex;
     int itemIndex;
-    int nextMinBet;
     int currentMinBet;
     char costBuf[16];
     char serviceLabels[7][128];
