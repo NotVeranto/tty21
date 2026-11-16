@@ -91,7 +91,7 @@ void renderShowCursor(void) {
 }
 
 // Returns the ANSI red sequence when colors are enabled.
-static const char *scrRed(void) {
+const char *scrRed(void) {
     return colorEnabled ? "\033[31m" : "";
 }
 
