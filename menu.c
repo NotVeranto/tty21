@@ -329,7 +329,7 @@ void runShop(Game *game) {
         ADD_SHOP_ITEM('v', serviceLabels[serviceLabelCount++],
                       "Trade 10 chips for 2 marks.",
                       !canPurchaseShopService(game, 'v', currentMinBet), 1);
-        if (game->safetyNetArmed == 0) {
+        if (isShopServiceOffered(game, 'n')) {
             snprintf(serviceLabels[serviceLabelCount],
                      sizeof(serviceLabels[serviceLabelCount]),
                      "%-13s  %-9s  %s",
@@ -352,7 +352,7 @@ void runShop(Game *game) {
         ADD_SHOP_ITEM('z', serviceLabels[serviceLabelCount++],
                       "Roll a new set of perks for this floor.",
                       !canPurchaseShopService(game, 'z', currentMinBet), 1);
-        if (game->loanAmount == 0) {
+        if (isShopServiceOffered(game, 'l')) {
             {
                 char loanEffect[32];
 
@@ -368,7 +368,7 @@ void runShop(Game *game) {
                           "Repay on the due floor or the run ends.",
                           !canPurchaseShopService(game, 'l', currentMinBet), 1);
         }
-        if (game->run.floor >= 4 && game->run.twistRerolled == 0) {
+        if (isShopServiceOffered(game, 'r')) {
             snprintf(serviceLabels[serviceLabelCount],
                      sizeof(serviceLabels[serviceLabelCount]),
                      "%-13s  %-9s  %s",
@@ -377,8 +377,7 @@ void runShop(Game *game) {
                           "Roll a new twist for the current floor.",
                           !canPurchaseShopService(game, 'r', currentMinBet), 2);
         }
-        if (game->run.floor >= 4 && game->run.twistBlocked == 0 &&
-            game->run.twistId != TWIST_NONE) {
+        if (isShopServiceOffered(game, 'b')) {
             snprintf(serviceLabels[serviceLabelCount],
                      sizeof(serviceLabels[serviceLabelCount]),
                      "%-13s  %-9s  %s",

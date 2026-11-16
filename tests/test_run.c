@@ -512,6 +512,7 @@ TEST(floor_menu_quit_marks_player_exit) {
 }
 
 void run_run_tests(void) {
+    RUN_TEST(shop_service_offer_visibility_uses_game_state);
     RUN_TEST(floor_menu_continue_requires_minimum_bet);
     RUN_TEST(floor_menu_shop_and_save_are_roguelike_only);
     RUN_TEST(shop_menu_exit_returns_to_floor_menu);

@@ -259,6 +259,27 @@ int purchasePerk(Game *game, int perkIndex) {
     return 1;
 }
 
+int isShopServiceOffered(const Game *game, char serviceId) {
+    switch (serviceId) {
+        case 'v':
+        case 't':
+        case 'z':
+            return 1;
+        case 'n':
+            return !game->safetyNetArmed;
+        case 'l':
+            return game->loanAmount == 0;
+        case 'r':
+            return game->run.floor >= 4 && !game->run.twistRerolled;
+        case 'b':
+            return game->run.floor >= 4 &&
+                   !game->run.twistBlocked &&
+                   game->run.twistId != TWIST_NONE;
+        default:
+            return 0;
+    }
+}
+
 int canPurchaseShopService(const Game *game,
                             char serviceId,
                             int currentMinBet) {
