@@ -268,14 +268,14 @@ TEST(shop_chip_services_apply_effects_after_payment) {
     Game game;
 
     memset(&game, 0, sizeof(game));
-    game.player.chips = 20;
+    game.player.chips = 22;
     ASSERT_EQ_INT(1, purchaseShopChipService(&game, 'v', 2));
     ASSERT_EQ_INT(10, game.player.chips);
     ASSERT_EQ_INT(2, game.run.marks);
     ASSERT_EQ_INT(2, game.totalMarksEarned);
 
     ASSERT_EQ_INT(1, purchaseShopChipService(&game, 't', 2));
-    ASSERT_EQ_INT(0, game.player.chips);
+    ASSERT_EQ_INT(2, game.player.chips);
     ASSERT_EQ_INT(1, game.tippedThisRound);
 
     game.player.chips = 60;
