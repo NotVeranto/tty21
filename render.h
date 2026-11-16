@@ -45,9 +45,6 @@ void renderTable(const Game *game, int hideDealerCard);
 void renderStatsScreen(const Game *game);
 void renderPause(const Game *game, int ms);
 void renderFloorTransition(const Game *game);
-void renderResultFlash(const Game *game,
-                       const char *message,
-                       MessageStyle style);
 void renderBossPrep(const Game *game);
 void renderResetScreen(void);
 void renderGameStateFallback(const Game *game, int hideDealerCard);
@@ -66,7 +63,6 @@ void renderActionBar(const ActionId *actions,
                      int row,
                      int showHelp);
 void renderHelpOverlay(const Game *game);
-void renderMessage(const char *msg, int row, MessageStyle style);
 void renderMenuLogRefresh(const Game *game);
 void renderMenu(const char *title,
                 const MenuItem *items,
