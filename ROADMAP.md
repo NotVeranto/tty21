@@ -58,7 +58,7 @@ Refactor only where it reduces real coupling or makes future work safer.
 
 - Keep game rules and state changes separate from rendering and terminal effects.
 - Keep the ordered shop-service offer catalog, offer visibility and purchase availability, purchase transactions, floor-advance economy, and menu-driven state transitions (including shop exit) in the game layer; menus should only format/present options, collect input, and perform presentation/persistence work. Floor advancement must not invoke rendering, delays, or terminal input flushing from the game layer. Keep the state-driven game loop and its UI, input, and persistence coordination in a controller module rather than the game-rules module.
-- Reduce oversized modules (especially rendering) into cohesive responsibilities without changing visible behavior.
+- Reduce oversized modules (especially rendering) into cohesive responsibilities without changing visible behavior. Keep the player action bar in its own renderer module, separate from table and screen composition.
 - Centralize repeated terminal, input, and screen-layout behavior.
 - Make ownership and lifetime of shared state explicit; avoid hidden file-scope state where it creates coupling.
 - Preserve a small, understandable interface between game events and presentation.

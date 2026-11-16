@@ -8,7 +8,7 @@ DESTDIR ?=
 BINDIR  = $(PREFIX)/bin
 MANDIR  = $(PREFIX)/share/man
 TARGET  = tty21
-SRCS    = main.c card.c hand.c game.c controller.c round.c round_cards.c round_economy.c round_rules.c round_input.c round_actions.c round_dealer.c round_settlement.c render.c terminal.c menu.c input.c input_map.c dealers.c twists.c rng.c perks.c run.c save.c
+SRCS    = main.c card.c hand.c game.c controller.c round.c round_cards.c round_economy.c round_rules.c round_input.c round_actions.c round_dealer.c round_settlement.c render.c render_actions.c terminal.c menu.c input.c input_map.c dealers.c twists.c rng.c perks.c run.c save.c
 OBJS    = $(SRCS:.c=.o)
 TESTS_SRCS = tests/run_tests.c tests/test_hand.c \
              tests/test_card.c tests/test_rng.c tests/test_twists.c \
