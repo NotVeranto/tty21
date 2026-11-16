@@ -60,7 +60,6 @@ void renderMessage(const char *msg, int row, MessageStyle style) {
     const char *displayMessage;
     int terminalWidth;
     int terminalHeight;
-    int messagePadding;
     int maxWidth;
     int cut;
     char truncated[512];
@@ -98,7 +97,6 @@ void renderMessage(const char *msg, int row, MessageStyle style) {
         return;
     }
 
-    messagePadding = messagePadding;
 
     if (isatty(STDOUT_FILENO) &&
         terminalWidth >= MIN_TERMINAL_WIDTH &&
