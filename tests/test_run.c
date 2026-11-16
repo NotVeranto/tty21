@@ -511,6 +511,38 @@ TEST(floor_menu_quit_marks_player_exit) {
     ASSERT_EQ_INT(STATE_QUIT, game.state);
 }
 
+TEST(shop_service_offer_visibility_uses_game_state) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_ROGUELIKE;
+    game.run.floor = 1;
+    game.run.twistId = TWIST_NONE;
+
+    ASSERT_EQ_INT(1, isShopServiceOffered(&game, 'v'));
+    ASSERT_EQ_INT(1, isShopServiceOffered(&game, 't'));
+    ASSERT_EQ_INT(1, isShopServiceOffered(&game, 'z'));
+    ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'n'));
+    ASSERT_EQ_INT(1, isShopServiceOffered(&game, 'l'));
+    ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'r'));
+    ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'b'));
+
+    game.safetyNetArmed = 1;
+    game.loanAmount = 75;
+    game.run.floor = 4;
+    game.run.twistId = TWIST_GREED;
+    ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'n'));
+    ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'l'));
+    ASSERT_EQ_INT(1, isShopServiceOffered(&game, 'r'));
+    ASSERT_EQ_INT(1, isShopServiceOffered(&game, 'b'));
+
+    game.run.twistRerolled = 1;
+    game.run.twistBlocked = 1;
+    ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'r'));
+    ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'b'));
+    ASSERT_EQ_INT(0, isShopServiceOffered(&game, 'x'));
+}
+
 void run_run_tests(void) {
     RUN_TEST(shop_service_offer_visibility_uses_game_state);
     RUN_TEST(floor_menu_continue_requires_minimum_bet);
