@@ -395,7 +395,7 @@ void renderTable(const Game *game, int hideDealerCard) {
 
         renderStatusLine(game, terminalWidth, tablePadding);
 
-        renderTableInfo(game, terminalWidth, tablePadding);
+        renderTableInfo(game, tablePadding);
         renderEventLog(game, tablePadding, terminalWidth);
 
         fflush(stdout);

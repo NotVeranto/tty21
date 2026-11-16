@@ -86,7 +86,6 @@ static int isDeckRunningHot(const Game *game) {
 
 
 void renderTableInfo(const Game *game,
-                     int terminalWidth,
                      int tablePadding) {
     const DealerInfo *dealerInfo;
     const TwistInfo *twistInfo;

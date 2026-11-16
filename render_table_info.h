@@ -4,7 +4,6 @@
 #include "game.h"
 
 void renderTableInfo(const Game *game,
-                     int terminalWidth,
                      int tablePadding);
 
 #endif
