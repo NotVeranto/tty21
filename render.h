@@ -31,6 +31,7 @@
 #include "round.h"
 #include "input_map.h"
 #include "render_status.h"
+#include "render_messages.h"
 
 typedef struct {
     char hotkey;          // single character shortcut
