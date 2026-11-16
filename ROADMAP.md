@@ -61,6 +61,7 @@ Refactor only where it reduces real coupling or makes future work safer.
 - Reduce oversized modules (especially rendering) into cohesive responsibilities without changing visible behavior. Keep shared menu presentation, the player action bar, standalone run-summary screen, and help overlay in focused renderer modules, separate from table and screen composition.
 - Centralize repeated terminal, input, and screen-layout behavior.
 - Keep terminal-size validation and too-small-screen presentation in a dedicated renderer module, separate from game-table composition.
+- Keep Oracle next-card and deck-composition intelligence separate from dealer-rule and floor-twist table information.
 - Make ownership and lifetime of shared state explicit; avoid hidden file-scope state where it creates coupling.
 - Preserve a small, understandable interface between game events and presentation.
 

@@ -45,13 +45,11 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 
 ## Architecture
 
-- `game.c` and the round modules own game state, rules, floor/menu/shop transitions, the ordered shop-service offer catalog, and purchase transactions. `controller.c` owns the state-driven game loop and coordinates round handlers, menus, input, autosaves, and end-of-run presentation; `menu.c` handles menu input and persistence requests, while `render.c` owns presentation.
-- `render_fallback.c` owns the plain-text game-state renderer used when full-screen terminal presentation is unavailable.
-- `render_log.c` owns the persistent event-log presentation, including truncation and semantic message styling.
-- `render_menu.c` owns the shared keyboard-menu presentation; `render_actions.c` owns the player action-bar presentation; shared ANSI style accessors are declared in `render_style.h`.
-- `render_stats.c` owns the standalone run-summary screen, keeping end-of-run statistics out of the main renderer.
-- `render_help.c` owns the interactive and plain-text help overlay; shared centering and box-frame primitives live in `render_layout.c` with declarations in `render_layout.h`.
-- `terminal.c` centralizes terminal dimension detection and the minimum full-screen layout requirements.
+- `game.c` and the round modules own game state, rules, floor/menu/shop transitions, the ordered shop-service offer catalog, and purchase transactions. `controller.c` owns the state-driven game loop and coordinates round handlers, menus, input, autosaves, and end-of-run presentation; `menu.c` handles menu input and persistence requests.
+- `render.c` composes the main table screen. Focused modules own card/hand drawing (`render_cards.c`), dealer rules and floor twists (`render_table_info.c`), Oracle next-card and deck intelligence (`render_oracle.c`), status/chip presentation (`render_status.c`), transient messages (`render_messages.c`), and the shop (`render_shop.c`).
+- `render_fallback.c` provides plain-text game-state output; `render_log.c` owns the persistent event log; `render_terminal.c` handles terminal-size validation and the too-small-screen message.
+- `render_menu.c`, `render_actions.c`, `render_stats.c`, `render_help.c`, and `render_transitions.c` own the shared menu, player action bar, run summary, help overlay, and floor/boss transition screens respectively.
+- Shared ANSI styling lives in `render_style.c`/`render_style.h`; shared centering and box-frame primitives live in `render_layout.c`/`render_layout.h`. `terminal.c` centralizes terminal dimension detection and minimum full-screen layout requirements.
 - `input.c` and `input_map.c` handle terminal input and key mapping.
 - `make test-unit`, `make test-smoke`, and `make test-sanitize` provide separate logic, CLI, and sanitizer checks.
 
