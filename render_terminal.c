@@ -1,13 +1,11 @@
 #define _DEFAULT_SOURCE
-#include "render.h"
+#include "render_terminal.h"
+#include "render_control.h"
 #include "render_style.h"
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
-static int colorEnabled = 1;
 
 int renderTerminalDimensionsOk(int width, int height) {
     return terminalDimensionsOk(width, height);
@@ -25,6 +23,9 @@ void renderTooSmallScreen(int currentWidth,
     char current[32];
     int lines;
     int row;
+    int useAnsi;
+
+    useAnsi = renderAnsiEnabled();
 
     if (currentWidth <= 0 || currentHeight <= 0) {
         fprintf(stderr,
@@ -60,7 +61,7 @@ void renderTooSmallScreen(int currentWidth,
         lines = 1;
     }
 
-    if (colorEnabled && isatty(STDOUT_FILENO)) {
+    if (useAnsi) {
         printf("%s%s", SCR_CLEAR, SCR_HOME);
     }
 
@@ -103,7 +104,7 @@ void renderTooSmallScreen(int currentWidth,
                 pad = 0;
             }
 
-            if (colorEnabled && isatty(STDOUT_FILENO)) {
+            if (useAnsi) {
                 printf(SCR_CURSOR, row + lineNo, pad + 1);
             } else {
                 int k;
@@ -114,7 +115,7 @@ void renderTooSmallScreen(int currentWidth,
 
             printf("%s", start);
 
-            if (!(colorEnabled && isatty(STDOUT_FILENO))) {
+            if (!useAnsi) {
                 putchar('\n');
             }
 
@@ -130,4 +131,3 @@ void renderTooSmallScreen(int currentWidth,
 
     fflush(stdout);
 }
-

@@ -1,4 +1,5 @@
 #include "render_layout.h"
+#include "render_control.h"
 #include "render_style.h"
 #include "terminal.h"
 #include "render_cards.h"

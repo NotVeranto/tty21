@@ -1,10 +1,11 @@
 #include "render_log.h"
+#include "render_control.h"
+#include "render_rows.h"
 #include "render_style.h"
 
 #include <stdio.h>
 #include <string.h>
 
-#define ROW_LOG_0 28
 
 // Renders the persistent event log from oldest to newest.
 void renderEventLog(const Game *game,

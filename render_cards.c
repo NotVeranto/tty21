@@ -1,4 +1,5 @@
 #include "render_cards.h"
+#include "render_control.h"
 #include "render_style.h"
 #include "round_cards.h"
 #include <stdio.h>

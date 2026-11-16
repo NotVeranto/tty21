@@ -49,7 +49,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 - `render.c` composes the main table screen. Focused modules own card/hand drawing (`render_cards.c`), dealer rules and floor twists (`render_table_info.c`), Oracle next-card and deck intelligence (`render_oracle.c`), status/chip presentation (`render_status.c`), transient messages (`render_messages.c`), and the shop (`render_shop.c`).
 - `render_fallback.c` provides plain-text game-state output; `render_log.c` owns the persistent event log; `render_terminal.c` handles terminal-size validation and the too-small-screen message.
 - `render_menu.c`, `render_actions.c`, `render_stats.c`, `render_help.c`, and `render_transitions.c` own the shared menu, player action bar, run summary, help overlay, and floor/boss transition screens respectively.
-- Shared ANSI styling lives in `render_style.c`/`render_style.h`; shared centering and box-frame primitives live in `render_layout.c`/`render_layout.h`. `terminal.c` centralizes terminal dimension detection and minimum full-screen layout requirements.
+- Shared ANSI styling and capability detection live in `render_style.c`/`render_style.h`; ANSI control sequences and fixed screen-row coordinates are isolated in `render_control.h` and `render_rows.h`. Shared centering and box-frame primitives live in `render_layout.c`/`render_layout.h`. `terminal.c` centralizes terminal dimension detection and minimum full-screen layout requirements.
 - `input.c` and `input_map.c` handle terminal input and key mapping.
 - `make test-unit`, `make test-smoke`, and `make test-sanitize` provide separate logic, CLI, and sanitizer checks.
 
