@@ -713,6 +713,18 @@ FloorMenuActionResult handleFloorMenuAction(Game *game,
     return FLOOR_MENU_IGNORED;
 }
 
+int handleShopMenuAction(Game *game, int actionCharacter) {
+    if (game->mode != MODE_ROGUELIKE ||
+        actionCharacter == 'q' ||
+        actionCharacter == 'Q' ||
+        actionCharacter == 27) {
+        game->state = STATE_MENU;
+        return 1;
+    }
+
+    return 0;
+}
+
 void bossPrepTurn(Game *game) {
     KeyEvent event;
     int answer;

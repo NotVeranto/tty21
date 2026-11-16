@@ -470,6 +470,36 @@ TEST(floor_menu_shop_and_save_are_roguelike_only) {
     ASSERT_EQ_INT(STATE_MENU, game.state);
 }
 
+TEST(shop_menu_exit_returns_to_floor_menu) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_ROGUELIKE;
+    game.state = STATE_SHOP;
+
+    ASSERT_EQ_INT(1, handleShopMenuAction(&game, 'q'));
+    ASSERT_EQ_INT(STATE_MENU, game.state);
+
+    game.state = STATE_SHOP;
+    ASSERT_EQ_INT(1, handleShopMenuAction(&game, 'Q'));
+    ASSERT_EQ_INT(STATE_MENU, game.state);
+
+    game.state = STATE_SHOP;
+    ASSERT_EQ_INT(1, handleShopMenuAction(&game, 27));
+    ASSERT_EQ_INT(STATE_MENU, game.state);
+}
+
+TEST(shop_menu_exit_rejects_classic_mode) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_CLASSIC;
+    game.state = STATE_SHOP;
+
+    ASSERT_EQ_INT(1, handleShopMenuAction(&game, 0));
+    ASSERT_EQ_INT(STATE_MENU, game.state);
+}
+
 TEST(floor_menu_quit_marks_player_exit) {
     Game game;
 
@@ -484,6 +514,8 @@ TEST(floor_menu_quit_marks_player_exit) {
 void run_run_tests(void) {
     RUN_TEST(floor_menu_continue_requires_minimum_bet);
     RUN_TEST(floor_menu_shop_and_save_are_roguelike_only);
+    RUN_TEST(shop_menu_exit_returns_to_floor_menu);
+    RUN_TEST(shop_menu_exit_rejects_classic_mode);
     RUN_TEST(floor_menu_quit_marks_player_exit);
     RUN_TEST(run_classic_minimum_bet_is_always_one);
     RUN_TEST(run_floor_advance_rejects_unaffordable_forecast_without_mutation);

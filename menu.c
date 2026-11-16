@@ -266,8 +266,7 @@ void runShop(Game *game) {
     char serviceLabels[7][128];
     int serviceLabelCount;
 
-    if (game->mode != MODE_ROGUELIKE) {
-        game->state = STATE_MENU;
+    if (handleShopMenuAction(game, 0)) {
         return;
     }
 
@@ -413,7 +412,7 @@ void runShop(Game *game) {
             } else if (event.type == KEY_CHAR) {
                 actionCharacter = event.ch;
             } else if (event.type == KEY_ESC || event.type == KEY_EOF) {
-                game->state = STATE_MENU;
+                (void)handleShopMenuAction(game, event.type == KEY_ESC ? 27 : 0);
                 continue;
             } else {
                 continue;
@@ -421,7 +420,7 @@ void runShop(Game *game) {
         } else {
             actionCharacter = -1;
             if (fgets(input, sizeof(input), stdin) == NULL) {
-                game->state = STATE_MENU;
+                (void)handleShopMenuAction(game, 0);
                 continue;
             }
             if (strchr(input, '\n') == NULL) {
@@ -438,13 +437,12 @@ void runShop(Game *game) {
                 characterIndex++;
             }
             if (actionCharacter == -1 || actionCharacter == 27) {
-                game->state = STATE_MENU;
+                (void)handleShopMenuAction(game, actionCharacter);
                 continue;
             }
         }
 
-        if (actionCharacter == 'q' || actionCharacter == 'Q') {
-            game->state = STATE_MENU;
+        if (handleShopMenuAction(game, actionCharacter)) {
             continue;
         }
 
