@@ -8,7 +8,6 @@
 
 // Prints the fallback game state for non-full-screen output.
 void renderGameStateFallback(const Game *game, int hideDealerCard)
-void renderGameStateFallback(const Game *game, int hideDealerCard)
 {
     const DealerInfo *dealerInfo;
     const TwistInfo *twistInfo;
