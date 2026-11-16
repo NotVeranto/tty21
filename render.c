@@ -2,6 +2,7 @@
 #include "render.h"
 #include "render_style.h"
 #include "render_layout.h"
+#include "render_log.h"
 #include "terminal.h"
 
 #include "round_cards.h"
@@ -564,94 +565,6 @@ static void drawPlayerHands(const Game *game,
     }
 }
 
-// Renders the persistent event log from oldest to newest.
-static void renderLog(const Game *game,
-                      int padding,
-                      int terminalWidth) {
-    int rowIndex;
-    int sourceIndex;
-    int maxWidth;
-    int cut;
-    const char *prefix;
-    const char *suffix;
-    const char *displayText;
-    char truncated[LOG_LINE_LEN];
-
-    maxWidth = terminalWidth - padding - 2;
-
-    if (maxWidth < 8) {
-        maxWidth = 8;
-    }
-
-    if (game->log.count == 0) {
-        for (rowIndex = 0; rowIndex < LOG_SIZE; rowIndex++) {
-            moveToTableRow(ROW_LOG_0 + rowIndex, padding);
-            printf(SCR_ERASE_EOL);
-        }
-
-        fflush(stdout);
-        return;
-    }
-
-    for (rowIndex = 0; rowIndex < LOG_SIZE; rowIndex++) {
-        moveToTableRow(ROW_LOG_0 + rowIndex, padding);
-        printf(SCR_ERASE_EOL);
-
-        sourceIndex = rowIndex - (LOG_SIZE - game->log.count);
-
-        if (sourceIndex < 0) {
-            continue;
-        }
-
-        displayText = game->log.lines[sourceIndex];
-
-        if ((int)strlen(displayText) > maxWidth) {
-            cut = maxWidth - 3;
-
-            if (cut < 1) {
-                cut = 1;
-            }
-
-            if (cut > LOG_LINE_LEN - 4) {
-                cut = LOG_LINE_LEN - 4;
-            }
-
-            memcpy(truncated, displayText, (size_t)cut);
-            truncated[cut] = '.';
-            truncated[cut + 1] = '.';
-            truncated[cut + 2] = '.';
-            truncated[cut + 3] = '\0';
-            displayText = truncated;
-        }
-
-        prefix = "";
-        suffix = "";
-
-        if (game->log.styles[sourceIndex] == MSG_WIN) {
-            prefix = scrGreen();
-            suffix = scrReset();
-        } else if (game->log.styles[sourceIndex] == MSG_LOSS) {
-            prefix = scrRed();
-            suffix = scrReset();
-        } else if (game->log.styles[sourceIndex] == MSG_PUSH) {
-            prefix = scrYellow();
-            suffix = scrReset();
-        } else if (game->log.styles[sourceIndex] == MSG_INFO) {
-            prefix = scrDim();
-            suffix = scrReset();
-        } else if (game->log.styles[sourceIndex] == MSG_ACTION) {
-            prefix = scrCyan();
-            suffix = scrReset();
-        } else if (game->log.styles[sourceIndex] == MSG_DEALER) {
-            prefix = scrMagenta();
-            suffix = scrReset();
-        }
-
-        printf("%s%s%s", prefix, displayText, suffix);
-    }
-
-    fflush(stdout);
-}
 
 void renderResetScreen(void) {
     renderInitColors();
@@ -1359,7 +1272,7 @@ void renderTable(const Game *game, int hideDealerCard) {
             printf("%s%s%s", scrDim(), oracleText, scrReset());
         }
 
-        renderLog(game, tablePadding, terminalWidth);
+        renderEventLog(game, tablePadding, terminalWidth);
 
         fflush(stdout);
     } else if (isatty(STDOUT_FILENO)) {
@@ -1385,7 +1298,7 @@ void renderMenuLogRefresh(const Game *game) {
     }
 
     drawStatusLine(game, terminalWidth, tablePadding, 0);
-    renderLog(game, tablePadding, terminalWidth);
+    renderEventLog(game, tablePadding, terminalWidth);
 }
 
 // Renders the roguelike shop with a list of available purchases and services.
@@ -1510,7 +1423,7 @@ void renderShop(const Game *game,
         printf(SCR_ERASE_EOL);
         printf("%sKeys: 1-9/A-C perks; V convert; N net; T tip; L loan; R/B twists; P slot; Q close%s",
                scrDim(), scrReset());
-        renderLog(game, shopPadding, terminalWidth);
+        renderEventLog(game, shopPadding, terminalWidth);
         fflush(stdout);
     } else {
         printf("TTY21 - SHOP\n");
