@@ -1,6 +1,7 @@
 #define _DEFAULT_SOURCE
 #include "render.h"
 #include "render_style.h"
+#include "render_layout.h"
 #include "terminal.h"
 
 #include "round_cards.h"
