@@ -19,6 +19,12 @@ typedef enum {
     STATE_QUIT
 } GameState;
 
+typedef enum {
+    FLOOR_MENU_IGNORED,
+    FLOOR_MENU_HANDLED,
+    FLOOR_MENU_SAVE_REQUESTED
+} FloorMenuActionResult;
+
 #define MAX_PLAYER_HANDS 5
 
 typedef struct {
@@ -110,6 +116,9 @@ int canRerollShopPool(const Game *game);
 int rerollShopPool(Game *game);
 void advanceFloor(Game *game);
 int advanceToNextFloor(Game *game);
+FloorMenuActionResult handleFloorMenuAction(Game *game,
+                                            char actionCharacter,
+                                            int currentMinBet);
 void bossPrepTurn(Game *game);
 void logPush(Game *game, const char *msg, MessageStyle style);
 void recoverInterruptedRound(Game *game);

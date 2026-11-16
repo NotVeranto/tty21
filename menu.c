@@ -17,26 +17,18 @@
 static void dispatchFloorMenuAction(Game *game,
                                     char actionCharacter,
                                     int currentMinBet) {
-    if ((actionCharacter == 'c' || actionCharacter == 'C') &&
-        game->player.chips >= currentMinBet) {
-        game->state = STATE_BET;
-    } else if ((actionCharacter == 'a' || actionCharacter == 'A') &&
-               game->mode == MODE_ROGUELIKE) {
-        (void)advanceToNextFloor(game);
-    } else if ((actionCharacter == 'w' || actionCharacter == 'W') &&
-               game->mode == MODE_ROGUELIKE) {
-        game->rngCalls = rngGetCallCount();
-        if (saveGame(game) == 0) {
-            logPush(game, "Game saved.", MSG_INFO);
-        } else {
-            logPush(game, "Save failed.", MSG_LOSS);
-        }
-    } else if ((actionCharacter == 's' || actionCharacter == 'S') &&
-               game->mode == MODE_ROGUELIKE) {
-        game->state = STATE_SHOP;
-    } else if (actionCharacter == 'q' || actionCharacter == 'Q') {
-        game->playerQuit = 1;
-        game->state = STATE_QUIT;
+    FloorMenuActionResult result;
+
+    result = handleFloorMenuAction(game, actionCharacter, currentMinBet);
+    if (result != FLOOR_MENU_SAVE_REQUESTED) {
+        return;
+    }
+
+    game->rngCalls = rngGetCallCount();
+    if (saveGame(game) == 0) {
+        logPush(game, "Game saved.", MSG_INFO);
+    } else {
+        logPush(game, "Save failed.", MSG_LOSS);
     }
 }
 
@@ -207,15 +199,13 @@ void floorMenu(Game *game) {
                 }
             } else if (event.type == KEY_ESC ||
                        event.type == KEY_EOF) {
-                game->playerQuit = 1;
-                game->state = STATE_QUIT;
+                dispatchFloorMenuAction(game, 'q', currentMinBet);
             }
         } else {
             actionCharacter = -1;
 
             if (fgets(input, sizeof(input), stdin) == NULL) {
-                game->playerQuit = 1;
-                game->state = STATE_QUIT;
+                dispatchFloorMenuAction(game, 'q', currentMinBet);
             } else {
                 if (strchr(input, '\n') == NULL) {
                     while ((inputCharacter = getchar()) != '\n' &&

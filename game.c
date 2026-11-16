@@ -671,6 +671,48 @@ int advanceToNextFloor(Game *game) {
     return 1;
 }
 
+FloorMenuActionResult handleFloorMenuAction(Game *game,
+                                            char actionCharacter,
+                                            int currentMinBet) {
+    char action = (char)tolower((unsigned char)actionCharacter);
+
+    if (action == 'c') {
+        if (game->player.chips < currentMinBet) {
+            return FLOOR_MENU_IGNORED;
+        }
+        game->state = STATE_BET;
+        return FLOOR_MENU_HANDLED;
+    }
+
+    if (action == 'a') {
+        return advanceToNextFloor(game)
+                   ? FLOOR_MENU_HANDLED
+                   : FLOOR_MENU_IGNORED;
+    }
+
+    if (action == 'w') {
+        return game->mode == MODE_ROGUELIKE
+                   ? FLOOR_MENU_SAVE_REQUESTED
+                   : FLOOR_MENU_IGNORED;
+    }
+
+    if (action == 's') {
+        if (game->mode != MODE_ROGUELIKE) {
+            return FLOOR_MENU_IGNORED;
+        }
+        game->state = STATE_SHOP;
+        return FLOOR_MENU_HANDLED;
+    }
+
+    if (action == 'q') {
+        game->playerQuit = 1;
+        game->state = STATE_QUIT;
+        return FLOOR_MENU_HANDLED;
+    }
+
+    return FLOOR_MENU_IGNORED;
+}
+
 void bossPrepTurn(Game *game) {
     KeyEvent event;
     int answer;

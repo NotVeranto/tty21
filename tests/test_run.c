@@ -430,7 +430,61 @@ TEST(run_classic_floor_advance_is_rejected) {
     ASSERT_EQ_INT(100, game.player.chips);
 }
 
+TEST(floor_menu_continue_requires_minimum_bet) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_ROGUELIKE;
+    game.state = STATE_MENU;
+    game.player.chips = 1;
+
+    ASSERT_EQ_INT(FLOOR_MENU_IGNORED,
+                  handleFloorMenuAction(&game, 'c', 2));
+    ASSERT_EQ_INT(STATE_MENU, game.state);
+
+    game.player.chips = 2;
+    ASSERT_EQ_INT(FLOOR_MENU_HANDLED,
+                  handleFloorMenuAction(&game, 'C', 2));
+    ASSERT_EQ_INT(STATE_BET, game.state);
+}
+
+TEST(floor_menu_shop_and_save_are_roguelike_only) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.mode = MODE_CLASSIC;
+    game.state = STATE_MENU;
+    ASSERT_EQ_INT(FLOOR_MENU_IGNORED,
+                  handleFloorMenuAction(&game, 's', 1));
+    ASSERT_EQ_INT(STATE_MENU, game.state);
+    ASSERT_EQ_INT(FLOOR_MENU_IGNORED,
+                  handleFloorMenuAction(&game, 'w', 1));
+
+    game.mode = MODE_ROGUELIKE;
+    ASSERT_EQ_INT(FLOOR_MENU_HANDLED,
+                  handleFloorMenuAction(&game, 'S', 1));
+    ASSERT_EQ_INT(STATE_SHOP, game.state);
+    game.state = STATE_MENU;
+    ASSERT_EQ_INT(FLOOR_MENU_SAVE_REQUESTED,
+                  handleFloorMenuAction(&game, 'W', 1));
+    ASSERT_EQ_INT(STATE_MENU, game.state);
+}
+
+TEST(floor_menu_quit_marks_player_exit) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.state = STATE_MENU;
+    ASSERT_EQ_INT(FLOOR_MENU_HANDLED,
+                  handleFloorMenuAction(&game, 'Q', 1));
+    ASSERT_EQ_INT(1, game.playerQuit);
+    ASSERT_EQ_INT(STATE_QUIT, game.state);
+}
+
 void run_run_tests(void) {
+    RUN_TEST(floor_menu_continue_requires_minimum_bet);
+    RUN_TEST(floor_menu_shop_and_save_are_roguelike_only);
+    RUN_TEST(floor_menu_quit_marks_player_exit);
     RUN_TEST(run_classic_minimum_bet_is_always_one);
     RUN_TEST(run_floor_advance_rejects_unaffordable_forecast_without_mutation);
     RUN_TEST(run_floor_advance_charges_forecast_fee_and_advances_once);
