@@ -18,8 +18,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y gcc clang make
       - name: Build
         run: make clean && make CC=${{ matrix.compiler }}
-      - name: Test
-        run: make CC=${{ matrix.compiler }} test
+      - name: Unit tests
+        run: make CC=${{ matrix.compiler }} test-unit
+      - name: CLI smoke tests
+        run: make CC=${{ matrix.compiler }} test-smoke
 
   sanitizers:
     runs-on: ubuntu-latest

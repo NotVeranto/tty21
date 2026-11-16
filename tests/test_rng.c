@@ -1,5 +1,7 @@
 #include "test.h"
 #include "rng.h"
+#include "game.h"
+#include "card.h"
 
 TEST(rng_range_zero_is_always_zero) {
     int sampleIndex;
@@ -104,10 +106,48 @@ TEST(rng_same_seed_repeats_first_ten_draws) {
     }
 }
 
+TEST(rng_seed_repeats_complete_roguelike_initialization) {
+    Game firstGame;
+    Game secondGame;
+    unsigned long firstCallCount;
+    int cardIndex;
+    int shopIndex;
+
+    rngInit(8675309U, 1);
+    initGame(&firstGame, MODE_ROGUELIKE);
+    firstCallCount = rngGetCallCount();
+    firstGame.rngCalls = firstCallCount;
+
+    rngInit(8675309U, 1);
+    initGame(&secondGame, MODE_ROGUELIKE);
+    secondGame.rngCalls = rngGetCallCount();
+
+    ASSERT_EQ_INT(firstGame.rngSeed, secondGame.rngSeed);
+    ASSERT_EQ_INT(firstCallCount, secondGame.rngCalls);
+    ASSERT_EQ_INT(firstGame.deck.top, secondGame.deck.top);
+    for (cardIndex = 0; cardIndex < DECK_SIZE; cardIndex++) {
+        ASSERT_EQ_INT(firstGame.deck.cards[cardIndex].suit,
+                      secondGame.deck.cards[cardIndex].suit);
+        ASSERT_EQ_INT(firstGame.deck.cards[cardIndex].rank,
+                      secondGame.deck.cards[cardIndex].rank);
+        ASSERT_EQ_INT(firstGame.deck.cards[cardIndex].cursed,
+                      secondGame.deck.cards[cardIndex].cursed);
+    }
+
+    ASSERT_EQ_INT(firstGame.run.shopPerkCount,
+                  secondGame.run.shopPerkCount);
+    for (shopIndex = 0; shopIndex < firstGame.run.shopPerkCount;
+         shopIndex++) {
+        ASSERT_EQ_INT(firstGame.run.shopPerks[shopIndex],
+                      secondGame.run.shopPerks[shopIndex]);
+    }
+}
+
 void run_rng_tests(void) {
     RUN_TEST(rng_range_zero_is_always_zero);
     RUN_TEST(rng_range_single_value_is_inclusive);
     RUN_TEST(rng_range_one_to_ten_bounds_and_diversity);
     RUN_TEST(rng_range_zero_to_ninety_nine_bounds_and_diversity);
     RUN_TEST(rng_same_seed_repeats_first_ten_draws);
+    RUN_TEST(rng_seed_repeats_complete_roguelike_initialization);
 }

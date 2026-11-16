@@ -39,7 +39,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 ### Terminal presentation
 
 - Full-screen ASCII table with ANSI styling and colored status feedback.
-- Card-deal and chip-change animations.
+- Card-deal animations and clear textual feedback for chip changes.
 - Dealer turn step-through; `--fast` skips animation pauses.
 - Raw terminal controls, keyboard-navigable menus, and an in-game help overlay.
 
@@ -48,11 +48,19 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 - GCC or Clang with C11 support.
 - Linux (uses termios and ANSI escape codes).
 - A UTF-8 terminal for card suit symbols.
-- A terminal window of at least 80x50 characters.
+- A terminal window of at least 70x42 characters.
 
 ## Build
 
     make
+
+## Test
+
+    make test-unit
+    make test-smoke
+    make test
+
+`test-unit` runs the game logic and component tests without terminal interaction. `test-smoke` checks command-line startup and error paths. `make test` runs both.
 
 ## Run
 
