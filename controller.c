@@ -5,6 +5,9 @@
 #include "render.h"
 #include "rng.h"
 #include "round.h"
+#include "round_actions.h"
+#include "round_dealer.h"
+#include "round_settlement.h"
 #include "save.h"
 
 #include <ctype.h>
