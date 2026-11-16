@@ -1,7 +1,7 @@
 CC      = gcc
 CFLAGS  = -Wall -Wextra -Werror -std=c11 -g
 VERSION = 0.1.0
-CFLAGS += -DTTY21_VERSION=\\"$(VERSION)\\"
+CFLAGS += -DTTY21_VERSION=\"$(VERSION)\"
 CFLAGS += -MMD -MP
 PREFIX  ?= /usr/local
 DESTDIR ?=

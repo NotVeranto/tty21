@@ -22,7 +22,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 - Face a boss every fifth floor. Bosses combine dealer rules and award marks for victory.
 - A Boss Preparation screen appears before boss encounters; spend marks to disable the first boss rule.
 - Visit the between-floor shop to buy perks, services, and twist tools.
-- Perks provide persistent run benefits; the shop rotates a selection of perks between floors.
+- Perks provide benefits for the current run only; the shop rotates a selection of perks between floors. Nothing unlocks or carries over as a permanent benefit between runs.
 - Floor twists modify blackjack rules, sometimes helping the player and sometimes making a floor more dangerous.
 - Cursed cards can inflict Bleed, Frost, or Echo effects.
 - Deep floors introduce stronger dealer powers, hostile twists, and additional economic pressure.
@@ -60,7 +60,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
     make test-smoke
     make test
 
-`test-unit` runs the game logic and component tests without terminal interaction. `test-smoke` checks command-line startup and error paths. `make test` runs both.
+`test-unit` runs the game logic and component tests without terminal interaction. `test-smoke` checks command-line startup and error paths. `make test` runs both. `make test-sanitize` runs the unit suite with AddressSanitizer and UndefinedBehaviorSanitizer. CI verifies GCC, Clang, and sanitizer builds.
 
 ## Run
 
