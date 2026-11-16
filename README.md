@@ -46,7 +46,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 ## Architecture
 
 - `game.c` and the round modules own game state, rules, floor/menu/shop transitions, the ordered shop-service offer catalog, and purchase transactions. `controller.c` owns the state-driven game loop and coordinates round handlers, menus, input, autosaves, and end-of-run presentation; `menu.c` handles menu input and persistence requests, while `render.c` owns presentation.
-- `render_actions.c` owns the player action-bar presentation; shared ANSI style accessors are declared in `render_style.h`.
+- `render_menu.c` owns the shared keyboard-menu presentation; `render_actions.c` owns the player action-bar presentation; shared ANSI style accessors are declared in `render_style.h`.
 - `render_stats.c` owns the standalone run-summary screen, keeping end-of-run statistics out of the main renderer.
 - `render_help.c` owns the interactive and plain-text help overlay; shared centering and box-frame primitives live in `render_layout.c` with declarations in `render_layout.h`.
 - `terminal.c` centralizes terminal dimension detection and the minimum full-screen layout requirements.
