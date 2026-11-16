@@ -45,7 +45,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 
 ## Architecture
 
-- `game.c` and the round modules own game state, rules, floor/menu/shop transitions, the ordered shop-service offer catalog, and purchase transactions; `menu.c` formats and presents those offers, handles input, and performs persistence requests; `render.c` owns presentation.
+- `game.c` and the round modules own game state, rules, floor/menu/shop transitions, the ordered shop-service offer catalog, and purchase transactions; floor advancement is a game-layer state transition, while `menu.c` triggers its transition presentation and handles menu input and persistence requests. `render.c` owns presentation.
 - `terminal.c` centralizes terminal dimension detection and the minimum full-screen layout requirements.
 - `input.c` and `input_map.c` handle terminal input and key mapping.
 - `make test-unit`, `make test-smoke`, and `make test-sanitize` provide separate logic, CLI, and sanitizer checks.

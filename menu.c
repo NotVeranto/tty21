@@ -20,6 +20,14 @@ static void dispatchFloorMenuAction(Game *game,
     FloorMenuActionResult result;
 
     result = handleFloorMenuAction(game, actionCharacter, currentMinBet);
+    if (result == FLOOR_MENU_HANDLED &&
+        tolower((unsigned char)actionCharacter) == 'a' &&
+        game->state != STATE_QUIT) {
+        renderFloorTransition(game);
+        renderPause(game, 1200);
+        flushInput();
+    }
+
     if (result != FLOOR_MENU_SAVE_REQUESTED) {
         return;
     }
