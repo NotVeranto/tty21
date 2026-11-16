@@ -277,47 +277,6 @@ void floorMenu(Game *game) {
     }
 }
 
-static int purchasePerk(Game *game, int perkIndex) {
-    char message[128];
-    int purchased;
-
-    purchased = 0;
-
-    if (isPerkLockedThisFloor(game, (PerkId)perkIndex)) {
-        logPush(game,
-                "Perk is disabled this floor.",
-                MSG_DEFAULT);
-        return 0;
-    }
-
-    if (game->player.perkOwned[perkIndex]) {
-        logPush(game, "Already owned.", MSG_DEFAULT);
-    } else if (game->run.marks < perkCost((PerkId)perkIndex)) {
-        logPush(game, "Not enough marks.", MSG_DEFAULT);
-    } else {
-        game->run.marks -= perkCost((PerkId)perkIndex);
-        game->player.perkOwned[perkIndex] = 1;
-
-        if (perkIndex == PERK_PEEK ||
-            perkIndex == PERK_SECOND_WIND ||
-            perkIndex == PERK_INSURANCE_PERK ||
-            perkIndex == PERK_DEALERS_FAVOR ||
-            perkIndex == PERK_MARKED_CARD ||
-            perkIndex == PERK_EXTRA_LIFE) {
-            game->player.perkCharges[perkIndex] = 1;
-        }
-
-        snprintf(message,
-                 sizeof(message),
-                 "%s purchased.",
-                 perkName((PerkId)perkIndex));
-        logPush(game, message, MSG_WIN);
-        purchased = 1;
-    }
-
-    return purchased;
-}
-
 void runShop(Game *game) {
     char input[64];
     char labels[24][128];
@@ -591,24 +550,11 @@ void runShop(Game *game) {
 
         switch (items[menuIndex].hotkey) {
             case 'v':
-                game->player.chips -= 10;
-                game->run.marks += 2;
-                game->totalMarksEarned += 2;
-                logPush(game, "Converted 10 chips to 2 marks.", MSG_INFO);
-                break;
             case 'n':
-                game->player.chips -= 50;
-                game->safetyNetArmed = 1;
-                logPush(game,
-                        "Safety net armed. Next wipe leaves 20 chips.",
-                        MSG_INFO);
-                break;
             case 't':
-                game->player.chips -= 10;
-                game->tippedThisRound = 1;
-                logPush(game,
-                        "Dealer tipped. Hole card visible next round.",
-                        MSG_INFO);
+                (void)purchaseShopChipService(game,
+                                              items[menuIndex].hotkey,
+                                              currentMinBet);
                 break;
             case 'z':
                 if (rerollShopPool(game)) {

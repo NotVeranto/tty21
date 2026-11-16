@@ -150,6 +150,142 @@ TEST(perk_lock_requires_an_active_late_floor_event) {
     ASSERT_EQ_INT(0, isPerkLockedThisFloor(&game, PERK_SECOND_WIND));
 }
 
+TEST(shop_pool_handles_empty_inventory) {
+    Game game;
+    int i;
+
+    memset(&game, 0, sizeof(game));
+    game.run.perkLockedId = -1;
+    for (i = 0; i < PERK_COUNT; i++) {
+        game.player.perkOwned[i] = 1;
+    }
+
+    generateShopPool(&game);
+
+    ASSERT_EQ_INT(0, game.run.shopPerkCount);
+    ASSERT_EQ_INT(0, canRerollShopPool(&game));
+    ASSERT_EQ_INT(0, rerollShopPool(&game));
+}
+
+TEST(shop_pool_contains_only_remaining_eligible_perk) {
+    Game game;
+    int i;
+    int remaining = -1;
+
+    memset(&game, 0, sizeof(game));
+    game.run.perkLockedId = -1;
+    for (i = 0; i < PERK_COUNT; i++) {
+        game.player.perkOwned[i] = 1;
+    }
+    game.player.perkOwned[PERK_BANKROLL] = 0;
+
+    generateShopPool(&game);
+
+    ASSERT_EQ_INT(1, game.run.shopPerkCount);
+    remaining = (int)game.run.shopPerks[0];
+    ASSERT_EQ_INT(PERK_BANKROLL, remaining);
+}
+
+TEST(shop_perk_purchase_rejects_insufficient_marks_without_mutation) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.run.marks = perkCost(PERK_PEEK) - 1;
+
+    ASSERT_EQ_INT(0, purchasePerk(&game, PERK_PEEK));
+    ASSERT_EQ_INT(perkCost(PERK_PEEK) - 1, game.run.marks);
+    ASSERT_EQ_INT(0, game.player.perkOwned[PERK_PEEK]);
+    ASSERT_EQ_INT(0, game.player.perkCharges[PERK_PEEK]);
+}
+
+TEST(shop_perk_purchase_rejects_owned_and_locked_perks) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.run.marks = 100;
+    game.player.perkOwned[PERK_PEEK] = 1;
+    ASSERT_EQ_INT(0, purchasePerk(&game, PERK_PEEK));
+    ASSERT_EQ_INT(100, game.run.marks);
+
+    game.player.perkOwned[PERK_PEEK] = 0;
+    game.run.floor = 10;
+    game.run.perkLockedUsed = 1;
+    game.run.perkLockedId = PERK_PEEK;
+    ASSERT_EQ_INT(0, purchasePerk(&game, PERK_PEEK));
+    ASSERT_EQ_INT(100, game.run.marks);
+    ASSERT_EQ_INT(0, game.player.perkOwned[PERK_PEEK]);
+}
+
+TEST(shop_perk_purchase_charges_only_after_success) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.run.marks = perkCost(PERK_PEEK);
+    ASSERT_EQ_INT(1, purchasePerk(&game, PERK_PEEK));
+    ASSERT_EQ_INT(0, game.run.marks);
+    ASSERT_EQ_INT(1, game.player.perkOwned[PERK_PEEK]);
+    ASSERT_EQ_INT(1, game.player.perkCharges[PERK_PEEK]);
+}
+
+TEST(shop_chip_services_reject_unaffordable_actions_without_mutation) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.player.chips = 9;
+    game.run.marks = 7;
+    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 'v', 2));
+    ASSERT_EQ_INT(9, game.player.chips);
+    ASSERT_EQ_INT(7, game.run.marks);
+
+    game.player.chips = 49;
+    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 'n', 2));
+    ASSERT_EQ_INT(49, game.player.chips);
+    ASSERT_EQ_INT(0, game.safetyNetArmed);
+
+    game.player.chips = 9;
+    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 't', 2));
+    ASSERT_EQ_INT(9, game.player.chips);
+    ASSERT_EQ_INT(0, game.tippedThisRound);
+}
+
+TEST(shop_chip_services_preserve_minimum_bet) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.player.chips = 12;
+    game.run.marks = 3;
+    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 'v', 3));
+    ASSERT_EQ_INT(12, game.player.chips);
+    ASSERT_EQ_INT(3, game.run.marks);
+
+    game.player.chips = 52;
+    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 'n', 3));
+    ASSERT_EQ_INT(52, game.player.chips);
+    ASSERT_EQ_INT(0, game.safetyNetArmed);
+}
+
+TEST(shop_chip_services_apply_effects_after_payment) {
+    Game game;
+
+    memset(&game, 0, sizeof(game));
+    game.player.chips = 20;
+    ASSERT_EQ_INT(1, purchaseShopChipService(&game, 'v', 2));
+    ASSERT_EQ_INT(10, game.player.chips);
+    ASSERT_EQ_INT(2, game.run.marks);
+    ASSERT_EQ_INT(2, game.totalMarksEarned);
+
+    ASSERT_EQ_INT(1, purchaseShopChipService(&game, 't', 2));
+    ASSERT_EQ_INT(0, game.player.chips);
+    ASSERT_EQ_INT(1, game.tippedThisRound);
+
+    game.player.chips = 60;
+    ASSERT_EQ_INT(1, purchaseShopChipService(&game, 'n', 2));
+    ASSERT_EQ_INT(10, game.player.chips);
+    ASSERT_EQ_INT(1, game.safetyNetArmed);
+    ASSERT_EQ_INT(0, purchaseShopChipService(&game, 'n', 2));
+    ASSERT_EQ_INT(10, game.player.chips);
+}
+
 void run_run_tests(void) {
     RUN_TEST(run_classic_minimum_bet_is_always_one);
     RUN_TEST(run_roguelike_minimum_bet_by_floor);
@@ -161,4 +297,12 @@ void run_run_tests(void) {
     RUN_TEST(perk_lock_requires_an_active_late_floor_event);
     RUN_TEST(shop_reroll_replaces_every_offered_perk);
     RUN_TEST(shop_reroll_is_unavailable_without_alternatives);
+    RUN_TEST(shop_pool_handles_empty_inventory);
+    RUN_TEST(shop_pool_contains_only_remaining_eligible_perk);
+    RUN_TEST(shop_perk_purchase_rejects_insufficient_marks_without_mutation);
+    RUN_TEST(shop_perk_purchase_rejects_owned_and_locked_perks);
+    RUN_TEST(shop_perk_purchase_charges_only_after_success);
+    RUN_TEST(shop_chip_services_reject_unaffordable_actions_without_mutation);
+    RUN_TEST(shop_chip_services_preserve_minimum_bet);
+    RUN_TEST(shop_chip_services_apply_effects_after_payment);
 }

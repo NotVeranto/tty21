@@ -219,6 +219,82 @@ void recoverInterruptedRound(Game *game) {
     game->state = STATE_BET;
 }
 
+int purchasePerk(Game *game, int perkIndex) {
+    char message[128];
+
+    if (perkIndex < PERK_SECOND_WIND || perkIndex >= PERK_COUNT) {
+        return 0;
+    }
+
+    if (isPerkLockedThisFloor(game, (PerkId)perkIndex)) {
+        logPush(game, "Perk is disabled this floor.", MSG_DEFAULT);
+        return 0;
+    }
+
+    if (game->player.perkOwned[perkIndex]) {
+        logPush(game, "Already owned.", MSG_DEFAULT);
+        return 0;
+    }
+
+    if (game->run.marks < perkCost((PerkId)perkIndex)) {
+        logPush(game, "Not enough marks.", MSG_DEFAULT);
+        return 0;
+    }
+
+    game->run.marks -= perkCost((PerkId)perkIndex);
+    game->player.perkOwned[perkIndex] = 1;
+
+    if (perkIndex == PERK_PEEK ||
+        perkIndex == PERK_SECOND_WIND ||
+        perkIndex == PERK_INSURANCE_PERK ||
+        perkIndex == PERK_DEALERS_FAVOR ||
+        perkIndex == PERK_MARKED_CARD ||
+        perkIndex == PERK_EXTRA_LIFE) {
+        game->player.perkCharges[perkIndex] = 1;
+    }
+
+    snprintf(message, sizeof(message), "%s purchased.",
+             perkName((PerkId)perkIndex));
+    logPush(game, message, MSG_WIN);
+    return 1;
+}
+
+int purchaseShopChipService(Game *game, char serviceId, int currentMinBet) {
+    int cost;
+
+    if (serviceId == 'n') {
+        cost = 50;
+    } else if (serviceId == 'v' || serviceId == 't') {
+        cost = 10;
+    } else {
+        return 0;
+    }
+
+    if (game->player.chips < cost ||
+        (long long)game->player.chips - cost < currentMinBet ||
+        (serviceId == 'n' && game->safetyNetArmed)) {
+        logPush(game, "Item unavailable.", MSG_DEFAULT);
+        return 0;
+    }
+
+    game->player.chips -= cost;
+    if (serviceId == 'v') {
+        game->run.marks += 2;
+        game->totalMarksEarned += 2;
+        logPush(game, "Converted 10 chips to 2 marks.", MSG_INFO);
+    } else if (serviceId == 'n') {
+        game->safetyNetArmed = 1;
+        logPush(game, "Safety net armed. Next wipe leaves 20 chips.",
+                MSG_INFO);
+    } else {
+        game->tippedThisRound = 1;
+        logPush(game, "Dealer tipped. Hole card visible next round.",
+                MSG_INFO);
+    }
+
+    return 1;
+}
+
 void logPush(Game *game, const char *msg, MessageStyle style) {
     int i;
 
