@@ -75,6 +75,8 @@ Refactor only where it reduces real coupling or makes future work safer.
 
 ## Stage 4 — Gameplay balance and within-run progression
 
+**Progress note (18 Nov 2026):** the advance forecast now uses the next floor's baseline minimum bet and clears current-floor twists and temporary bet multipliers in its projection. This fixes a misleading forecast where Greed or another current-floor effect could inflate the next-floor fee even though that effect is reset on arrival. A regression test covers the mismatch. The new floor's independently selected twist can still alter its effective minimum bet; broader risk and reward tuning remains in progress.
+
 - Review the difficulty curve across floors, including minimum bets, dealer strength, boss frequency, and economic pressure.
 - Evaluate perk strength, shop prices, services, twist tools, cursed cards, and rewards as one connected economy.
 - Check that strong and weak strategies both have meaningful trade-offs.
