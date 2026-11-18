@@ -1,9 +1,10 @@
 #define _DEFAULT_SOURCE
 #include "round_input.h"
 
+#include "render_table.h"
+
 #include "input.h"
 #include "input_map.h"
-#include "render_messages.h"
 #include "render_rows.h"
 
 #include <ctype.h>
@@ -71,7 +72,7 @@ int readBet(Game *game) {
                  "Minimum bet is %d. You have %d chips. Run over.",
                  minBet,
                  maxBet);
-        renderMessage(prompt, ROW_RESULT, MSG_DEFAULT);
+        renderTableMessage(prompt, ROW_RESULT, MSG_DEFAULT);
         game->state = STATE_QUIT;
         return -1;
     }
@@ -87,7 +88,7 @@ int readBet(Game *game) {
                      minBet,
                      maxBet,
                      rawInput);
-            renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
+            renderTableMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
 
             event = readKey();
 
@@ -107,7 +108,7 @@ int readBet(Game *game) {
                 }
             } else if (event.type == KEY_ENTER) {
                 if (rawLength == 0) {
-                    renderMessage("Enter a bet.",
+                    renderTableMessage("Enter a bet.",
                                   ROW_RESULT,
                                   MSG_DEFAULT);
                 } else {
@@ -123,7 +124,7 @@ int readBet(Game *game) {
                                      betDivisor,
                                      minBet,
                                      maxBet);
-                            renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+                            renderTableMessage(message, ROW_RESULT, MSG_DEFAULT);
                             validBet = 0;
                         } else {
                             validBet = 1;
@@ -134,7 +135,7 @@ int readBet(Game *game) {
                                  "Invalid bet. Enter an integer between %d and %d.",
                                  minBet,
                                  maxBet);
-                        renderMessage(message,
+                        renderTableMessage(message,
                                       ROW_RESULT,
                                       MSG_DEFAULT);
                         validBet = 0;
@@ -159,7 +160,7 @@ int readBet(Game *game) {
         validBet = 0;
 
         while (!validBet) {
-            renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
+            renderTableMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
 
             if (fgets(input, sizeof(input), stdin) == NULL) {
                 if (ferror(stdin) && errno == EINTR) {
@@ -183,7 +184,7 @@ int readBet(Game *game) {
                          "Invalid bet. Enter an integer between %d and %d.",
                          minBet,
                          maxBet);
-                renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+                renderTableMessage(message, ROW_RESULT, MSG_DEFAULT);
                 continue;
             }
 
@@ -208,7 +209,7 @@ int readBet(Game *game) {
                              betDivisor,
                              minBet,
                              maxBet);
-                    renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+                    renderTableMessage(message, ROW_RESULT, MSG_DEFAULT);
                     validBet = 0;
                 } else {
                     validBet = 1;
@@ -219,7 +220,7 @@ int readBet(Game *game) {
                          "Invalid bet. Enter an integer between %d and %d.",
                          minBet,
                          maxBet);
-                renderMessage(message, ROW_RESULT, MSG_DEFAULT);
+                renderTableMessage(message, ROW_RESULT, MSG_DEFAULT);
             }
         }
 
@@ -231,7 +232,7 @@ int readYesNoPrompt(const char *prompt) {
     while (1) {
         int answer;
 
-        renderMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
+        renderTableMessage(prompt, ROW_PROMPT, MSG_DEFAULT);
 
         if (inputIsRaw()) {
             KeyEvent event;

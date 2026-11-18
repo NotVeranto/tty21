@@ -11,12 +11,6 @@
 #include <string.h>
 #include <unistd.h>
 
-static int messagePadding;
-
-void renderMessagesSetPadding(int padding) {
-    messagePadding = padding < 0 ? 0 : padding;
-}
-
 void renderResultFlash(const Game *game,
                        const char *message,
                        MessageStyle style) {
@@ -56,7 +50,10 @@ void renderResultFlash(const Game *game,
     fflush(stdout);
 }
 
-void renderMessage(const char *msg, int row, MessageStyle style) {
+void renderMessage(const char *msg,
+                   int row,
+                   MessageStyle style,
+                   int padding) {
     const char *prefix;
     const char *suffix;
     const char *displayMessage;
@@ -104,7 +101,10 @@ void renderMessage(const char *msg, int row, MessageStyle style) {
         terminalWidth >= MIN_TERMINAL_WIDTH &&
         terminalHeight >= MIN_TERMINAL_HEIGHT) {
         displayMessage = msg;
-        maxWidth = terminalWidth - messagePadding - 2;
+        if (padding < 0) {
+            padding = 0;
+        }
+        maxWidth = terminalWidth - padding - 2;
 
         if (maxWidth < 8) {
             maxWidth = 8;
@@ -129,7 +129,7 @@ void renderMessage(const char *msg, int row, MessageStyle style) {
             displayMessage = truncated;
         }
 
-        printf(SCR_CURSOR, row, messagePadding + 1);
+        printf(SCR_CURSOR, row, padding + 1);
         printf(SCR_ERASE_EOL);
         printf("%s%s%s", prefix, displayMessage, suffix);
         fflush(stdout);

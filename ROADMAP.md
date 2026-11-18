@@ -54,7 +54,7 @@ Add a regression test for every confirmed defect.
 
 ## Stage 3 — Maintainability and architecture
 
-**Status:** in progress. Core renderer extraction, narrow public interfaces, and settlement/presentation separation are in place. Remaining work is to move the remaining round-flow presentation coordination out of round handlers and make shared presentation-state ownership explicit.
+**Status:** in progress. Core renderer extraction, narrow public interfaces, and settlement/presentation separation are in place. Table layout now owns message alignment and passes it explicitly to a stateless message renderer. Remaining work is to move the remaining round-flow presentation coordination out of round handlers and complete the shared presentation-state audit.
 
 Refactor only where it reduces real coupling or makes future work safer.
 
@@ -68,7 +68,7 @@ Refactor only where it reduces real coupling or makes future work safer.
 - Keep presentation-only values outside mutable game state; rendering must not temporarily rewrite gameplay fields. Keep settlement free of renderer calls, and let the controller present completed round results.
 - Do not animate currency balances or currency deltas; update chip balances immediately and use concise textual feedback for transactions.
 - Keep Oracle next-card and deck-composition intelligence separate from dealer-rule and floor-twist table information.
-- Make ownership and lifetime of shared state explicit; avoid hidden file-scope state where it creates coupling.
+- Make ownership and lifetime of shared state explicit; avoid hidden file-scope state where it creates coupling. Table padding is owned by the table compositor and passed into message rendering per call rather than stored in the message renderer.
 - Preserve a small, understandable interface between game events and presentation.
 
 **Exit criteria:** core rules can be tested without depending on terminal rendering; presentation changes do not require edits throughout game logic; no behavior regressions.

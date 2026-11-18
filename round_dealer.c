@@ -6,7 +6,6 @@
 #include "round_rules.h"
 #include "dealers.h"
 #include "render_table.h"
-#include "render_messages.h"
 #include "render_rows.h"
 #include "input.h"
 
@@ -23,7 +22,7 @@ void dealerTurn(Game *game) {
             isatty(STDOUT_FILENO) &&
             !game->peekActive &&
             !twistActive(game, TWIST_SNIPER)) {
-            renderMessage("DEALER REVEALS...", ROW_PROMPT, MSG_INFO);
+            renderTableMessage("DEALER REVEALS...", ROW_PROMPT, MSG_INFO);
             renderPause(game, 400);
             flushInput();
             renderTable(game, 0);
@@ -89,7 +88,7 @@ void dealerTurn(Game *game) {
                 if (!game->fastMode &&
                     isatty(STDOUT_FILENO) &&
                     inputIsRaw()) {
-                    renderMessage("Press any key for next card...",
+                    renderTableMessage("Press any key for next card...",
                                   ROW_PROMPT,
                                   MSG_INFO);
                     event = readKey();

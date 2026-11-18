@@ -37,6 +37,12 @@ void renderPause(const Game *game, int ms) {
     usleep((unsigned int)ms * 1000U);
 }
 
+void renderTableMessage(const char *message,
+                        int row,
+                        MessageStyle style) {
+    renderMessage(message, row, style, tablePadding);
+}
+
 
 // Returns the 1-based column that centers content within the terminal.
 
@@ -113,7 +119,6 @@ void renderResetScreen(void) {
     printf("%s%s", SCR_CLEAR, SCR_HOME);
     renderShowCursor();
     tablePadding = 0;
-    renderMessagesSetPadding(0);
     fflush(stdout);
 }
 
@@ -169,7 +174,6 @@ void renderTable(const Game *game, int hideDealerCard) {
         terminalWidth >= tableWidth + 2) {
         renderHideCursor();
         tablePadding = (terminalWidth - tableWidth) / 2;
-        renderMessagesSetPadding(tablePadding);
 
         phaseText = "";
 

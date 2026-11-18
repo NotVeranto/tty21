@@ -9,7 +9,6 @@
 #include "render_table.h"
 #include "render_actions.h"
 #include "render_help.h"
-#include "render_messages.h"
 #include "render_rows.h"
 #include "input.h"
 #include "input_map.h"
@@ -429,7 +428,7 @@ void playerTurn(Game *game) {
             }
 
             renderTable(game, 1);
-            renderMessage("Choose action: [h/s/d/p/k/u/q]: ",
+            renderTableMessage("Choose action: [h/s/d/p/k/u/q]: ",
                           ROW_PROMPT,
                           MSG_DEFAULT);
             inputCharacter = getchar();
@@ -474,12 +473,12 @@ void playerTurn(Game *game) {
                             dispatchPlayerAction(game, action);
                         }
                     } else {
-                        renderMessage("Invalid action. Enter h, s, d, p, k, or q.",
+                        renderTableMessage("Invalid action. Enter h, s, d, p, k, or q.",
                                       ROW_PROMPT,
                                       MSG_DEFAULT);
                     }
                 } else {
-                    renderMessage("Invalid action. Enter h, s, d, p, k, or q.",
+                    renderTableMessage("Invalid action. Enter h, s, d, p, k, or q.",
                                   ROW_PROMPT,
                                   MSG_DEFAULT);
                 }
