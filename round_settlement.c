@@ -21,6 +21,7 @@ typedef struct {
     int dealerValue;
     int dealerHandCount;
     int outcome;
+    int compoundingAwarded;
 } SettlementContext;
 
 typedef enum {
@@ -37,6 +38,7 @@ static void captureSettlementContext(const Game *game,
     ctx->winStreakBefore = game->winStreak;
     ctx->evenMoneyBefore = game->player.evenMoneyTaken;
     ctx->roundHadBlackjack = 0;
+    ctx->compoundingAwarded = 0;
 }
 
 static HandOutcome classifyHandOutcome(int handValue,
@@ -62,7 +64,7 @@ static HandOutcome classifyHandOutcome(int handValue,
 }
 
 
-static int calculateHandPayout(Game *game, const SettlementContext *ctx,
+static int calculateHandPayout(Game *game, SettlementContext *ctx,
                                int playerHandIndex, int dealerHandIndex) {
     long long basePayout = 0;
     long long payoutValue;
@@ -82,8 +84,11 @@ static int calculateHandPayout(Game *game, const SettlementContext *ctx,
         if (twistActive(game, TWIST_BLOOD_PACT)) basePayout *= 2;
         if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble[playerHandIndex] && !game->player.usedSplit[playerHandIndex])
             basePayout += splitBet / 2;
-        if (game->player.perkOwned[PERK_COMPOUNDING])
+        if (game->player.perkOwned[PERK_COMPOUNDING] &&
+            !ctx->compoundingAwarded) {
             basePayout += game->winStreak < 10 ? game->winStreak : 10;
+            ctx->compoundingAwarded = 1;
+        }
     } else if (outcome == HAND_OUTCOME_WIN) {
         basePayout = splitBet;
         if (dealerPaysPureHandBonus(game->run.dealerId) && !game->player.usedSplit[playerHandIndex] && !game->player.usedDouble[playerHandIndex]) basePayout *= 2;
@@ -94,8 +99,11 @@ static int calculateHandPayout(Game *game, const SettlementContext *ctx,
         if (twistActive(game, TWIST_JACKPOT) && rngRange(0, 99) < 5) basePayout *= 10;
         if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble[playerHandIndex] && !game->player.usedSplit[playerHandIndex])
             basePayout += splitBet / 2;
-        if (game->player.perkOwned[PERK_COMPOUNDING])
+        if (game->player.perkOwned[PERK_COMPOUNDING] &&
+            !ctx->compoundingAwarded) {
             basePayout += game->winStreak < 10 ? game->winStreak : 10;
+            ctx->compoundingAwarded = 1;
+        }
     } else return 0;
     payoutValue = basePayout;
     if (game->mode == MODE_ROGUELIKE && game->winStreak >= 3) payoutValue *= 2;
