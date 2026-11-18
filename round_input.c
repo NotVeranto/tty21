@@ -49,7 +49,7 @@ int readBet(Game *game) {
     KeyEvent event;
 
     minBet = getMinBet(game, game->run.floor, game->mode);
-    maxBet = getMaxBet(game, minBet);
+    maxBet = getMaxBet(game);
     betDivisor = dealerHandsCount(game->run.dealerId);
 
     if (maxBet < minBet) {
