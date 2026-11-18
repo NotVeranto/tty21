@@ -89,6 +89,15 @@ void completeBossPrep(Game *game, int disableFirstRule) {
     game->state = STATE_BET;
 }
 
+int endRunIfUnaffordable(Game *game, int minimumBet) {
+    if (game->player.chips >= minimumBet) {
+        return 0;
+    }
+
+    game->state = STATE_QUIT;
+    return 1;
+}
+
 int isPerkLockedThisFloor(const Game *game, PerkId perkId) {
     if (perkId < PERK_SECOND_WIND || perkId >= PERK_COUNT) {
         return 0;
