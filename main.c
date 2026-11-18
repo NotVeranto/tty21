@@ -161,7 +161,7 @@ static StartupChoice runStartupMenu(int showContinue) {
                 h = ws.ws_row;
             }
 
-            if (!renderTerminalDimensionsOk(w, h)) {
+            if (!terminalDimensionsOk(w, h)) {
                 renderTooSmallScreen(w, h);
 
                 if (inputIsRaw()) {
