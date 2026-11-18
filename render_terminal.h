@@ -3,7 +3,6 @@
 
 #include "terminal.h"
 
-int renderTerminalDimensionsOk(int width, int height);
 int renderTerminalSizeOk(int *width, int *height);
 void renderTooSmallScreen(int currentWidth, int currentHeight);
 
