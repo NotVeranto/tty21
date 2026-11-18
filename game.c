@@ -76,6 +76,19 @@ void initGame(Game *game, GameMode mode) {
     }
 }
 
+void completeBossPrep(Game *game, int disableFirstRule) {
+    if (game->state != STATE_BOSS_PREP) {
+        return;
+    }
+
+    if (disableFirstRule && game->run.marks >= game->bossRulePaid) {
+        game->run.marks -= game->bossRulePaid;
+        game->bossRuleDisabled = 1;
+    }
+
+    game->state = STATE_BET;
+}
+
 int isPerkLockedThisFloor(const Game *game, PerkId perkId) {
     if (perkId < PERK_SECOND_WIND || perkId >= PERK_COUNT) {
         return 0;
