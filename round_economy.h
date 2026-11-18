@@ -1,7 +1,9 @@
 #ifndef ROUND_ECONOMY_H
 #define ROUND_ECONOMY_H
 
-#include "game.h"
+#include "run.h"
+
+typedef struct Game Game;
 
 typedef struct {
     int fee;
