@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Reject purchases for perks that are not offered in the current shop pool.
 - Apply Survival after aggregating all loss components in Twin/multiple-dealer rounds.
 - Verify Survival and Extra Life recovery ordering and charge preservation with core regressions.
+- Reject floor advancement outside the between-floor menu state, including repeated calls after a successful transition.
 
 ## [0.1.0] - 2026-11-04
 
