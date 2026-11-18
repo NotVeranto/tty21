@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Include Bankroll's +5 floor-start income in advance affordability forecasts and projected post-loan chips.
 - Calculate the next-floor advance forecast from the next floor's baseline economy instead of carrying over the current floor's twist and temporary minimum-bet multiplier.
 - Include Greed twist marks in the run's total earned-marks statistic.
 - Skip a newly selected Greed twist when the post-advance bankroll cannot cover its doubled minimum bet.
