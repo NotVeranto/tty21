@@ -16,6 +16,50 @@ static const char *CARD_RANKS[] = {
 };
 static const char *CARD_SUITS[] = { "♥", "♦", "♣", "♠" };
 
+int getDynamicTableWidth(const Game *game) {
+    int cardsTotal;
+    int playerCardsTotal;
+    int handIndex;
+    int dealerHandIndex;
+    int totalDealerCards;
+
+    totalDealerCards = 0;
+
+    for (dealerHandIndex = 0;
+         dealerHandIndex < game->dealer.handCount;
+         dealerHandIndex++) {
+        totalDealerCards += game->dealer.hands[dealerHandIndex].count;
+    }
+
+    if (game->dealer.handCount > 1) {
+        totalDealerCards += (game->dealer.handCount - 1) * 2;
+    }
+
+    cardsTotal = totalDealerCards;
+    playerCardsTotal = 0;
+
+    for (handIndex = 0;
+         handIndex < game->player.handCount;
+         handIndex++) {
+        playerCardsTotal += game->player.hands[handIndex].count;
+    }
+
+    if (game->player.handCount > 1) {
+        playerCardsTotal += (game->player.handCount - 1) * 2;
+    }
+
+    if (playerCardsTotal > cardsTotal) {
+        cardsTotal = playerCardsTotal;
+    }
+
+    if (cardsTotal < 5) {
+        cardsTotal = 5;
+    }
+
+    return cardsTotal * CARD_WIDTH + (cardsTotal - 1) * CARD_GAP;
+}
+
+
 static void moveToTableRow(int row, int padding) {
     printf(SCR_CURSOR, row, padding + 1);
 }
