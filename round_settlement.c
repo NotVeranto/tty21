@@ -142,15 +142,25 @@ static int calculateHandLoss(Game *game, const SettlementContext *ctx,
     lossPower = dealerPowerLossMultiplier(game->run.dealerId, game->run.floor);
     if (lossPower != 100) baseLoss = baseLoss * lossPower / 100;
     if (outcome != HAND_OUTCOME_LOSS && baseLoss > INT_MAX) baseLoss = INT_MAX;
-    if (outcome != HAND_OUTCOME_BUST &&
+    if (baseLoss > INT_MAX) baseLoss = INT_MAX;
+    return (int)baseLoss;
+}
+
+static void applyInsuranceToHand(Game *game,
+                                   int *insuranceHand,
+                                   long long *baseLoss) {
+    if (!*insuranceHand &&
         game->player.perkOwned[PERK_INSURANCE_PERK] &&
-        game->player.perkCharges[PERK_INSURANCE_PERK] > 0 && baseLoss > 0) {
-        baseLoss /= 2;
+        game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
+        *baseLoss > 0) {
+        *insuranceHand = 1;
         game->player.perkCharges[PERK_INSURANCE_PERK]--;
         logPush(game, "Insurance used: loss halved.", MSG_INFO);
     }
-    if (baseLoss > INT_MAX) baseLoss = INT_MAX;
-    return (int)baseLoss;
+
+    if (*insuranceHand) {
+        *baseLoss /= 2;
+    }
 }
 
 static void applyRoundRewards(Game *game, MessageStyle resultStyle) {
@@ -440,6 +450,7 @@ MessageStyle resolveRound(Game *game) {
     int anyDealerBlackjack;
     int greedAwarded;
     int dealerFavorPush;
+    int insuranceHand;
     int handWon;
     int currentFatigue;
     long long baseLoss;
@@ -584,6 +595,7 @@ MessageStyle resolveRound(Game *game) {
         handPayoutTotal = 0;
         handLossTotal = 0;
         anyDealerBlackjack = 0;
+        insuranceHand = 0;
         dealerFavorPush = handValue > 21 &&
                           game->player.perkOwned[PERK_DEALERS_FAVOR] &&
                           game->player.perkCharges[PERK_DEALERS_FAVOR] > 0;
@@ -639,16 +651,7 @@ MessageStyle resolveRound(Game *game) {
             ctx.dealerValue = dealerValue;
             if (outcome == HAND_OUTCOME_BUST) {
                 baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
-
-                if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
-                    game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
-                    baseLoss > 0) {
-                    baseLoss /= 2;
-                    game->player.perkCharges[PERK_INSURANCE_PERK]--;
-                    logPush(game,
-                            "Insurance used: loss halved.",
-                            MSG_INFO);
-                }
+                applyInsuranceToHand(game, &insuranceHand, &baseLoss);
 
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
@@ -718,6 +721,7 @@ MessageStyle resolveRound(Game *game) {
                 }
             } else if (outcome == HAND_OUTCOME_DEALER_BLACKJACK) {
                 baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
+                applyInsuranceToHand(game, &insuranceHand, &baseLoss);
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
@@ -790,6 +794,7 @@ MessageStyle resolveRound(Game *game) {
                 }
             } else {
                 baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
+                applyInsuranceToHand(game, &insuranceHand, &baseLoss);
                 lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
