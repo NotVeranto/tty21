@@ -90,7 +90,8 @@ void completeBossPrep(Game *game, int disableFirstRule) {
 }
 
 int endRunIfUnaffordable(Game *game, int minimumBet) {
-    if (game->player.chips >= minimumBet) {
+    if (game->state != STATE_MENU ||
+        game->player.chips >= minimumBet) {
         return 0;
     }
 
