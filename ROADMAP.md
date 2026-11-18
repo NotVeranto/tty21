@@ -54,13 +54,16 @@ Add a regression test for every confirmed defect.
 
 ## Stage 3 — Maintainability and architecture
 
+**Status:** in progress. Core renderer extraction, narrow public interfaces, and settlement/presentation separation are in place. Remaining work is to move the remaining round-flow presentation coordination out of round handlers and make shared presentation-state ownership explicit.
+
 Refactor only where it reduces real coupling or makes future work safer.
 
 - Keep game rules and state changes separate from rendering and terminal effects.
 - Keep the ordered shop-service offer catalog, offer visibility and purchase availability, purchase transactions, floor-advance economy, and menu-driven state transitions (including shop exit) in the game layer; menus should only format/present options, collect input, and perform presentation/persistence work. Floor advancement must not invoke rendering, delays, or terminal input flushing from the game layer. Keep the state-driven game loop and its UI, input, and persistence coordination in a controller module rather than the game-rules module.
 - Reduce oversized modules (especially rendering) into cohesive responsibilities without changing visible behavior. Keep shared menu presentation, the player action bar, standalone run-summary screen, and help overlay in focused renderer modules, separate from table and screen composition.
 - Centralize repeated terminal, input, and screen-layout behavior.
-- Keep terminal-size validation and too-small-screen presentation in a dedicated renderer module, separate from game-table composition. Share one ANSI-capability decision across terminal styling, cursor control, and constrained-screen output.\n- Keep ANSI control sequences and fixed screen-row coordinates in narrow headers so focused renderers do not depend on the aggregate renderer interface.
+- Keep terminal-size validation and too-small-screen presentation in a dedicated renderer module, separate from game-table composition. Share one ANSI-capability decision across terminal styling, cursor control, and constrained-screen output.
+- Keep ANSI control sequences and fixed screen-row coordinates in narrow headers so focused renderers do not depend on the aggregate renderer interface.
 - Give focused renderer responsibilities dedicated public headers; reserve the aggregate renderer header for compatibility and application-level composition.
 - Keep presentation-only values outside mutable game state; rendering must not temporarily rewrite gameplay fields. Keep settlement free of renderer calls, and let the controller present completed round results.
 - Do not animate currency balances or currency deltas; update chip balances immediately and use concise textual feedback for transactions.

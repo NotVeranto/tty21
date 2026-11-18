@@ -1,6 +1,12 @@
 #define _DEFAULT_SOURCE
 #include "menu.h"
-#include "render.h"
+#include "render_transitions.h"
+#include "render_table.h"
+#include "render_messages.h"
+#include "render_menu.h"
+#include "render_help.h"
+#include "render_shop.h"
+#include "render_rows.h"
 #include "input.h"
 #include "input_map.h"
 #include "round.h"
