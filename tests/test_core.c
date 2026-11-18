@@ -330,6 +330,47 @@ static void testSettlementCore(void) {
     assert(game.player.chips == 110);
 }
 
+static void testCompoundingPaysOncePerRound(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    game.player.perkOwned[PERK_COMPOUNDING] = 1;
+    game.winStreak = 2;
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], KING);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], EIGHT);
+    assert(resolveRound(&game) == MSG_WIN);
+    assert(game.player.chips == 112);
+
+    setupCoreSettlement(&game);
+    game.player.perkOwned[PERK_COMPOUNDING] = 1;
+    game.winStreak = 2;
+    game.player.handCount = 2;
+    game.player.bets[1] = 10;
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], KING);
+    addCoreCard(&game.player.hands[1], TEN);
+    addCoreCard(&game.player.hands[1], NINE);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], EIGHT);
+    assert(resolveRound(&game) == MSG_WIN);
+    assert(game.player.chips == 122);
+
+    setupCoreSettlement(&game);
+    game.player.perkOwned[PERK_COMPOUNDING] = 1;
+    game.winStreak = 2;
+    game.dealer.handCount = 2;
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], KING);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], SEVEN);
+    addCoreCard(&game.dealer.hands[1], TEN);
+    addCoreCard(&game.dealer.hands[1], EIGHT);
+    assert(resolveRound(&game) == MSG_WIN);
+    assert(game.player.chips == 112);
+}
+
 static void testGreedMarksUpdateRunEarnings(void) {
     Game game;
 
@@ -546,6 +587,7 @@ int main(void) {
     testClassicMenuReturnTransition();
     testSettlementCore();
     testGreedMarksUpdateRunEarnings();
+    testCompoundingPaysOncePerRound();
     testSettlementPushAndSurrender();
     testInsuranceSettlement();
     testTwinSplitAndPayoutCapCore();
