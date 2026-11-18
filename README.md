@@ -8,6 +8,10 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 
 ## Features
 
+### Economy and floor progression
+
+- The displayed next-floor minimum bet and advance fee are calculated from the next floor's baseline, not from temporary bet modifiers or twists on the floor being left. The new floor's own twist can still change its effective minimum bet after arrival.
+
 ### Blackjack
 
 - Hit, stand, double down, and split.
