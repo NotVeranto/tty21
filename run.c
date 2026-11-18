@@ -1,6 +1,4 @@
 #include "run.h"
-#include "game.h"
-#include "round_rules.h"
 
 // Initializes the persistent state for a new run.
 void initRun(Run *run) {
@@ -23,23 +21,3 @@ void initRun(Run *run) {
     run->perkLockedId = -1;
 }
 
-// Returns the minimum bet for a floor.
-int getMinBet(const Game *game, int floor, GameMode mode) {
-    int base;
-
-    if (mode == MODE_CLASSIC) {
-        base = 1;
-    } else {
-        int halfFloor = floor / 2;
-
-        base = 2 * (1 + halfFloor * halfFloor);
-    }
-
-    if (twistActive(game, TWIST_GREED)) {
-        base *= 2;
-    }
-
-    base *= game->minBetMultiplier;
-
-    return base;
-}
