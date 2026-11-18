@@ -54,11 +54,11 @@ Add a regression test for every confirmed defect.
 
 ## Stage 3 — Maintainability and architecture
 
-**Status:** in progress. Core renderer extraction, narrow public interfaces, and settlement/presentation separation are in place. Table layout now owns message alignment and passes it explicitly to a stateless message renderer. Round handlers now use a dedicated presentation coordinator for table, prompt, action-bar, help, and pause operations. Remaining work is to audit shared presentation-state ownership and verify that core rules remain independently testable.
+**Status:** in progress. Core renderer extraction, narrow public interfaces, settlement/presentation separation, and a renderer-free core test target are in place. `make test-core` compiles the game-state, shop/economy, floor, and settlement modules without linking terminal rendering, input, menus, controller, or persistence. Table layout owns message alignment and passes it explicitly to a stateless message renderer. Round handlers use a dedicated presentation coordinator. Remaining work is to expand core-level regression coverage and audit shared presentation-state ownership and remaining game/controller/menu boundaries.
 
 Refactor only where it reduces real coupling or makes future work safer.
 
-- Keep game rules and state changes separate from rendering and terminal effects.
+- Keep game rules and state changes separate from rendering and terminal effects. A dedicated core test target must compile and exercise the rules without linking terminal rendering, input, menus, controller, or persistence.
 - Keep the ordered shop-service offer catalog, offer visibility and purchase availability, purchase transactions, floor-advance economy, and menu-driven state transitions (including shop exit) in the game layer; menus should only format/present options, collect input, and perform presentation/persistence work. Floor advancement must not invoke rendering, delays, or terminal input flushing from the game layer. Keep the state-driven game loop and its UI, input, and persistence coordination in a controller module rather than the game-rules module.
 - Reduce oversized modules (especially rendering) into cohesive responsibilities without changing visible behavior. Keep shared menu presentation, the player action bar, standalone run-summary screen, and help overlay in focused renderer modules, separate from table and screen composition.
 - Centralize repeated terminal, input, and screen-layout behavior.
@@ -71,7 +71,7 @@ Refactor only where it reduces real coupling or makes future work safer.
 - Make ownership and lifetime of shared state explicit; avoid hidden file-scope state where it creates coupling. Table padding is owned by the table compositor and passed into message rendering per call rather than stored in the message renderer.
 - Preserve a small, understandable interface between game events and presentation.
 
-**Exit criteria:** core rules can be tested without depending on terminal rendering; presentation changes do not require edits throughout game logic; no behavior regressions.
+**Exit criteria:** the dedicated core test target covers the important game-state, economy, floor, and settlement paths without linking terminal/UI modules; presentation changes do not require edits throughout game logic; no behavior regressions.
 
 ## Stage 4 — Gameplay balance and within-run progression
 
