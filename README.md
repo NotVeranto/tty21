@@ -52,7 +52,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 - Round settlement owns payouts, losses, and result state only; the controller owns result-screen presentation. Round handlers depend on `round_presentation.c` for table, prompt, action-bar, help, and pause coordination instead of importing focused renderer modules. The message renderer receives alignment explicitly and owns no shared padding state. Chip balances update immediately without currency animation.
 - Shared ANSI styling and capability detection live in `render_style.c`/`render_style.h`; ANSI control sequences and fixed screen-row coordinates are isolated in `render_control.h` and `render_rows.h`. Shared centering and box-frame primitives live in `render_layout.c`/`render_layout.h`. `terminal.c` centralizes terminal dimension detection and minimum full-screen layout requirements.
 - `input.c` and `input_map.c` handle terminal input and key mapping.
-- `make test-core` builds and tests the game-state, shop/economy, floor, and settlement layer without linking rendering, terminal input, menus, controller, or persistence. `make test-unit`, `make test-smoke`, and `make test-sanitize` provide broader regression, CLI, and sanitizer checks.
+- `make test-core` builds and tests the game-state layer without linking rendering, terminal input, menus, controller, or persistence. Its renderer-free regression cases cover initial state, shop-service availability and purchase transactions, floor-menu/advancement rules, and interrupted-round recovery. `make test-unit`, `make test-smoke`, and `make test-sanitize` provide broader regression, CLI, and sanitizer checks.
 
 ## Requirements
 
