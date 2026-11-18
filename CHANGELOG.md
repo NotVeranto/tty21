@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Include the shop loan's 50-chip proceeds when checking whether the next-floor minimum bet is reachable.
 - Apply Bankroll's +5 floor-start income before collecting a loan due on the newly reached floor.
 - Award Compounding's streak bonus once per round, including split-hand and Twin/multiple-dealer settlements.
+- Apply Dealer's Favor to the entire busted hand in Twin/multiple-dealer rounds.
 
 ## [0.1.0] - 2026-11-04
 
