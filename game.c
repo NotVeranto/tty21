@@ -547,42 +547,7 @@ void advanceFloor(Game *game) {
         game->player.perkCharges[PERK_DEALERS_FAVOR] = 1;
     }
 
-    {
-        int attempts;
-        game->run.twistId = selectTwistForFloor(game);
-        if (!twistIsForcedHostile(game)) {
-            attempts = 0;
-            while (game->player.perkOwned[PERK_SIXTH_SENSE] &&
-                   game->run.floor >= 4 &&
-                   getTwistInfo(game->run.twistId)->category == TWIST_CAT_HOSTILE &&
-                   attempts < 10) {
-                game->run.twistId = selectTwistForFloor(game);
-                attempts++;
-            }
-            if (game->player.perkOwned[PERK_SIXTH_SENSE] &&
-                game->run.floor >= 4 &&
-                getTwistInfo(game->run.twistId)->category == TWIST_CAT_HOSTILE) {
-                static const TwistId FAVORITES[] = {TWIST_LUCKY_DRAW, TWIST_CHARITY,
-                    TWIST_SNIPER, TWIST_JACKPOT, TWIST_BUST_INSURANCE, TWIST_GREED};
-                static const TwistId NEUTRALS[] = {TWIST_SIX_DECK, TWIST_NO_RESHUFFLE,
-                    TWIST_ACES_LOW, TWIST_HIGH_STAKES};
-                int i, replaced = 0;
-                for (i = 0; i < (int)(sizeof(FAVORITES)/sizeof(FAVORITES[0])); i++) {
-                    if (FAVORITES[i] != game->run.previousTwistId) {
-                        game->run.twistId = FAVORITES[i]; replaced = 1; break;
-                    }
-                }
-                if (!replaced) {
-                    for (i = 0; i < (int)(sizeof(NEUTRALS)/sizeof(NEUTRALS[0])); i++) {
-                        if (NEUTRALS[i] != game->run.previousTwistId) {
-                            game->run.twistId = NEUTRALS[i]; break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-
+    game->run.twistId = selectTwistForFloor(game);
     game->freePeekReady = 0;
     game->minBetMultiplier = 1;
 
