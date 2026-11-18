@@ -440,6 +440,7 @@ MessageStyle resolveRound(Game *game) {
     int dealerHandIndex;
     int anyDealerBlackjack;
     int greedAwarded;
+    int dealerFavorPush;
     int handWon;
     int currentFatigue;
     long long baseLoss;
@@ -584,6 +585,27 @@ MessageStyle resolveRound(Game *game) {
         handPayoutTotal = 0;
         handLossTotal = 0;
         anyDealerBlackjack = 0;
+        dealerFavorPush = handValue > 21 &&
+                          game->player.perkOwned[PERK_DEALERS_FAVOR] &&
+                          game->player.perkCharges[PERK_DEALERS_FAVOR] > 0;
+        if (dealerFavorPush) {
+            game->player.perkCharges[PERK_DEALERS_FAVOR]--;
+            if (dealerHandCount == 1) {
+                if (game->player.handCount == 1) {
+                    snprintf(resultMessage, sizeof(resultMessage),
+                             "Dealer's Favor: bust pushed.");
+                } else {
+                    messageLength = snprintf(handMessage,
+                                             sizeof(handMessage),
+                                             "Hand %d: push",
+                                             handIndex + 1);
+                    appendResultMessage(resultMessage,
+                                        sizeof(resultMessage),
+                                        handMessage,
+                                        &messageTruncated);
+                }
+            }
+        }
 
         if (game->player.evenMoneyTaken) {
             payoutTotal += handBet;
@@ -597,6 +619,9 @@ MessageStyle resolveRound(Game *game) {
         for (dealerHandIndex = 0;
              dealerHandIndex < dealerHandCount;
              dealerHandIndex++) {
+            if (dealerFavorPush) {
+                continue;
+            }
             dealerValue = dealerValues[dealerHandIndex];
             dealerBlackjack = dealerBlackjacks[dealerHandIndex];
 
@@ -616,58 +641,45 @@ MessageStyle resolveRound(Game *game) {
             if (outcome == HAND_OUTCOME_BUST) {
                 baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
 
-                if (game->player.perkOwned[PERK_DEALERS_FAVOR] &&
-                    game->player.perkCharges[PERK_DEALERS_FAVOR] > 0) {
-                    game->player.perkCharges[PERK_DEALERS_FAVOR]--;
+                if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
+                    game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
+                    baseLoss > 0) {
+                    baseLoss /= 2;
+                    game->player.perkCharges[PERK_INSURANCE_PERK]--;
+                    logPush(game,
+                            "Insurance used: loss halved.",
+                            MSG_INFO);
+                }
 
-                    if (dealerHandCount == 1 &&
-                        game->player.handCount == 1) {
+                lossAmount = applyLoss(game, baseLoss);
+                lossTotal += lossAmount;
+                handLossTotal += lossAmount;
+
+                if (dealerHandCount == 1) {
+                    if (game->player.handCount == 1) {
                         snprintf(resultMessage,
                                  sizeof(resultMessage),
-                                 "Dealer's Favor: bust pushed.");
-                    }
-                } else {
+                                 "Player busts. You lose %d chips. Chips: %d.",
+                                 lossAmount,
+                                 game->player.chips);
+                    } else {
+                        messageLength = snprintf(handMessage,
+                                                 sizeof(handMessage),
+                                                 "Hand %d: bust (-%d)",
+                                                 handIndex + 1,
+                                                 lossAmount);
 
-                    if (game->player.perkOwned[PERK_INSURANCE_PERK] &&
-                        game->player.perkCharges[PERK_INSURANCE_PERK] > 0 &&
-                        baseLoss > 0) {
-                        baseLoss /= 2;
-                        game->player.perkCharges[PERK_INSURANCE_PERK]--;
-                        logPush(game,
-                                "Insurance used: loss halved.",
-                                MSG_INFO);
-                    }
-
-                    lossAmount = applyLoss(game, baseLoss);
-                    lossTotal += lossAmount;
-                    handLossTotal += lossAmount;
-
-                    if (dealerHandCount == 1) {
-                        if (game->player.handCount == 1) {
-                            snprintf(resultMessage,
-                                     sizeof(resultMessage),
-                                     "Player busts. You lose %d chips. Chips: %d.",
-                                     lossAmount,
-                                     game->player.chips);
-                        } else {
-                            messageLength = snprintf(handMessage,
-                                                     sizeof(handMessage),
-                                                     "Hand %d: bust (-%d)",
-                                                     handIndex + 1,
-                                                     lossAmount);
-
-                            if (messageLength < 0) {
-                                snprintf(handMessage,
-                                         sizeof(handMessage),
-                                         "Hand %d: bust",
-                                         handIndex + 1);
-                            }
-
-                            appendResultMessage(resultMessage,
-                                                sizeof(resultMessage),
-                                                handMessage,
-                                                &messageTruncated);
+                        if (messageLength < 0) {
+                            snprintf(handMessage,
+                                     sizeof(handMessage),
+                                     "Hand %d: bust",
+                                     handIndex + 1);
                         }
+
+                        appendResultMessage(resultMessage,
+                                            sizeof(resultMessage),
+                                            handMessage,
+                                            &messageTruncated);
                     }
                 }
             } else if (outcome == HAND_OUTCOME_BLACKJACK) {
@@ -800,7 +812,12 @@ MessageStyle resolveRound(Game *game) {
         }
 
         if (dealerHandCount > 1 && !game->player.evenMoneyTaken) {
-            if (handValue > 21) {
+            if (handValue > 21 && dealerFavorPush) {
+                messageLength = snprintf(handMessage,
+                                         sizeof(handMessage),
+                                         "Hand %d: push",
+                                         handIndex + 1);
+            } else if (handValue > 21) {
                 messageLength = snprintf(handMessage,
                                          sizeof(handMessage),
                                          "Hand %d: bust (-%lld)",
