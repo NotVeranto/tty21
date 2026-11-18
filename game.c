@@ -99,6 +99,16 @@ int endRunIfUnaffordable(Game *game, int minimumBet) {
     return 1;
 }
 
+int resumeClassicBetting(Game *game) {
+    if (game->mode != MODE_CLASSIC ||
+        game->state != STATE_MENU) {
+        return 0;
+    }
+
+    game->state = STATE_BET;
+    return 1;
+}
+
 int isPerkLockedThisFloor(const Game *game, PerkId perkId) {
     if (perkId < PERK_SECOND_WIND || perkId >= PERK_COUNT) {
         return 0;
