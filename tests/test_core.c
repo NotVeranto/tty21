@@ -1,8 +1,11 @@
 #include "game.h"
+#include "hand.h"
 #include "rng.h"
+#include "round_settlement.h"
 
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 static void testInitialStateAndShopOffers(void) {
     Game game;
@@ -124,6 +127,59 @@ static void testFloorMenuAndAdvancement(void) {
     assert(game.run.roundsOnFloor == 0);
 }
 
+
+static Card coreCard(Rank rank) {
+    Card card;
+
+    card.suit = HEARTS;
+    card.rank = rank;
+    card.cursed = CURSED_NONE;
+    return card;
+}
+
+static void addCoreCard(Hand *hand, Rank rank) {
+    Card card = coreCard(rank);
+
+    addCardToHand(hand, &card);
+}
+
+static void setupCoreSettlement(Game *game) {
+    memset(game, 0, sizeof(*game));
+    game->mode = MODE_CLASSIC;
+    game->state = STATE_RESULT;
+    game->run.floor = 1;
+    game->run.dealerId = DEALER_CROUPIER;
+    game->run.twistId = TWIST_NONE;
+    game->minBetMultiplier = 1;
+    game->player.chips = 100;
+    game->player.handCount = 1;
+    game->player.bets[0] = 10;
+    game->dealer.handCount = 1;
+}
+
+static void testSettlementCore(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    addCoreCard(&game.player.hands[0], ACE);
+    addCoreCard(&game.player.hands[0], KING);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], EIGHT);
+    game.roundHadNaturalBj = 1;
+    assert(resolveRound(&game) == MSG_WIN);
+    assert(game.player.chips == 115);
+    assert(game.state == STATE_BET);
+    assert(game.roundInProgress == 0);
+
+    setupCoreSettlement(&game);
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], KING);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], EIGHT);
+    assert(resolveRound(&game) == MSG_WIN);
+    assert(game.player.chips == 110);
+}
+
 static void testInterruptedRoundRecovery(void) {
     Game game;
 
@@ -148,6 +204,7 @@ int main(void) {
     testInitialStateAndShopOffers();
     testShopPurchaseTransactions();
     testFloorMenuAndAdvancement();
+    testSettlementCore();
     testInterruptedRoundRecovery();
 
     puts("renderer-free core tests passed");
