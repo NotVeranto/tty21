@@ -811,7 +811,71 @@ static void testSixthSenseProtectsTwistRerolls(void) {
     }
 }
 
+static void testFloorPressureAndFatigueBoundaries(void) {
+    Game game;
+    int i;
+    int j;
+
+    assert(fatiguePercent(0) == 100);
+    assert(fatiguePercent(5) == 100);
+    assert(fatiguePercent(6) == 80);
+    assert(fatiguePercent(8) == 80);
+    assert(fatiguePercent(9) == 60);
+    assert(fatiguePercent(11) == 60);
+    assert(fatiguePercent(12) == 50);
+    assert(fatiguePercent(14) == 50);
+    assert(fatiguePercent(15) == 30);
+    assert(fatiguePercent(100) == 30);
+
+    rngInit(91273U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.run.twistId = TWIST_COLD_DECK;
+
+    game.run.roundsOnFloor = 5;
+    applyAntiFarmPressure(&game);
+    assert(game.run.extraTwistCount == 0);
+
+    game.run.roundsOnFloor = 6;
+    applyAntiFarmPressure(&game);
+    assert(game.run.extraTwistCount == 1);
+    applyAntiFarmPressure(&game);
+    assert(game.run.extraTwistCount == 1);
+
+    game.run.roundsOnFloor = 10;
+    applyAntiFarmPressure(&game);
+    assert(game.run.extraTwistCount == 1);
+    game.run.roundsOnFloor = 11;
+    applyAntiFarmPressure(&game);
+    assert(game.run.extraTwistCount == 2);
+
+    game.run.roundsOnFloor = 15;
+    applyAntiFarmPressure(&game);
+    assert(game.run.extraTwistCount == 2);
+    game.run.roundsOnFloor = 16;
+    applyAntiFarmPressure(&game);
+    assert(game.run.extraTwistCount == 3);
+    game.run.roundsOnFloor = 18;
+    applyAntiFarmPressure(&game);
+    assert(game.run.extraTwistCount == 3);
+    game.run.roundsOnFloor = 19;
+    applyAntiFarmPressure(&game);
+    assert(game.run.extraTwistCount == MAX_EXTRA_TWISTS);
+
+    game.run.roundsOnFloor = 100;
+    applyAntiFarmPressure(&game);
+    assert(game.run.extraTwistCount == MAX_EXTRA_TWISTS);
+
+    for (i = 0; i < game.run.extraTwistCount; i++) {
+        assert(game.run.extraTwists[i] != TWIST_NONE);
+        assert(game.run.extraTwists[i] != game.run.twistId);
+        for (j = i + 1; j < game.run.extraTwistCount; j++) {
+            assert(game.run.extraTwists[i] != game.run.extraTwists[j]);
+        }
+    }
+}
+
 int main(void) {
+    testFloorPressureAndFatigueBoundaries();
     testInitialStateAndShopOffers();
     testShopPurchaseTransactions();
     testPerkPurchaseRequiresCurrentOffer();
