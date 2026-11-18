@@ -401,8 +401,7 @@ static void buildModifierList(const Game *game,
     }
 
     if (game->player.perkOwned[PERK_DOUBLE_DIP] &&
-        anyHandUsed(game, game->player.usedDouble) &&
-        !anyHandUsed(game, game->player.usedSplit) && isWin) {
+        anyHandUsed(game, game->player.usedDouble) && isWin) {
         APPEND_MODIFIER("Dip +B/2");
     }
 
