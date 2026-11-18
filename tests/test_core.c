@@ -151,6 +151,33 @@ static void testBankrollIncomeCanRepayDueLoan(void) {
     assert(game.loanDueFloor == 0);
 }
 
+static void testAdvanceForecastIncludesBankrollIncome(void) {
+    Game game;
+    AdvanceForecast forecast;
+
+    rngInit(7719U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.run.floor = 8;
+    game.state = STATE_MENU;
+    game.player.chips = 220;
+    game.player.perkOwned[PERK_BANKROLL] = 1;
+    game.loanAmount = 75;
+    game.loanDueFloor = 9;
+
+    computeAdvanceForecast(&game, &forecast);
+    assert(forecast.nextMinBet == 50);
+    assert(forecast.fee == 100);
+    assert(forecast.loanDue == 75);
+    assert(forecast.postChips == 50);
+    assert(forecast.affordable);
+
+    assert(advanceToNextFloor(&game));
+    assert(game.run.floor == 9);
+    assert(game.player.chips >= getMinBet(&game, 9, game.mode));
+    assert(game.player.chips == 50);
+    assert(game.loanAmount == 0);
+}
+
 static void testLoanEligibilityIncludesAdvance(void) {
     Game game;
 
@@ -789,6 +816,7 @@ int main(void) {
     testShopPurchaseTransactions();
     testPerkPurchaseRequiresCurrentOffer();
     testLoanEligibilityIncludesAdvance();
+    testAdvanceForecastIncludesBankrollIncome();
     testBankrollIncomeCanRepayDueLoan();
     testSixthSenseProtectsTwistRerolls();
     testBetLimits();
