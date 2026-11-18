@@ -9,11 +9,8 @@
 #include "input_map.h"
 #include "render_status.h"
 #include "render_messages.h"
-
-typedef struct {
-    char hotkey;          // single character shortcut
-    const char *label;    // description shown next to hotkey
-} MenuItem;
+#include "render_menu.h"
+#include "render_shop.h"
 
 int renderTerminalDimensionsOk(int width, int height);
 int renderTerminalSizeOk(int *width, int *height);
@@ -28,13 +25,6 @@ void renderResetScreen(void);
 void renderGameStateFallback(const Game *game, int hideDealerCard);
 void renderHideCursor(void);
 void renderShowCursor(void);
-void renderShop(const Game *game,
-                const MenuItem *items,
-                const char **descriptions,
-                const int *groups,
-                int itemCount,
-                int disabledMask,
-                int selectedIndex);
 void renderActionBar(const ActionId *actions,
                      int actionCount,
                      int selectedIndex,
@@ -42,11 +32,5 @@ void renderActionBar(const ActionId *actions,
                      int showHelp);
 void renderHelpOverlay(const Game *game);
 void renderMenuLogRefresh(const Game *game);
-void renderMenu(const char *title,
-                const MenuItem *items,
-                int itemCount,
-                int disabledMask,
-                int selectedIndex,
-                int startRow);
 
 #endif

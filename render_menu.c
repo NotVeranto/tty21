@@ -1,4 +1,6 @@
-#include "render.h"
+#include "render_menu.h"
+#include "render_control.h"
+#include "render_terminal.h"
 #include "render_style.h"
 #include "render_layout.h"
 #include "terminal.h"
