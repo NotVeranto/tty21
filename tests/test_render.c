@@ -1,20 +1,19 @@
 #include "test.h"
-#include "render_terminal.h"
 #include "terminal.h"
 
 TEST(render_terminal_accepts_minimum_dimensions) {
     ASSERT_TRUE(terminalDimensionsOk(MIN_TERMINAL_WIDTH,
-                                           MIN_TERMINAL_HEIGHT));
+                                       MIN_TERMINAL_HEIGHT));
 }
 
 TEST(render_terminal_rejects_insufficient_width) {
     ASSERT_EQ_INT(0, terminalDimensionsOk(MIN_TERMINAL_WIDTH - 1,
-                                                MIN_TERMINAL_HEIGHT));
+                                            MIN_TERMINAL_HEIGHT));
 }
 
 TEST(render_terminal_rejects_insufficient_height) {
     ASSERT_EQ_INT(0, terminalDimensionsOk(MIN_TERMINAL_WIDTH,
-                                                MIN_TERMINAL_HEIGHT - 1));
+                                            MIN_TERMINAL_HEIGHT - 1));
 }
 
 TEST(render_terminal_accepts_larger_dimensions) {
