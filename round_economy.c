@@ -94,7 +94,7 @@ void computeAdvanceForecast(const Game *game,
 }
 
 // Returns the maximum legal bet, including the floor-based roguelike cap.
-int getMaxBet(const Game *game, int minBet) {
+int getMaxBet(const Game *game) {
     int maxBet;
     int cap;
 
@@ -110,7 +110,6 @@ int getMaxBet(const Game *game, int minBet) {
         cap /= 2;
     }
 
-    (void)minBet;
     return cap;
 }
 
