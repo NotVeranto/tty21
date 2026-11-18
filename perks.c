@@ -19,7 +19,7 @@ static const PerkInfo PERK_INFO[] = {
      60},
     {PERK_SIXTH_SENSE,
      "Sixth Sense",
-     "Twists on floors 4+ are always favorable or neutral.",
+     "Random twists on floors 4+ are favorable or neutral; forced hostile floors remain hostile.",
      80},
     {PERK_DEALERS_FAVOR, "Dealer's Favor",
      "Once per floor, a bust is treated as a push.", 70},
