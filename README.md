@@ -29,7 +29,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 - Face a boss every fifth floor. Bosses combine dealer rules and award marks for victory.
 - A Boss Preparation screen appears before boss encounters; spend marks to disable the first boss rule.
 - Visit the between-floor shop to buy perks, services, and twist tools.
-- Perks provide benefits for the current run only; the shop rotates a selection of perks between floors. Compounding adds its current streak bonus once to the round's total payout, not once per split hand or dealer hand. Dealer's Favor turns an entire busted hand into a push, including against multiple dealer hands. Nothing unlocks or carries over as a permanent benefit between runs.
+- Perks provide benefits for the current run only; the shop rotates a selection of perks between floors. Double Dip adds half a bet to any doubled win, including split hands. Compounding adds its current streak bonus once to the round's total payout, not once per split hand or dealer hand. Dealer's Favor turns an entire busted hand into a push, including against multiple dealer hands. Nothing unlocks or carries over as a permanent benefit between runs.
 - Floor twists modify blackjack rules, sometimes helping the player and sometimes making a floor more dangerous.
 - Cursed cards can inflict Bleed, Frost, or Echo effects.
 - Deep floors introduce stronger dealer powers, hostile twists, and additional economic pressure.
