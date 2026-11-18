@@ -570,6 +570,45 @@ static void testSurvivalCoversCombinedTwinLosses(void) {
     assert(game.state == STATE_MENU);
 }
 
+static void testSurvivalAndExtraLifeRecoveryOrder(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    game.mode = MODE_ROGUELIKE;
+    game.player.chips = 40;
+    game.player.bets[0] = 40;
+    game.player.perkOwned[PERK_SURVIVAL] = 1;
+    game.player.perkOwned[PERK_EXTRA_LIFE] = 1;
+    game.player.perkCharges[PERK_EXTRA_LIFE] = 1;
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], SEVEN);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], NINE);
+
+    assert(resolveRound(&game) == MSG_LOSS);
+    assert(game.player.chips == 20);
+    assert(game.player.perkCharges[PERK_EXTRA_LIFE] == 1);
+    assert(game.state == STATE_MENU);
+
+    setupCoreSettlement(&game);
+    game.mode = MODE_ROGUELIKE;
+    game.player.chips = 10;
+    game.player.bets[0] = 10;
+    game.player.perkOwned[PERK_SURVIVAL] = 1;
+    game.player.perkOwned[PERK_EXTRA_LIFE] = 1;
+    game.player.perkCharges[PERK_EXTRA_LIFE] = 1;
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], SEVEN);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], NINE);
+
+    assert(resolveRound(&game) == MSG_LOSS);
+    assert(game.player.chips == getMinBet(
+        &game, game.run.floor, game.mode));
+    assert(game.player.perkCharges[PERK_EXTRA_LIFE] == 0);
+    assert(game.state == STATE_MENU);
+}
+
 static void testTwinSplitAndPayoutCapCore(void) {
     Game game;
 
@@ -736,6 +775,7 @@ int main(void) {
     testInsuranceCoversWholeTwinHand();
     testDealersFavorCoversTwinBust();
     testSurvivalCoversCombinedTwinLosses();
+    testSurvivalAndExtraLifeRecoveryOrder();
     testTwinSplitAndPayoutCapCore();
     testUnaffordableRunTermination();
     testBossPrepTransaction();
