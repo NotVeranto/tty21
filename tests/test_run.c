@@ -32,6 +32,14 @@ TEST(run_roguelike_minimum_bet_by_floor) {
     ASSERT_EQ_INT(2, getMinBet(&game, 1, MODE_ROGUELIKE));
     ASSERT_EQ_INT(4, getMinBet(&game, 3, MODE_ROGUELIKE));
     ASSERT_EQ_INT(10, getMinBet(&game, 5, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(34, getMinBet(&game, 8, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(34, getMinBet(&game, 9, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(52, getMinBet(&game, 10, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(52, getMinBet(&game, 11, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(74, getMinBet(&game, 12, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(74, getMinBet(&game, 13, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(100, getMinBet(&game, 14, MODE_ROGUELIKE));
+    ASSERT_EQ_INT(100, getMinBet(&game, 15, MODE_ROGUELIKE));
 }
 
 TEST(run_roguelike_quadratic_minimum_bet_late_floors) {
