@@ -5,7 +5,6 @@
 #include "terminal.h"
 #include "render_style.h"
 #include "render_layout.h"
-#include "terminal.h"
 #include "dealers.h"
 #include "round_economy.h"
 
