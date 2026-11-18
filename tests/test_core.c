@@ -129,6 +129,26 @@ static void testFloorMenuAndAdvancement(void) {
 }
 
 
+static void testClassicMenuReturnTransition(void) {
+    Game game;
+
+    rngInit(24680U, 1);
+    initGame(&game, MODE_CLASSIC);
+    game.state = STATE_MENU;
+    assert(resumeClassicBetting(&game) == 1);
+    assert(game.state == STATE_BET);
+
+    game.mode = MODE_ROGUELIKE;
+    game.state = STATE_MENU;
+    assert(resumeClassicBetting(&game) == 0);
+    assert(game.state == STATE_MENU);
+
+    game.mode = MODE_CLASSIC;
+    game.state = STATE_PLAYER_TURN;
+    assert(resumeClassicBetting(&game) == 0);
+    assert(game.state == STATE_PLAYER_TURN);
+}
+
 static Card coreCard(Rank rank) {
     Card card;
 
@@ -348,6 +368,7 @@ int main(void) {
     testInitialStateAndShopOffers();
     testShopPurchaseTransactions();
     testFloorMenuAndAdvancement();
+    testClassicMenuReturnTransition();
     testSettlementCore();
     testSettlementPushAndSurrender();
     testInsuranceSettlement();
