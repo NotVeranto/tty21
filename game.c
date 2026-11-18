@@ -603,6 +603,20 @@ void advanceFloor(Game *game) {
         logPush(game, "Bankroll: +5 chips.", MSG_WIN);
     }
 
+    /*
+     * A floor transition guarantees enough chips for its baseline bet.
+     * Greed doubles that requirement, so do not let its random selection
+     * make an otherwise affordable transition immediately unplayable.
+     */
+    if (game->run.twistId == TWIST_GREED &&
+        game->player.chips < getMinBet(game, game->run.floor,
+                                       game->mode)) {
+        game->run.twistId = TWIST_NONE;
+        logPush(game,
+                "Greed skipped: not enough chips for its minimum bet.",
+                MSG_INFO);
+    }
+
     {
         int handIndex;
 
