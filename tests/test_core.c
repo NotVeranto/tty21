@@ -89,6 +89,23 @@ static void testShopPurchaseTransactions(void) {
     assert(!canPurchaseShopService(&game, 'z', 10));
 }
 
+static void testLoanEligibilityIncludesAdvance(void) {
+    Game game;
+
+    rngInit(12345U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.run.floor = 11;
+    game.player.chips = 60;
+
+    assert(getMinBet(&game, game.run.floor, game.mode) == 52);
+    assert(getMinBet(&game, game.run.floor + 1, game.mode) == 74);
+    assert(!canPurchaseShopService(&game, 'l', 52) == 0);
+    assert(purchaseShopService(&game, 'l', 52));
+    assert(game.player.chips == 110);
+    assert(game.loanAmount == 75);
+    assert(game.loanDueFloor == 14);
+}
+
 static void testBetLimits(void) {
     Game game;
     int minBet;
@@ -500,6 +517,7 @@ static void testSixthSenseProtectsTwistRerolls(void) {
 int main(void) {
     testInitialStateAndShopOffers();
     testShopPurchaseTransactions();
+    testLoanEligibilityIncludesAdvance();
     testSixthSenseProtectsTwistRerolls();
     testBetLimits();
     testFloorMenuAndAdvancement();
