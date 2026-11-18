@@ -283,6 +283,7 @@ static void testGreedCannotBlockAffordableFloorAdvance(void) {
         initGame(&game, MODE_ROGUELIKE);
         game.run.floor = 3;
         game.run.previousTwistId = TWIST_NONE;
+        game.state = STATE_MENU;
         game.player.chips = 30;
 
         assert(advanceToNextFloor(&game));
