@@ -347,7 +347,7 @@ int canPurchaseShopService(const Game *game,
 
     if (serviceId == 'l') {
         return game->loanAmount == 0 &&
-               game->player.chips >= getMinBet(
+               (long long)game->player.chips + 50LL >= getMinBet(
                    game, game->run.floor + 1, game->mode);
     }
 
