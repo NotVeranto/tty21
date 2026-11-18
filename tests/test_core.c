@@ -389,9 +389,32 @@ static void testInterruptedRoundRecovery(void) {
     assert(game.state == STATE_MENU);
 }
 
+
+static void testSixthSenseProtectsTwistRerolls(void) {
+    Game game;
+    int seed;
+
+    for (seed = 1; seed <= 100; seed++) {
+        rngInit((unsigned int)seed, 1);
+        initGame(&game, MODE_ROGUELIKE);
+        game.run.floor = 4;
+        game.run.marks = 30;
+        game.run.twistId = TWIST_COLD_DECK;
+        game.run.previousTwistId = TWIST_NONE;
+        game.player.perkOwned[PERK_SIXTH_SENSE] = 1;
+
+        assert(purchaseShopService(&game, 'r', getMinBet(
+            &game, game.run.floor, game.mode)));
+        assert(getTwistInfo(game.run.twistId)->category !=
+               TWIST_CAT_HOSTILE);
+        assert(game.run.marks == 0);
+    }
+}
+
 int main(void) {
     testInitialStateAndShopOffers();
     testShopPurchaseTransactions();
+    testSixthSenseProtectsTwistRerolls();
     testBetLimits();
     testFloorMenuAndAdvancement();
     testClassicMenuReturnTransition();
