@@ -11,6 +11,7 @@ typedef struct {
     int loanDue;
 } AdvanceForecast;
 
+int getMinBet(const Game *game, int floor, GameMode mode);
 void creditChips(Game *game, int amount);
 int applyLoss(Game *game, long long lossValue);
 void computeAdvanceForecast(const Game *game,
