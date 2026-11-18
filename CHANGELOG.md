@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Apply Dealer's Favor to the entire busted hand in Twin/multiple-dealer rounds.
 - Apply Double Dip's extra half-bet payout to doubled split hands as well as unsplit hands.
 - Apply Insurance's once-per-floor protection to the full loss of a Twin/multiple-dealer player hand.
+- Reject purchases for perks that are not offered in the current shop pool.
 
 ## [0.1.0] - 2026-11-04
 
