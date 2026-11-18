@@ -420,6 +420,18 @@ TEST(run_floor_advance_charges_forecast_fee_and_advances_once) {
     ASSERT_EQ_INT(1, game.totalFloorsReached);
     ASSERT_EQ_INT(STATE_BET, game.state);
     ASSERT_TRUE(game.run.marks > 0);
+
+    {
+        int chipsAfterAdvance = game.player.chips;
+        int marksAfterAdvance = game.run.marks;
+        int floorsAfterAdvance = game.totalFloorsReached;
+
+        ASSERT_EQ_INT(0, advanceToNextFloor(&game));
+        ASSERT_EQ_INT(2, game.run.floor);
+        ASSERT_EQ_INT(chipsAfterAdvance, game.player.chips);
+        ASSERT_EQ_INT(marksAfterAdvance, game.run.marks);
+        ASSERT_EQ_INT(floorsAfterAdvance, game.totalFloorsReached);
+    }
 }
 
 TEST(run_classic_floor_advance_is_rejected) {
