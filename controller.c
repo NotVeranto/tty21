@@ -98,9 +98,7 @@ int runGame(Game *game) {
         } else if (game->state == STATE_BOSS_PREP) {
             bossPrepTurn(game);
         } else if (game->state == STATE_MENU) {
-            if (game->mode == MODE_CLASSIC) {
-                game->state = STATE_BET;
-            } else {
+            if (!resumeClassicBetting(game)) {
                 floorMenu(game);
             }
         }
