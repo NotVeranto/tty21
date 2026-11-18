@@ -49,22 +49,8 @@ int readBet(Game *game) {
     KeyEvent event;
 
     minBet = getMinBet(game, game->run.floor, game->mode);
-    maxBet = game->player.chips;
+    maxBet = getMaxBet(game, minBet);
     betDivisor = dealerHandsCount(game->run.dealerId);
-
-    if (game->mode == MODE_ROGUELIKE) {
-        int cap = game->player.chips;
-
-        if (game->run.floor >= 12) {
-            cap = game->player.chips / 3;
-        } else if (game->run.floor >= 8) {
-            cap = game->player.chips / 2;
-        }
-
-        if (cap >= minBet) {
-            maxBet = cap;
-        }
-    }
 
     if (game->player.chips < minBet) {
         snprintf(prompt,
