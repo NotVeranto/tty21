@@ -63,7 +63,20 @@ int applyLoss(Game *game, long long lossValue) {
 
 void computeAdvanceForecast(const Game *game,
                             AdvanceForecast *out) {
-    out->nextMinBet = getMinBet(game, game->run.floor + 1,
+    Game nextFloor = *game;
+
+    /*
+     * The current floor's twist and temporary bet modifiers end on
+     * advancement. Forecast the next floor's baseline before its new
+     * twist is selected.
+     */
+    nextFloor.run.floor++;
+    nextFloor.run.twistId = TWIST_NONE;
+    nextFloor.run.extraTwistCount = 0;
+    nextFloor.run.twistBlocked = 0;
+    nextFloor.minBetMultiplier = 1;
+
+    out->nextMinBet = getMinBet(&nextFloor, nextFloor.run.floor,
                                 game->mode);
     out->fee = 2 * out->nextMinBet;
     out->loanDue = 0;
