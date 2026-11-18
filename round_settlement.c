@@ -14,7 +14,7 @@ typedef struct {
     int winStreakBefore;
     int evenMoneyBefore;
     int roundHadBlackjack;
-    int currentFatigue;\n    int chipsBeforeSettlement;
+    int currentFatigue;
     int handValue;
     int playerBlackjack;
     int splitBet;
@@ -453,6 +453,7 @@ MessageStyle resolveRound(Game *game) {
     int insuranceHand;
     int handWon;
     int currentFatigue;
+    int chipsBeforeSettlement;
     long long baseLoss;
     long long payoutTotal;
     long long lossTotal;
@@ -463,7 +464,9 @@ MessageStyle resolveRound(Game *game) {
     char handMessage[64];
     char *payoutBreakdownText;
 
-    chipsBeforeSettlement = game->player.chips;\n\n    if (game->player.surrendered) {
+    chipsBeforeSettlement = game->player.chips;
+
+    if (game->player.surrendered) {
         applyRoundRewards(game, MSG_LOSS);
         applyRoundRecovery(game);
         game->tippedThisRound = 0;
