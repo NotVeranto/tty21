@@ -106,6 +106,7 @@ struct Game {
 
 void initGame(Game *game, GameMode mode);
 void completeBossPrep(Game *game, int disableFirstRule);
+int endRunIfUnaffordable(Game *game, int minimumBet);
 void generateShopPool(Game *game);
 int purchasePerk(Game *game, int perkIndex);
 int isShopServiceOffered(const Game *game, char serviceId);
