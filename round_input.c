@@ -55,7 +55,7 @@ int readBet(Game *game) {
     if (maxBet < minBet) {
         snprintf(prompt,
                  sizeof(prompt),
-                 "Bet cap is %d, below the %d minimum. Run over.",
+                 "Cap %d is below minimum %d. Run over.",
                  maxBet,
                  minBet);
         roundPresentMessage(prompt, ROUND_MESSAGE_RESULT, MSG_DEFAULT);
