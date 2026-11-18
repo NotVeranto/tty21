@@ -147,6 +147,7 @@ TwistId selectTwistForFloor(const Game *game) {
     TwistId previousTwist = game->run.previousTwistId;
     int roll;
     TwistCategory category;
+    int sixthSense = game->player.perkOwned[PERK_SIXTH_SENSE];
 
     if (floor <= 3) return TWIST_NONE;
     if (twistIsForcedHostile(game)) {
@@ -154,7 +155,15 @@ TwistId selectTwistForFloor(const Game *game) {
     }
 
     roll = rngRange(0, 99);
-    if (floor <= 7) {
+    if (sixthSense) {
+        if (floor <= 7) {
+            category = roll < 50 ? TWIST_CAT_FAVORABLE
+                                 : TWIST_CAT_NEUTRAL;
+        } else {
+            category = roll < 60 ? TWIST_CAT_FAVORABLE
+                                 : TWIST_CAT_NEUTRAL;
+        }
+    } else if (floor <= 7) {
         if (roll < 50) category = TWIST_CAT_FAVORABLE;
         else if (roll < 80) category = TWIST_CAT_NEUTRAL;
         else category = TWIST_CAT_HOSTILE;
