@@ -2,7 +2,6 @@
 #include "menu.h"
 #include "render_transitions.h"
 #include "render_table.h"
-#include "render_messages.h"
 #include "render_menu.h"
 #include "render_help.h"
 #include "render_shop.h"
@@ -69,7 +68,7 @@ void floorMenu(Game *game) {
     currentMinBet = getMinBet(game, game->run.floor, game->mode);
 
     if (game->player.chips < currentMinBet) {
-        renderMessage("You cannot afford the minimum bet. Run over.",
+        renderTableMessage("You cannot afford the minimum bet. Run over.",
                       ROW_RESULT,
                       MSG_LOSS);
         game->state = STATE_QUIT;
