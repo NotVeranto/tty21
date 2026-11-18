@@ -10,6 +10,8 @@ const char *scrDim(void);
 const char *scrCyan(void);
 const char *scrRed(void);
 void renderInitColors(void);
+void renderHideCursor(void);
+void renderShowCursor(void);
 int renderAnsiEnabled(void);
 
 #endif
