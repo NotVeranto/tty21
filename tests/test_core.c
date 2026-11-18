@@ -283,6 +283,11 @@ static void testUnaffordableRunTermination(void) {
     game.state = STATE_MENU;
     assert(endRunIfUnaffordable(&game, 10) == 0);
     assert(game.state == STATE_MENU);
+
+    game.player.chips = 0;
+    game.state = STATE_BET;
+    assert(endRunIfUnaffordable(&game, 10) == 0);
+    assert(game.state == STATE_BET);
 }
 
 static void testBossPrepTransaction(void) {
