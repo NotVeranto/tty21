@@ -2,7 +2,6 @@
 #include "render_control.h"
 #include "render_style.h"
 #include "terminal.h"
-#include "render_cards.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -40,51 +39,6 @@ void printBoxSides(int row, int column, int width) {
     printf(SCR_CURSOR, row, column + width - 1);
     printf("%s|%s", scrDim(), scrReset());
 }
-
-int getDynamicTableWidth(const Game *game) {
-    int cardsTotal;
-    int playerCardsTotal;
-    int handIndex;
-    int dealerHandIndex;
-    int totalDealerCards;
-
-    totalDealerCards = 0;
-
-    for (dealerHandIndex = 0;
-         dealerHandIndex < game->dealer.handCount;
-         dealerHandIndex++) {
-        totalDealerCards += game->dealer.hands[dealerHandIndex].count;
-    }
-
-    if (game->dealer.handCount > 1) {
-        totalDealerCards += (game->dealer.handCount - 1) * 2;
-    }
-
-    cardsTotal = totalDealerCards;
-    playerCardsTotal = 0;
-
-    for (handIndex = 0;
-         handIndex < game->player.handCount;
-         handIndex++) {
-        playerCardsTotal += game->player.hands[handIndex].count;
-    }
-
-    if (game->player.handCount > 1) {
-        playerCardsTotal += (game->player.handCount - 1) * 2;
-    }
-
-    if (playerCardsTotal > cardsTotal) {
-        cardsTotal = playerCardsTotal;
-    }
-
-    if (cardsTotal < 5) {
-        cardsTotal = 5;
-    }
-
-    return cardsTotal * CARD_WIDTH + (cardsTotal - 1) * CARD_GAP;
-}
-
-
 
 void renderScreenHeader(const char *title,
                         const char *subtitle,
