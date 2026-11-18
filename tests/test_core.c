@@ -429,6 +429,26 @@ static void testInsuranceSettlement(void) {
     assert(game.player.insuranceBet == 0);
 }
 
+static void testDealersFavorCoversTwinBust(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    game.player.perkOwned[PERK_DEALERS_FAVOR] = 1;
+    game.player.perkCharges[PERK_DEALERS_FAVOR] = 1;
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], NINE);
+    addCoreCard(&game.player.hands[0], FIVE);
+    game.dealer.handCount = 2;
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], SEVEN);
+    addCoreCard(&game.dealer.hands[1], TEN);
+    addCoreCard(&game.dealer.hands[1], EIGHT);
+
+    assert(resolveRound(&game) == MSG_PUSH);
+    assert(game.player.chips == 100);
+    assert(game.player.perkCharges[PERK_DEALERS_FAVOR] == 0);
+}
+
 static void testTwinSplitAndPayoutCapCore(void) {
     Game game;
 
@@ -590,6 +610,7 @@ int main(void) {
     testCompoundingPaysOncePerRound();
     testSettlementPushAndSurrender();
     testInsuranceSettlement();
+    testDealersFavorCoversTwinBust();
     testTwinSplitAndPayoutCapCore();
     testUnaffordableRunTermination();
     testBossPrepTransaction();
