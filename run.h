@@ -12,8 +12,6 @@ typedef enum {
     MODE_CLASSIC
 } GameMode;
 
-typedef struct Game Game;
-
 #define MAX_EXTRA_TWISTS 4
 
 typedef struct {
