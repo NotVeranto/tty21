@@ -1,5 +1,5 @@
 #include "test.h"
-#include "render.h"
+#include "render_terminal.h"
 #include "terminal.h"
 
 TEST(render_terminal_accepts_minimum_dimensions) {

@@ -1,7 +1,7 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "input.h"
-#include "render.h"
+#include "render_style.h"
 
 #include <errno.h>
 #include <signal.h>
