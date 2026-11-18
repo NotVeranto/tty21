@@ -369,8 +369,7 @@ void playerTurn(Game *game) {
                 roundPresentActionBar(actions,
                                 actionCount,
                                 actionIndex,
-                                ROUND_MESSAGE_PROMPT,
-                                game->mode == MODE_ROGUELIKE);
+                                    game->mode == MODE_ROGUELIKE);
                 continue;
             }
 
@@ -444,7 +443,6 @@ void playerTurn(Game *game) {
                     roundPresentActionBar(actions,
                                     actionCount,
                                     actionIndex,
-                                    ROUND_MESSAGE_PROMPT,
                                     game->mode == MODE_ROGUELIKE);
                     continue;
                 }
