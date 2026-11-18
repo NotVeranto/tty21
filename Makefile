@@ -16,8 +16,8 @@ TESTS_SRCS = tests/run_tests.c tests/test_hand.c \
              tests/test_settlement.c tests/test_save.c \
              tests/test_render.c
 TEST_LIB_SRCS = $(filter-out main.c,$(SRCS))
-CORE_LIB_SRCS = card.c hand.c game.c round_cards.c round_economy.c \\
-                round_rules.c round_settlement.c dealers.c twists.c rng.c \\
+CORE_LIB_SRCS = card.c hand.c game.c round_cards.c round_economy.c \
+                round_rules.c round_settlement.c dealers.c twists.c rng.c \
                 perks.c run.c
 
 all: $(TARGET)
