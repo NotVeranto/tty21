@@ -592,6 +592,7 @@ static void testSurvivalAndExtraLifeRecoveryOrder(void) {
 
     setupCoreSettlement(&game);
     game.mode = MODE_ROGUELIKE;
+    game.run.floor = 4;
     game.player.chips = 10;
     game.player.bets[0] = 10;
     game.player.perkOwned[PERK_SURVIVAL] = 1;
