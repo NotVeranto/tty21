@@ -100,36 +100,36 @@ static void testBetLimits(void) {
     game.run.floor = 8;
     minBet = getMinBet(&game, game.run.floor, game.mode);
     assert(minBet == 34);
-    assert(getMaxBet(&game, minBet) == 50);
+    assert(getMaxBet(&game) == 50);
 
     game.run.floor = 12;
     minBet = getMinBet(&game, game.run.floor, game.mode);
     assert(minBet == 74);
-    assert(getMaxBet(&game, minBet) == 33);
-    assert(getMaxBet(&game, minBet) < minBet);
+    assert(getMaxBet(&game) == 33);
+    assert(getMaxBet(&game) < minBet);
 
     game.player.chips = 300;
-    assert(getMaxBet(&game, minBet) == 100);
+    assert(getMaxBet(&game) == 100);
 
     /* A bankroll below the cap threshold must not bypass the cap. */
     game.player.chips = 100;
-    assert(getMaxBet(&game, minBet) == 33);
-    assert(getMaxBet(&game, minBet) < minBet);
+    assert(getMaxBet(&game) == 33);
+    assert(getMaxBet(&game) < minBet);
 
     game.run.floor = 8;
     game.player.chips = 60;
     minBet = getMinBet(&game, game.run.floor, game.mode);
     assert(minBet == 34);
-    assert(getMaxBet(&game, minBet) == 30);
-    assert(getMaxBet(&game, minBet) < minBet);
+    assert(getMaxBet(&game) == 30);
+    assert(getMaxBet(&game) < minBet);
 
     game.run.floor = 12;
     game.player.chips = 222;
     minBet = getMinBet(&game, game.run.floor, game.mode);
-    assert(getMaxBet(&game, minBet) == minBet);
+    assert(getMaxBet(&game) == minBet);
 
     game.mode = MODE_CLASSIC;
-    assert(getMaxBet(&game, 1) == 222);
+    assert(getMaxBet(&game) == 222);
 }
 
 static void testFloorMenuAndAdvancement(void) {
