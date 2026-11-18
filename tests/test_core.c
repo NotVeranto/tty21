@@ -3,6 +3,8 @@
 #include "rng.h"
 #include "round_settlement.h"
 #include "round_economy.h"
+#include "round_rules.h"
+#include "dealers.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -714,6 +716,32 @@ static void testBossPrepTransaction(void) {
     assert(game.run.marks == 12);
 }
 
+static void testBossRuleDisablingPreservesSecondRule(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    game.mode = MODE_ROGUELIKE;
+    game.bossRuleDisabled = 1;
+
+    game.run.dealerId = DEALER_BOSS_PIT;
+    assert(effectiveDealerLossMultiplier(&game) == 100);
+    assert(dealerHidesTotal(game.run.dealerId) == 1);
+
+    game.run.dealerId = DEALER_BOSS_PRIME;
+    assert(effectiveDealerMirrorsOnHit(&game) == 0);
+    assert(dealerTargetValue(game.run.dealerId) == 18);
+
+    game.run.dealerId = DEALER_BOSS_SUPREME;
+    assert(effectiveDealerAcesCountAsOne(
+        &game, game.run.dealerId) == 0);
+    assert(dealerForcesDouble(game.run.dealerId) == 1);
+
+    game.run.dealerId = DEALER_BOSS_VOID;
+    assert(effectiveDealerBlackjackNumerator(&game) == 3);
+    assert(effectiveDealerBlackjackDenominator(&game) == 2);
+    assert(dealerPaysPureHandBonus(game.run.dealerId) == 1);
+}
+
 static void testInterruptedRoundRecovery(void) {
     Game game;
 
@@ -781,6 +809,7 @@ int main(void) {
     testTwinSplitAndPayoutCapCore();
     testUnaffordableRunTermination();
     testBossPrepTransaction();
+    testBossRuleDisablingPreservesSecondRule();
     testInterruptedRoundRecovery();
 
     puts("renderer-free core tests passed");
