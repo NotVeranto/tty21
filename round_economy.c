@@ -80,6 +80,30 @@ void computeAdvanceForecast(const Game *game,
                               out->loanDue;
 }
 
+// Returns the maximum legal bet, including the floor-based roguelike cap.
+int getMaxBet(const Game *game, int minBet) {
+    int maxBet;
+    int cap;
+
+    maxBet = game->player.chips;
+    if (game->mode != MODE_ROGUELIKE) {
+        return maxBet;
+    }
+
+    cap = game->player.chips;
+    if (game->run.floor >= 12) {
+        cap /= 3;
+    } else if (game->run.floor >= 8) {
+        cap /= 2;
+    }
+
+    if (cap >= minBet) {
+        maxBet = cap;
+    }
+
+    return maxBet;
+}
+
 // Returns the minimum bet for a floor.
 int getMinBet(const Game *game, int floor, GameMode mode) {
     int base;
