@@ -52,12 +52,23 @@ int readBet(Game *game) {
     maxBet = getMaxBet(game, minBet);
     betDivisor = dealerHandsCount(game->run.dealerId);
 
+    if (maxBet < minBet) {
+        snprintf(prompt,
+                 sizeof(prompt),
+                 "Bet cap is %d, below the %d minimum. Run over.",
+                 maxBet,
+                 minBet);
+        roundPresentMessage(prompt, ROUND_MESSAGE_RESULT, MSG_DEFAULT);
+        game->state = STATE_QUIT;
+        return -1;
+    }
+
     if (game->player.chips < minBet) {
         snprintf(prompt,
                  sizeof(prompt),
                  "Minimum bet is %d. You have %d chips. Run over.",
                  minBet,
-                 maxBet);
+                 game->player.chips);
         roundPresentMessage(prompt, ROUND_MESSAGE_RESULT, MSG_DEFAULT);
         game->state = STATE_QUIT;
         return -1;
