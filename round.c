@@ -138,7 +138,6 @@ static void askEvenMoney(Game *game) {
 }
 
 void startRound(Game *game) {
-    // Stage 16a peek/insurance/even-money paths have no unit tests yet. Stage 16.6 will add coverage; validate these paths manually meanwhile.
     int playerValue;
     int betAmount;
     int upcardRank;
