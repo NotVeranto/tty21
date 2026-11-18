@@ -6,6 +6,7 @@
 #define CARD_WIDTH 11
 #define CARD_GAP 1
 
+int getDynamicTableWidth(const Game *game);
 void renderDrawDealerHands(const Game *game, int padding, int hideFirstCard);
 void renderDrawPlayerHands(const Game *game, int padding);
 
