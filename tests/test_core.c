@@ -154,6 +154,30 @@ static void testFloorMenuAndAdvancement(void) {
 }
 
 
+static void testAdvanceForecastIgnoresCurrentFloorModifiers(void) {
+    Game game;
+    AdvanceForecast forecast;
+    int baseNextBet;
+
+    rngInit(4411U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    baseNextBet = getMinBet(&game, game.run.floor + 1, game.mode);
+
+    game.run.twistId = TWIST_GREED;
+    game.minBetMultiplier = 3;
+    game.run.extraTwists[0] = TWIST_GREED;
+    game.run.extraTwistCount = 1;
+    computeAdvanceForecast(&game, &forecast);
+    assert(forecast.nextMinBet == baseNextBet);
+    assert(forecast.fee == 2 * baseNextBet);
+
+    game.run.twistId = TWIST_NONE;
+    game.minBetMultiplier = 1;
+    game.run.extraTwistCount = 0;
+    computeAdvanceForecast(&game, &forecast);
+    assert(forecast.nextMinBet == baseNextBet);
+}
+
 static void testClassicMenuReturnTransition(void) {
     Game game;
 
@@ -417,6 +441,7 @@ int main(void) {
     testSixthSenseProtectsTwistRerolls();
     testBetLimits();
     testFloorMenuAndAdvancement();
+    testAdvanceForecastIgnoresCurrentFloorModifiers();
     testClassicMenuReturnTransition();
     testSettlementCore();
     testSettlementPushAndSurrender();
