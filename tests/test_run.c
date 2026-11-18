@@ -189,6 +189,8 @@ TEST(shop_perk_purchase_rejects_insufficient_marks_without_mutation) {
     Game game;
 
     memset(&game, 0, sizeof(game));
+    game.run.shopPerkCount = 1;
+    game.run.shopPerks[0] = PERK_PEEK;
     game.run.marks = perkCost(PERK_PEEK) - 1;
 
     ASSERT_EQ_INT(0, purchasePerk(&game, PERK_PEEK));
@@ -201,6 +203,8 @@ TEST(shop_perk_purchase_rejects_owned_and_locked_perks) {
     Game game;
 
     memset(&game, 0, sizeof(game));
+    game.run.shopPerkCount = 1;
+    game.run.shopPerks[0] = PERK_PEEK;
     game.run.marks = 100;
     game.player.perkOwned[PERK_PEEK] = 1;
     ASSERT_EQ_INT(0, purchasePerk(&game, PERK_PEEK));
@@ -219,6 +223,8 @@ TEST(shop_perk_purchase_charges_only_after_success) {
     Game game;
 
     memset(&game, 0, sizeof(game));
+    game.run.shopPerkCount = 1;
+    game.run.shopPerks[0] = PERK_PEEK;
     game.run.marks = perkCost(PERK_PEEK);
     ASSERT_EQ_INT(1, purchasePerk(&game, PERK_PEEK));
     ASSERT_EQ_INT(0, game.run.marks);
