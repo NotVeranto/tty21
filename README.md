@@ -10,7 +10,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 
 ### Economy and floor progression
 
-- The displayed next-floor minimum bet and advance fee are calculated from the next floor's baseline, not from temporary bet modifiers or twists on the floor being left. The new floor's own twist can still change its effective minimum bet after arrival.
+- The displayed next-floor minimum bet and advance fee are calculated from the next floor's baseline, not from temporary bet modifiers or twists on the floor being left. The new floor's own twist can still change its effective minimum bet after arrival. Roguelike maximum-bet caps are enforced even when the bankroll is too small to reach the minimum bet under that cap; such a run ends instead of silently allowing an over-cap wager.
 - Marks earned from floor twists, boss victories, floor events, and shop exchanges are included in the run's earned-marks total.
 - A newly selected Greed twist is skipped when the post-transition bankroll cannot cover its doubled minimum bet, so an affordable floor advance cannot leave the run unable to bet.
 
