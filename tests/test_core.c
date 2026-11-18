@@ -2,6 +2,7 @@
 #include "hand.h"
 #include "rng.h"
 #include "round_settlement.h"
+#include "round_economy.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -180,6 +181,46 @@ static void testSettlementCore(void) {
     assert(game.player.chips == 110);
 }
 
+static void testSettlementPushAndSurrender(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], EIGHT);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], EIGHT);
+    assert(resolveRound(&game) == MSG_PUSH);
+    assert(game.player.chips == 100);
+    assert(game.state == STATE_BET);
+
+    setupCoreSettlement(&game);
+    game.player.chips = 95;
+    game.player.surrendered = 1;
+    game.roundInProgress = 1;
+    assert(resolveRound(&game) == MSG_DEFAULT);
+    assert(game.player.chips == 95);
+    assert(game.player.surrendered == 0);
+    assert(game.roundInProgress == 0);
+    assert(game.state == STATE_BET);
+}
+
+static void testInsuranceSettlement(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], EIGHT);
+    addCoreCard(&game.dealer.hands[0], ACE);
+    addCoreCard(&game.dealer.hands[0], KING);
+    game.player.chips = 95;
+    game.player.insuranceBet = 5;
+
+    roundSettleInsurance(&game);
+
+    assert(game.player.chips == 110);
+    assert(game.player.insuranceBet == 0);
+}
+
 static void testInterruptedRoundRecovery(void) {
     Game game;
 
@@ -205,6 +246,8 @@ int main(void) {
     testShopPurchaseTransactions();
     testFloorMenuAndAdvancement();
     testSettlementCore();
+    testSettlementPushAndSurrender();
+    testInsuranceSettlement();
     testInterruptedRoundRecovery();
 
     puts("renderer-free core tests passed");
