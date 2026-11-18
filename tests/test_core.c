@@ -89,6 +89,47 @@ static void testShopPurchaseTransactions(void) {
     assert(!canPurchaseShopService(&game, 'z', 10));
 }
 
+static void testPerkPurchaseRequiresCurrentOffer(void) {
+    Game game;
+    int perkIndex;
+    int shopIndex;
+    int offered;
+    int hiddenPerk;
+
+    rngInit(77421U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.run.marks = 1000;
+    hiddenPerk = -1;
+
+    for (perkIndex = PERK_SECOND_WIND;
+         perkIndex < PERK_COUNT;
+         perkIndex++) {
+        offered = 0;
+        for (shopIndex = 0; shopIndex < game.run.shopPerkCount;
+             shopIndex++) {
+            if (game.run.shopPerks[shopIndex] == (PerkId)perkIndex) {
+                offered = 1;
+                break;
+            }
+        }
+        if (!offered) {
+            hiddenPerk = perkIndex;
+            break;
+        }
+    }
+
+    assert(hiddenPerk >= PERK_SECOND_WIND);
+    assert(!purchasePerk(&game, hiddenPerk));
+    assert(game.player.perkOwned[hiddenPerk] == 0);
+    assert(game.run.marks == 1000);
+
+    assert(game.run.shopPerkCount > 0);
+    perkIndex = game.run.shopPerks[0];
+    assert(purchasePerk(&game, perkIndex));
+    assert(game.player.perkOwned[perkIndex] == 1);
+    assert(game.run.marks == 1000 - perkCost((PerkId)perkIndex));
+}
+
 static void testBankrollIncomeCanRepayDueLoan(void) {
     Game game;
 
@@ -656,6 +697,7 @@ static void testSixthSenseProtectsTwistRerolls(void) {
 int main(void) {
     testInitialStateAndShopOffers();
     testShopPurchaseTransactions();
+    testPerkPurchaseRequiresCurrentOffer();
     testLoanEligibilityIncludesAdvance();
     testBankrollIncomeCanRepayDueLoan();
     testSixthSenseProtectsTwistRerolls();
