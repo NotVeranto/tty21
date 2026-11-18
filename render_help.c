@@ -484,7 +484,7 @@ void renderHelpOverlay(const Game *game) {
         }
         printf("Min bet: %d    Max bet: %d\n",
                getMinBet(game, game->run.floor, game->mode),
-               effectiveMaxBet(game));
+               getMaxBet(game, getMinBet(game, game->run.floor, game->mode)));
         printf("\nPress any key to return.\n");
         fflush(stdout);
     }
