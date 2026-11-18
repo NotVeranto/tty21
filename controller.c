@@ -69,11 +69,7 @@ void bossPrepTurn(Game *game) {
             }
         }
     }
-    if (answer == 'y' && game->run.marks >= game->bossRulePaid) {
-        game->run.marks -= game->bossRulePaid;
-        game->bossRuleDisabled = 1;
-    }
-    game->state = STATE_BET;
+    completeBossPrep(game, answer == 'y');
 }
 
 int runGame(Game *game) {
