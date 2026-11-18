@@ -410,6 +410,7 @@ TEST(run_floor_advance_charges_forecast_fee_and_advances_once) {
     rngInit(97531U, 1);
     initGame(&game, MODE_ROGUELIKE);
     game.fastMode = 1;
+    game.state = STATE_MENU;
     game.player.chips = 100;
     computeAdvanceForecast(&game, &forecast);
     chipsBefore = game.player.chips;
