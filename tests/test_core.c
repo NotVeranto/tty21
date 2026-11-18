@@ -549,6 +549,27 @@ static void testDealersFavorCoversTwinBust(void) {
     assert(game.player.perkCharges[PERK_DEALERS_FAVOR] == 0);
 }
 
+static void testSurvivalCoversCombinedTwinLosses(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    game.mode = MODE_ROGUELIKE;
+    game.player.chips = 20;
+    game.player.bets[0] = 20;
+    game.player.perkOwned[PERK_SURVIVAL] = 1;
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], SEVEN);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], NINE);
+    game.dealer.handCount = 2;
+    addCoreCard(&game.dealer.hands[1], TEN);
+    addCoreCard(&game.dealer.hands[1], EIGHT);
+
+    assert(resolveRound(&game) == MSG_LOSS);
+    assert(game.player.chips == 10);
+    assert(game.state == STATE_MENU);
+}
+
 static void testTwinSplitAndPayoutCapCore(void) {
     Game game;
 
@@ -714,7 +735,7 @@ int main(void) {
     testInsuranceSettlement();
     testInsuranceCoversWholeTwinHand();
     testDealersFavorCoversTwinBust();
-    testTwinSplitAndPayoutCapCore();
+    testSurvivalCoversCombinedTwinLosses();\n    testTwinSplitAndPayoutCapCore();
     testUnaffordableRunTermination();
     testBossPrepTransaction();
     testInterruptedRoundRecovery();
