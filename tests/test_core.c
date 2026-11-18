@@ -105,7 +105,8 @@ static void testBetLimits(void) {
     game.run.floor = 12;
     minBet = getMinBet(&game, game.run.floor, game.mode);
     assert(minBet == 74);
-    assert(getMaxBet(&game, minBet) == 100);
+    assert(getMaxBet(&game, minBet) == 33);
+    assert(getMaxBet(&game, minBet) < minBet);
 
     game.player.chips = 300;
     assert(getMaxBet(&game, minBet) == 100);
