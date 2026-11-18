@@ -326,7 +326,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
         }
     } else if (action == ACTION_SURRENDER) {
         int bet = game->player.bets[game->player.activeHand];
-        (void)applyLoss(game, bet / 2);
+        (void)applySurrenderLoss(game, bet);
         game->player.surrendered = 1;
         logPush(game, "You surrendered. Half your bet is lost.", MSG_LOSS);
         game->state = STATE_RESULT;
