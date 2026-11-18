@@ -1,6 +1,7 @@
 #define _DEFAULT_SOURCE
 #include "render_status.h"
-#include "render.h"
+#include "render_control.h"
+#include "render_rows.h"
 #include "render_style.h"
 #include "render_layout.h"
 #include "terminal.h"
@@ -55,9 +56,10 @@ static void printStyledStatusText(const char *statusText) {
     }
 }
 
-void renderStatusLine(const Game *game,
-                           int terminalWidth,
-                           int padding) {
+static void renderStatusLineAtChips(const Game *game,
+                                    int terminalWidth,
+                                    int padding,
+                                    int displayedChips) {
     const DealerInfo *dealerInfo;
     int prefixLength;
     int suffixLength;
@@ -105,14 +107,14 @@ void renderStatusLine(const Game *game,
                 snprintf(statusText,
                          sizeof(statusText),
                          "Chips: %d | Bet: %d | Deck: %d cards",
-                         game->player.chips,
+                         displayedChips,
                          game->player.bets[displayHandIndex],
                          cardsLeft);
             } else {
                 snprintf(statusText,
                          sizeof(statusText),
                          "Chips: %d | Bet: %d (hand %d/%d) | Deck: %d cards",
-                         game->player.chips,
+                         displayedChips,
                          game->player.bets[displayHandIndex],
                          displayHandIndex + 1,
                          game->player.handCount,
@@ -125,7 +127,7 @@ void renderStatusLine(const Game *game,
                      game->run.floor, progressEquals, progressDots,
                      dealerName,
                      game->run.marks,
-                     game->player.chips,
+                     displayedChips,
                      game->player.bets[displayHandIndex],
                      cardsLeft,
                      loanText);
@@ -136,7 +138,7 @@ void renderStatusLine(const Game *game,
                      game->run.floor, progressEquals, progressDots,
                      dealerName,
                      game->run.marks,
-                     game->player.chips,
+                     displayedChips,
                      game->player.bets[displayHandIndex],
                      displayHandIndex + 1,
                      game->player.handCount,
@@ -167,7 +169,7 @@ void renderStatusLine(const Game *game,
                              sizeof(statusText),
                              " | Marks: %d | Chips: %d | Bet: %d | Deck: %d cards%s",
                              game->run.marks,
-                             game->player.chips,
+                             displayedChips,
                              game->player.bets[displayHandIndex],
                              cardsLeft,
                              loanText);
@@ -176,7 +178,7 @@ void renderStatusLine(const Game *game,
                              sizeof(statusText),
                              " | Marks: %d | Chips: %d | Bet: %d (hand %d/%d) | Deck: %d cards%s",
                              game->run.marks,
-                             game->player.chips,
+                             displayedChips,
                              game->player.bets[displayHandIndex],
                              displayHandIndex + 1,
                              game->player.handCount,
@@ -208,7 +210,7 @@ void renderStatusLine(const Game *game,
                              game->run.floor,
                              dealerName,
                              game->run.marks,
-                             game->player.chips,
+                             displayedChips,
                              game->player.bets[displayHandIndex],
                              cardsLeft);
                 } else {
@@ -218,7 +220,7 @@ void renderStatusLine(const Game *game,
                              game->run.floor,
                              dealerName,
                              game->run.marks,
-                             game->player.chips,
+                             displayedChips,
                              game->player.bets[displayHandIndex],
                              displayHandIndex + 1,
                              game->player.handCount,
@@ -243,28 +245,31 @@ void renderStatusLine(const Game *game,
     printf(SCR_ERASE_EOL);
 }
 
+void renderStatusLine(const Game *game, int terminalWidth, int padding) {
+    renderStatusLineAtChips(game, terminalWidth, padding,
+                            game->player.chips);
+}
+
 void animateChips(Game *game, int startChips, int endChips) {
     int terminalWidth;
     int terminalHeight;
-    int savedChips;
     int direction;
     int value;
     if (game == NULL || game->fastMode || !isatty(STDOUT_FILENO) || startChips == endChips) return;
     terminalGetSize(&terminalWidth, &terminalHeight);
     (void)terminalHeight;
-    savedChips = game->player.chips;
     direction = endChips > startChips ? 1 : -1;
     value = startChips;
     while (value != endChips) {
         int nextValue = value + direction * 5;
         if ((direction > 0 && nextValue > endChips) || (direction < 0 && nextValue < endChips)) nextValue = endChips;
-        game->player.chips = nextValue;
-        renderStatusLine(game, terminalWidth, getCenteredColumn(getDynamicTableWidth(game)));
+        renderStatusLineAtChips(game, terminalWidth,
+                                 getCenteredColumn(getDynamicTableWidth(game)),
+                                 nextValue);
         fflush(stdout);
         usleep(15000);
         value = nextValue;
     }
-    game->player.chips = savedChips;
     renderStatusLine(game,
                      terminalWidth,
                      (terminalWidth - getDynamicTableWidth(game)) / 2);
