@@ -44,17 +44,6 @@ static const char *LOGO[] = {
 };
 static const int LOGO_ROWS = 5;
 
-static int getStartupWidth(void) {
-    struct winsize windowSize;
-
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &windowSize) == 0 &&
-        windowSize.ws_col > 0) {
-        return windowSize.ws_col;
-    }
-
-    return 80;
-}
-
 static void printCentered(const char *text, int width) {
     int padding;
     int textWidth;
@@ -151,18 +140,19 @@ static StartupChoice runStartupMenu(int showContinue) {
     selectedIndex = 0;
 
     while (1) {
+        width = 80;
         if (isatty(STDOUT_FILENO)) {
             struct winsize ws;
-            int w = 0;
-            int h = 0;
+            int height = 0;
 
+            width = 0;
             if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0) {
-                w = ws.ws_col;
-                h = ws.ws_row;
+                width = ws.ws_col;
+                height = ws.ws_row;
             }
 
-            if (!terminalDimensionsOk(w, h)) {
-                renderTooSmallScreen(w, h);
+            if (!terminalDimensionsOk(width, height)) {
+                renderTooSmallScreen(width, height);
 
                 if (inputIsRaw()) {
                     (void)readKey();
@@ -174,7 +164,6 @@ static StartupChoice runStartupMenu(int showContinue) {
             }
         }
 
-        width = getStartupWidth();
         colors = getenv("NO_COLOR") == NULL &&
                  isatty(STDOUT_FILENO);
 
