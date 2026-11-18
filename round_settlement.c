@@ -14,7 +14,7 @@ typedef struct {
     int winStreakBefore;
     int evenMoneyBefore;
     int roundHadBlackjack;
-    int currentFatigue;
+    int currentFatigue;\n    int chipsBeforeSettlement;
     int handValue;
     int playerBlackjack;
     int splitBet;
@@ -463,9 +463,16 @@ MessageStyle resolveRound(Game *game) {
     char handMessage[64];
     char *payoutBreakdownText;
 
-    if (game->player.surrendered) {
+    chipsBeforeSettlement = game->player.chips;\n\n    if (game->player.surrendered) {
         applyRoundRewards(game, MSG_LOSS);
-        applyRoundRecovery(game);
+        if (game->player.chips == 0 &&
+        game->player.perkOwned[PERK_SURVIVAL] &&
+        chipsBeforeSettlement > 0) {
+        game->player.chips = chipsBeforeSettlement / 2;
+        logPush(game, "Survival triggered. Half your chips remain.", MSG_WIN);
+    }
+
+    applyRoundRecovery(game);
         game->tippedThisRound = 0;
         game->player.insuranceBet = 0;
         game->player.evenMoneyTaken = 0;
@@ -653,7 +660,7 @@ MessageStyle resolveRound(Game *game) {
                 baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
                 applyInsuranceToHand(game, &insuranceHand, &baseLoss);
 
-                lossAmount = applyLoss(game, baseLoss);
+                lossAmount = applyLossForSettlement(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
 
@@ -722,7 +729,7 @@ MessageStyle resolveRound(Game *game) {
             } else if (outcome == HAND_OUTCOME_DEALER_BLACKJACK) {
                 baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
                 applyInsuranceToHand(game, &insuranceHand, &baseLoss);
-                lossAmount = applyLoss(game, baseLoss);
+                lossAmount = applyLossForSettlement(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
 
@@ -795,7 +802,7 @@ MessageStyle resolveRound(Game *game) {
             } else {
                 baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
                 applyInsuranceToHand(game, &insuranceHand, &baseLoss);
-                lossAmount = applyLoss(game, baseLoss);
+                lossAmount = applyLossForSettlement(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
 
