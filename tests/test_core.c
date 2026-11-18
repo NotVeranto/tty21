@@ -453,6 +453,41 @@ static void testInsuranceSettlement(void) {
     assert(game.player.insuranceBet == 0);
 }
 
+static void testInsuranceCoversWholeTwinHand(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    game.player.perkOwned[PERK_INSURANCE_PERK] = 1;
+    game.player.perkCharges[PERK_INSURANCE_PERK] = 1;
+    game.dealer.handCount = 2;
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], SEVEN);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], NINE);
+    addCoreCard(&game.dealer.hands[1], TEN);
+    addCoreCard(&game.dealer.hands[1], EIGHT);
+
+    assert(resolveRound(&game) == MSG_LOSS);
+    assert(game.player.chips == 96);
+    assert(game.player.perkCharges[PERK_INSURANCE_PERK] == 0);
+
+    setupCoreSettlement(&game);
+    game.player.perkOwned[PERK_INSURANCE_PERK] = 1;
+    game.player.perkCharges[PERK_INSURANCE_PERK] = 1;
+    game.dealer.handCount = 2;
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], NINE);
+    addCoreCard(&game.player.hands[0], FIVE);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], NINE);
+    addCoreCard(&game.dealer.hands[1], TEN);
+    addCoreCard(&game.dealer.hands[1], EIGHT);
+
+    assert(resolveRound(&game) == MSG_LOSS);
+    assert(game.player.chips == 96);
+    assert(game.player.perkCharges[PERK_INSURANCE_PERK] == 0);
+}
+
 static void testDealersFavorCoversTwinBust(void) {
     Game game;
 
@@ -635,6 +670,7 @@ int main(void) {
     testCompoundingPaysOncePerRound();
     testSettlementPushAndSurrender();
     testInsuranceSettlement();
+    testInsuranceCoversWholeTwinHand();
     testDealersFavorCoversTwinBust();
     testTwinSplitAndPayoutCapCore();
     testUnaffordableRunTermination();
