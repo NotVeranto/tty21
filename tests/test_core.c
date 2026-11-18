@@ -221,6 +221,54 @@ static void testInsuranceSettlement(void) {
     assert(game.player.insuranceBet == 0);
 }
 
+static void testTwinSplitAndPayoutCapCore(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], KING);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], EIGHT);
+    game.dealer.handCount = 2;
+    addCoreCard(&game.dealer.hands[1], TEN);
+    addCoreCard(&game.dealer.hands[1], NINE);
+    assert(resolveRound(&game) == MSG_WIN);
+    assert(game.player.chips == 110);
+
+    setupCoreSettlement(&game);
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], KING);
+    game.player.handCount = 2;
+    game.player.bets[1] = 10;
+    addCoreCard(&game.player.hands[1], TEN);
+    addCoreCard(&game.player.hands[1], NINE);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], EIGHT);
+    game.dealer.handCount = 2;
+    addCoreCard(&game.dealer.hands[1], TEN);
+    addCoreCard(&game.dealer.hands[1], TEN);
+    assert(resolveRound(&game) == MSG_WIN);
+    assert(game.player.chips == 105);
+
+    setupCoreSettlement(&game);
+    game.mode = MODE_ROGUELIKE;
+    game.run.twistId = TWIST_DESPERATION;
+    game.run.extraTwists[0] = TWIST_HIGH_STAKES;
+    game.run.extraTwists[1] = TWIST_BLOOD_PACT;
+    game.run.extraTwistCount = 2;
+    game.run.roundsOnFloor = 1;
+    game.player.bets[0] = 20;
+    game.player.usedDouble[0] = 1;
+    game.winStreak = 3;
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], KING);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], EIGHT);
+    assert(resolveRound(&game) == MSG_WIN);
+    assert(game.player.chips == 500);
+    assert(strstr(game.lastPayoutBreakdown, "Won 400") != NULL);
+}
+
 static void testInterruptedRoundRecovery(void) {
     Game game;
 
@@ -248,6 +296,7 @@ int main(void) {
     testSettlementCore();
     testSettlementPushAndSurrender();
     testInsuranceSettlement();
+    testTwinSplitAndPayoutCapCore();
     testInterruptedRoundRecovery();
 
     puts("renderer-free core tests passed");
