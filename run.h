@@ -39,6 +39,5 @@ typedef struct {
 } Run;
 
 void initRun(Run *run);
-int getMinBet(const Game *game, int floor, GameMode mode);
 
 #endif
