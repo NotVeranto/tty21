@@ -1,4 +1,5 @@
 #include "round_economy.h"
+#include "round_rules.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -77,4 +78,25 @@ void computeAdvanceForecast(const Game *game,
         game->player.chips >= out->fee +
                               out->nextMinBet +
                               out->loanDue;
+}
+
+// Returns the minimum bet for a floor.
+int getMinBet(const Game *game, int floor, GameMode mode) {
+    int base;
+
+    if (mode == MODE_CLASSIC) {
+        base = 1;
+    } else {
+        int halfFloor = floor / 2;
+
+        base = 2 * (1 + halfFloor * halfFloor);
+    }
+
+    if (twistActive(game, TWIST_GREED)) {
+        base *= 2;
+    }
+
+    base *= game->minBetMultiplier;
+
+    return base;
 }
