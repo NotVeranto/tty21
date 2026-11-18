@@ -123,6 +123,42 @@ TEST(twist_spot_check_categories) {
                   getTwistInfo(TWIST_ACES_LOW)->category);
 }
 
+
+TEST(twist_sixth_sense_excludes_hostile_random_twists) {
+    unsigned int seed;
+    int floor;
+
+    for (floor = 4; floor <= 12; floor += 4) {
+        for (seed = 1; seed <= 100; seed++) {
+            Game game = {0};
+            TwistId id;
+
+            game.run.floor = floor;
+            game.run.previousTwistId = TWIST_NONE;
+            game.run.dealerId = DEALER_ACCOUNTANT;
+            game.player.perkOwned[PERK_SIXTH_SENSE] = 1;
+            rngInit(seed, 1);
+            id = selectTwistForFloor(&game);
+
+            ASSERT_TRUE(id > TWIST_NONE && id < TWIST_COUNT);
+            ASSERT_TRUE(getTwistInfo(id)->category != TWIST_CAT_HOSTILE);
+        }
+    }
+}
+
+TEST(twist_sixth_sense_keeps_forced_hostile_floors) {
+    Game game = {0};
+    TwistId id;
+
+    game.run.floor = 10;
+    game.run.dealerId = DEALER_ACCOUNTANT;
+    game.player.perkOwned[PERK_SIXTH_SENSE] = 1;
+    rngInit(991U, 1);
+    id = selectTwistForFloor(&game);
+
+    ASSERT_EQ_INT(TWIST_CAT_HOSTILE, getTwistInfo(id)->category);
+}
+
 void run_twists_tests(void) {
     RUN_TEST(twist_early_floors_have_none);
     RUN_TEST(twist_floor_four_has_valid_category);
@@ -131,6 +167,8 @@ void run_twists_tests(void) {
     RUN_TEST(twist_forced_hostile_schedule);
     RUN_TEST(twist_boss_floors_are_not_forced_hostile);
     RUN_TEST(twist_sixth_sense_does_not_cancel_forced_hostility);
+    RUN_TEST(twist_sixth_sense_excludes_hostile_random_twists);
+    RUN_TEST(twist_sixth_sense_keeps_forced_hostile_floors);
     RUN_TEST(twist_none_has_expected_name);
     RUN_TEST(twist_invalid_ids_fall_back_to_none);
     RUN_TEST(twist_spot_check_categories);
