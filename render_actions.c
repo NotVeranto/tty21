@@ -35,8 +35,6 @@ void renderActionBar(const ActionId *actions,
     int visibleWidth;
     int startColumn;
 
-    terminalGetSize(&terminalWidth, &terminalHeight);
-
     if (isatty(STDOUT_FILENO) &&
         !renderTerminalSizeOk(&terminalWidth,
                               &terminalHeight)) {
