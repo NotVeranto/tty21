@@ -67,10 +67,7 @@ int applyLoss(Game *game, long long lossValue) {
 
     if (game->player.perkOwned[PERK_SURVIVAL] &&
         lossValue >= chipsBeforeLoss) {
-        // Survival halves the pre-loss chips. With 1 chip this is 0,
-        // which ends the run as specified.
         remainingChips = chipsBeforeLoss / 2;
-
         game->player.chips = remainingChips;
         lossAmount = chipsBeforeLoss - remainingChips;
     } else {
@@ -80,15 +77,21 @@ int applyLoss(Game *game, long long lossValue) {
     return lossAmount;
 }
 
+int applySurrenderLoss(Game *game, int bet) {
+    int loss;
+
+    if (bet <= 0) {
+        return 0;
+    }
+
+    loss = bet / 2 + bet % 2;
+    return applyLoss(game, loss);
+}
+
 void computeAdvanceForecast(const Game *game,
                             AdvanceForecast *out) {
     Game nextFloor = *game;
 
-    /*
-     * The current floor's twist and temporary bet modifiers end on
-     * advancement. Forecast the next floor's baseline before its new
-     * twist is selected.
-     */
     nextFloor.run.floor++;
     nextFloor.run.twistId = TWIST_NONE;
     nextFloor.run.extraTwistCount = 0;
@@ -115,7 +118,6 @@ void computeAdvanceForecast(const Game *game,
         (long long)out->fee + out->nextMinBet + out->loanDue;
 }
 
-// Returns the maximum legal bet, including the floor-based roguelike cap.
 int getMaxBet(const Game *game) {
     int maxBet;
     int cap;
@@ -135,7 +137,6 @@ int getMaxBet(const Game *game) {
     return cap;
 }
 
-// Returns the minimum bet for a floor.
 int getMinBet(const Game *game, int floor, GameMode mode) {
     int base;
 
