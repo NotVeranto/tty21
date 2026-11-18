@@ -178,6 +178,32 @@ static void testAdvanceForecastIgnoresCurrentFloorModifiers(void) {
     assert(forecast.nextMinBet == baseNextBet);
 }
 
+static void testGreedCannotBlockAffordableFloorAdvance(void) {
+    Game game;
+    unsigned int seed;
+    int skippedGreed = 0;
+
+    for (seed = 1; seed <= 500 && !skippedGreed; seed++) {
+        rngInit(seed, 1);
+        initGame(&game, MODE_ROGUELIKE);
+        game.run.floor = 3;
+        game.run.previousTwistId = TWIST_NONE;
+        game.player.chips = 30;
+
+        assert(advanceToNextFloor(&game));
+        assert(game.run.floor == 4);
+        assert(game.player.chips == 10);
+        assert(game.player.chips >=
+               getMinBet(&game, game.run.floor, game.mode));
+
+        if (game.run.twistId == TWIST_NONE) {
+            skippedGreed = 1;
+        }
+    }
+
+    assert(skippedGreed);
+}
+
 static void testClassicMenuReturnTransition(void) {
     Game game;
 
@@ -460,6 +486,7 @@ int main(void) {
     testBetLimits();
     testFloorMenuAndAdvancement();
     testAdvanceForecastIgnoresCurrentFloorModifiers();
+    testGreedCannotBlockAffordableFloorAdvance();
     testClassicMenuReturnTransition();
     testSettlementCore();
     testGreedMarksUpdateRunEarnings();
