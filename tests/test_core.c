@@ -351,6 +351,7 @@ static void testDoubleDipAppliesToSplitDoubles(void) {
 
     assert(resolveRound(&game) == MSG_WIN);
     assert(game.player.chips == 130);
+    assert(strstr(game.lastPayoutBreakdown, "Dip +B/2") != NULL);
 }
 
 static void testCompoundingPaysOncePerRound(void) {
