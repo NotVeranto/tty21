@@ -89,6 +89,25 @@ static void testShopPurchaseTransactions(void) {
     assert(!canPurchaseShopService(&game, 'z', 10));
 }
 
+static void testBankrollIncomeCanRepayDueLoan(void) {
+    Game game;
+
+    rngInit(9041U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.run.floor = 8;
+    game.player.chips = 104;
+    game.player.perkOwned[PERK_BANKROLL] = 1;
+    game.loanAmount = 75;
+    game.loanDueFloor = 9;
+
+    advanceFloor(&game);
+
+    assert(game.run.floor == 9);
+    assert(game.player.chips == 34);
+    assert(game.loanAmount == 0);
+    assert(game.loanDueFloor == 0);
+}
+
 static void testLoanEligibilityIncludesAdvance(void) {
     Game game;
 
@@ -518,6 +537,7 @@ int main(void) {
     testInitialStateAndShopOffers();
     testShopPurchaseTransactions();
     testLoanEligibilityIncludesAdvance();
+    testBankrollIncomeCanRepayDueLoan();
     testSixthSenseProtectsTwistRerolls();
     testBetLimits();
     testFloorMenuAndAdvancement();
