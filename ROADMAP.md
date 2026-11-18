@@ -62,7 +62,8 @@ Refactor only where it reduces real coupling or makes future work safer.
 - Centralize repeated terminal, input, and screen-layout behavior.
 - Keep terminal-size validation and too-small-screen presentation in a dedicated renderer module, separate from game-table composition. Share one ANSI-capability decision across terminal styling, cursor control, and constrained-screen output.\n- Keep ANSI control sequences and fixed screen-row coordinates in narrow headers so focused renderers do not depend on the aggregate renderer interface.
 - Give focused renderer responsibilities dedicated public headers; reserve the aggregate renderer header for compatibility and application-level composition.
-- Keep presentation-only animation values outside mutable game state; rendering must not temporarily rewrite gameplay fields.
+- Keep presentation-only values outside mutable game state; rendering must not temporarily rewrite gameplay fields. Keep settlement free of renderer calls, and let the controller present completed round results.
+- Do not animate currency balances or currency deltas; update chip balances immediately and use concise textual feedback for transactions.
 - Keep Oracle next-card and deck-composition intelligence separate from dealer-rule and floor-twist table information.
 - Make ownership and lifetime of shared state explicit; avoid hidden file-scope state where it creates coupling.
 - Preserve a small, understandable interface between game events and presentation.

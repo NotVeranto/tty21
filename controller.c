@@ -8,10 +8,47 @@
 #include "round_actions.h"
 #include "round_dealer.h"
 #include "round_settlement.h"
+#include "round_cards.h"
 #include "save.h"
 
 #include <ctype.h>
 #include <stdio.h>
+
+static int controllerAllHandsBust(const Game *game) {
+    int handIndex;
+    int foundHand = 0;
+
+    for (handIndex = 0;
+         handIndex < game->player.handCount &&
+         handIndex < MAX_PLAYER_HANDS;
+         handIndex++) {
+        if (game->player.hands[handIndex].count < 1) {
+            continue;
+        }
+        foundHand = 1;
+        if (calculatePlayerHandValueForIndex(game, handIndex) <= 21) {
+            return 0;
+        }
+    }
+
+    return foundHand;
+}
+
+static void presentRoundResult(Game *game) {
+    MessageStyle resultStyle = resolveRound(game);
+
+    renderTable(game, 0);
+    if (resultStyle == MSG_WIN) {
+        renderResultFlash(game, "YOU WIN!", MSG_WIN);
+        renderPause(game, 600);
+    } else if (resultStyle == MSG_PUSH) {
+        renderResultFlash(game, "PUSH", MSG_PUSH);
+        renderPause(game, 600);
+    } else if (resultStyle == MSG_LOSS && controllerAllHandsBust(game)) {
+        renderResultFlash(game, "BUST!", MSG_LOSS);
+        renderPause(game, 600);
+    }
+}
 
 void bossPrepTurn(Game *game) {
     KeyEvent event;
@@ -56,7 +93,7 @@ int runGame(Game *game) {
         } else if (game->state == STATE_DEALER_TURN) {
             dealerTurn(game);
         } else if (game->state == STATE_RESULT) {
-            resolveRound(game);
+            presentRoundResult(game);
         } else if (game->state == STATE_SHOP) {
             runShop(game);
         } else if (game->state == STATE_BOSS_PREP) {

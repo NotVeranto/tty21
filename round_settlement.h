@@ -3,6 +3,6 @@
 
 #include "game.h"
 
-void resolveRound(Game *game);
+MessageStyle resolveRound(Game *game);
 
 #endif

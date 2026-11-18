@@ -3,14 +3,11 @@
 #include "render_control.h"
 #include "render_rows.h"
 #include "render_style.h"
-#include "render_layout.h"
-#include "terminal.h"
 #include "dealers.h"
 #include "round_cards.h"
 
 #include <stdio.h>
 #include <string.h>
-#include <unistd.h>
 
 static void moveToTableRow(int row, int padding) {
     printf(SCR_CURSOR, row, padding + 1);
@@ -250,28 +247,3 @@ void renderStatusLine(const Game *game, int terminalWidth, int padding) {
                             game->player.chips);
 }
 
-void animateChips(Game *game, int startChips, int endChips) {
-    int terminalWidth;
-    int terminalHeight;
-    int direction;
-    int value;
-    if (game == NULL || game->fastMode || !isatty(STDOUT_FILENO) || startChips == endChips) return;
-    terminalGetSize(&terminalWidth, &terminalHeight);
-    (void)terminalHeight;
-    direction = endChips > startChips ? 1 : -1;
-    value = startChips;
-    while (value != endChips) {
-        int nextValue = value + direction * 5;
-        if ((direction > 0 && nextValue > endChips) || (direction < 0 && nextValue < endChips)) nextValue = endChips;
-        renderStatusLineAtChips(game, terminalWidth,
-                                 getCenteredColumn(getDynamicTableWidth(game)),
-                                 nextValue);
-        fflush(stdout);
-        usleep(15000);
-        value = nextValue;
-    }
-    renderStatusLine(game,
-                     terminalWidth,
-                     (terminalWidth - getDynamicTableWidth(game)) / 2);
-    fflush(stdout);
-}

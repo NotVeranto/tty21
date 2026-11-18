@@ -4,7 +4,6 @@
 #include "round_economy.h"
 #include "round_rules.h"
 #include "dealers.h"
-#include "render.h"
 #include "rng.h"
 
 #include <limits.h>
@@ -144,28 +143,6 @@ static int calculateHandLoss(Game *game, const SettlementContext *ctx,
     }
     if (baseLoss > INT_MAX) baseLoss = INT_MAX;
     return (int)baseLoss;
-}
-
-static int playerAllHandsBust(const Game *game) {
-    int handIndex;
-    int foundHand;
-
-    foundHand = 0;
-    for (handIndex = 0;
-         handIndex < game->player.handCount &&
-         handIndex < MAX_PLAYER_HANDS;
-         handIndex++) {
-        if (game->player.hands[handIndex].count < 1) {
-            continue;
-        }
-
-        foundHand = 1;
-        if (calculatePlayerHandValueForIndex(game, handIndex) <= 21) {
-            return 0;
-        }
-    }
-
-    return foundHand;
 }
 
 static void applyRoundRewards(Game *game, MessageStyle resultStyle) {
@@ -435,7 +412,7 @@ static void buildModifierList(const Game *game,
 #undef APPEND_MODIFIER
 }
 
-void resolveRound(Game *game) {
+MessageStyle resolveRound(Game *game) {
     SettlementContext ctx;
     HandOutcome outcome;
     int dealerValue;
@@ -479,7 +456,6 @@ void resolveRound(Game *game) {
         game->player.surrendered = 0;
         game->roundHadNaturalBj = 0;
         game->roundInProgress = 0;
-        renderTable(game, 0);
         if (game->player.chips == 0) {
             game->state = STATE_QUIT;
         } else if (game->mode == MODE_CLASSIC) {
@@ -487,7 +463,7 @@ void resolveRound(Game *game) {
         } else {
             game->state = STATE_MENU;
         }
-        return;
+        return MSG_DEFAULT;
     }
 
     captureSettlementContext(game, &ctx);
@@ -654,11 +630,7 @@ void resolveRound(Game *game) {
                                 MSG_INFO);
                     }
 
-                    {
-                        int startChips = game->player.chips;
-                        lossAmount = applyLoss(game, baseLoss);
-                        animateChips(game, startChips, game->player.chips);
-                    }
+                    lossAmount = applyLoss(game, baseLoss);
                     lossTotal += lossAmount;
                     handLossTotal += lossAmount;
 
@@ -693,11 +665,7 @@ void resolveRound(Game *game) {
             } else if (outcome == HAND_OUTCOME_BLACKJACK) {
                 ctx.roundHadBlackjack = 1;
                 payout = calculateHandPayout(game, &ctx, handIndex, dealerHandIndex);
-                {
-                    int startChips = game->player.chips;
-                    creditChips(game, payout);
-                    animateChips(game, startChips, game->player.chips);
-                }
+                creditChips(game, payout);
                 payoutTotal += payout;
                 handPayoutTotal += payout;
                 handWon = 1;
@@ -731,11 +699,7 @@ void resolveRound(Game *game) {
                 }
             } else if (outcome == HAND_OUTCOME_DEALER_BLACKJACK) {
                 baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
-                {
-                    int startChips = game->player.chips;
-                    lossAmount = applyLoss(game, baseLoss);
-                    animateChips(game, startChips, game->player.chips);
-                }
+                lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
 
@@ -795,11 +759,7 @@ void resolveRound(Game *game) {
                 }
             } else if (outcome == HAND_OUTCOME_WIN) {
                 payout = calculateHandPayout(game, &ctx, handIndex, dealerHandIndex);
-                {
-                    int startChips = game->player.chips;
-                    creditChips(game, payout);
-                    animateChips(game, startChips, game->player.chips);
-                }
+                creditChips(game, payout);
                 payoutTotal += payout;
                 handPayoutTotal += payout;
                 handWon = 1;
@@ -811,11 +771,7 @@ void resolveRound(Game *game) {
                 }
             } else {
                 baseLoss = calculateHandLoss(game, &ctx, handIndex, dealerHandIndex);
-                {
-                    int startChips = game->player.chips;
-                    lossAmount = applyLoss(game, baseLoss);
-                    animateChips(game, startChips, game->player.chips);
-                }
+                lossAmount = applyLoss(game, baseLoss);
                 lossTotal += lossAmount;
                 handLossTotal += lossAmount;
 
@@ -921,19 +877,6 @@ void resolveRound(Game *game) {
     game->player.insuranceBet = 0;
     game->player.evenMoneyTaken = 0;
 
-    renderTable(game, 0);
-
-    if (resultStyle == MSG_WIN) {
-        renderResultFlash(game, "YOU WIN!", MSG_WIN);
-        renderPause(game, 600);
-    } else if (resultStyle == MSG_PUSH) {
-        renderResultFlash(game, "PUSH", MSG_PUSH);
-        renderPause(game, 600);
-    } else if (playerAllHandsBust(game)) {
-        renderResultFlash(game, "BUST!", MSG_LOSS);
-        renderPause(game, 600);
-    }
-
     {
         char breakdown[256];
 
@@ -981,4 +924,5 @@ void resolveRound(Game *game) {
     }
     game->roundHadNaturalBj = 0;
     game->roundInProgress = 0;
+    return resultStyle;
 }
