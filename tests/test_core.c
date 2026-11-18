@@ -269,6 +269,40 @@ static void testTwinSplitAndPayoutCapCore(void) {
     assert(strstr(game.lastPayoutBreakdown, "Won 400") != NULL);
 }
 
+static void testBossPrepTransaction(void) {
+    Game game;
+
+    rngInit(24680U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.state = STATE_BOSS_PREP;
+    game.run.marks = 12;
+    game.bossRulePaid = 5;
+    completeBossPrep(&game, 1);
+    assert(game.run.marks == 7);
+    assert(game.bossRuleDisabled == 1);
+    assert(game.state == STATE_BET);
+
+    game.state = STATE_BOSS_PREP;
+    game.run.marks = 3;
+    game.bossRuleDisabled = 0;
+    completeBossPrep(&game, 1);
+    assert(game.run.marks == 3);
+    assert(game.bossRuleDisabled == 0);
+    assert(game.state == STATE_BET);
+
+    game.state = STATE_BOSS_PREP;
+    game.run.marks = 12;
+    completeBossPrep(&game, 0);
+    assert(game.run.marks == 12);
+    assert(game.bossRuleDisabled == 0);
+    assert(game.state == STATE_BET);
+
+    game.state = STATE_MENU;
+    completeBossPrep(&game, 1);
+    assert(game.state == STATE_MENU);
+    assert(game.run.marks == 12);
+}
+
 static void testInterruptedRoundRecovery(void) {
     Game game;
 
@@ -297,6 +331,7 @@ int main(void) {
     testSettlementPushAndSurrender();
     testInsuranceSettlement();
     testTwinSplitAndPayoutCapCore();
+    testBossPrepTransaction();
     testInterruptedRoundRecovery();
 
     puts("renderer-free core tests passed");
