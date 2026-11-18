@@ -492,6 +492,12 @@ void advanceFloor(Game *game) {
     game->run.previousTwistId = game->run.twistId;
     game->run.floor++;
 
+    /* Floor-start income is available before debts due on this floor. */
+    if (game->player.perkOwned[PERK_BANKROLL]) {
+        creditChips(game, 5);
+        logPush(game, "Bankroll: +5 chips.", MSG_WIN);
+    }
+
     if (game->loanAmount > 0 &&
         game->run.floor >= game->loanDueFloor) {
         if (game->player.chips >= game->loanAmount) {
@@ -596,11 +602,6 @@ void advanceFloor(Game *game) {
                         MSG_INFO);
             }
         }
-    }
-
-    if (game->player.perkOwned[PERK_BANKROLL]) {
-        creditChips(game, 5);
-        logPush(game, "Bankroll: +5 chips.", MSG_WIN);
     }
 
     /*
