@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Skip a newly selected Greed twist when the post-advance bankroll cannot cover its doubled minimum bet.
 - Enforce late-floor maximum-bet caps even below the minimum-bet threshold, preventing over-cap wagers.
 - Include the shop loan's 50-chip proceeds when checking whether the next-floor minimum bet is reachable.
+- Apply Bankroll's +5 floor-start income before collecting a loan due on the newly reached floor.
 
 ## [0.1.0] - 2026-11-04
 
