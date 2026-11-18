@@ -735,7 +735,8 @@ int main(void) {
     testInsuranceSettlement();
     testInsuranceCoversWholeTwinHand();
     testDealersFavorCoversTwinBust();
-    testSurvivalCoversCombinedTwinLosses();\n    testTwinSplitAndPayoutCapCore();
+    testSurvivalCoversCombinedTwinLosses();
+    testTwinSplitAndPayoutCapCore();
     testUnaffordableRunTermination();
     testBossPrepTransaction();
     testInterruptedRoundRecovery();
