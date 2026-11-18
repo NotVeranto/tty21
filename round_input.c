@@ -3,7 +3,8 @@
 
 #include "input.h"
 #include "input_map.h"
-#include "render.h"
+#include "render_messages.h"
+#include "render_rows.h"
 
 #include <ctype.h>
 #include <errno.h>

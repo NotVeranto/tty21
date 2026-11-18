@@ -9,6 +9,7 @@
 #include "input_map.h"
 #include "render_status.h"
 #include "render_messages.h"
+#include "render_table.h"
 #include "render_menu.h"
 #include "render_shop.h"
 #include "render_actions.h"
@@ -20,12 +21,8 @@ int renderTerminalDimensionsOk(int width, int height);
 int renderTerminalSizeOk(int *width, int *height);
 void renderTooSmallScreen(int currentWidth,
                           int currentHeight);
-void renderTable(const Game *game, int hideDealerCard);
-void renderPause(const Game *game, int ms);
-void renderResetScreen(void);
 void renderGameStateFallback(const Game *game, int hideDealerCard);
 void renderHideCursor(void);
 void renderShowCursor(void);
-void renderMenuLogRefresh(const Game *game);
 
 #endif

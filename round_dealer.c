@@ -5,7 +5,9 @@
 #include "round_cards.h"
 #include "round_rules.h"
 #include "dealers.h"
-#include "render.h"
+#include "render_table.h"
+#include "render_messages.h"
+#include "render_rows.h"
 #include "input.h"
 
 #include <stdio.h>

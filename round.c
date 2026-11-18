@@ -5,7 +5,7 @@
 #include "round_economy.h"
 #include "round_rules.h"
 #include "round_input.h"
-#include "render.h"
+#include "render_table.h"
 #include "input.h"
 #include "input_map.h"
 #include "rng.h"

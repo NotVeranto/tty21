@@ -2,7 +2,10 @@
 
 #include "input.h"
 #include "menu.h"
-#include "render.h"
+#include "render_table.h"
+#include "render_messages.h"
+#include "render_transitions.h"
+#include "render_style.h"
 #include "rng.h"
 #include "round.h"
 #include "round_actions.h"
