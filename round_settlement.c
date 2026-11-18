@@ -465,14 +465,7 @@ MessageStyle resolveRound(Game *game) {
 
     chipsBeforeSettlement = game->player.chips;\n\n    if (game->player.surrendered) {
         applyRoundRewards(game, MSG_LOSS);
-        if (game->player.chips == 0 &&
-        game->player.perkOwned[PERK_SURVIVAL] &&
-        chipsBeforeSettlement > 0) {
-        game->player.chips = chipsBeforeSettlement / 2;
-        logPush(game, "Survival triggered. Half your chips remain.", MSG_WIN);
-    }
-
-    applyRoundRecovery(game);
+        applyRoundRecovery(game);
         game->tippedThisRound = 0;
         game->player.insuranceBet = 0;
         game->player.evenMoneyTaken = 0;
@@ -906,6 +899,13 @@ MessageStyle resolveRound(Game *game) {
                 "Five losses in a row. The pit boss ends your run.",
                 MSG_LOSS);
         game->state = STATE_QUIT;
+    }
+
+    if (game->player.chips == 0 &&
+        game->player.perkOwned[PERK_SURVIVAL] &&
+        chipsBeforeSettlement > 0) {
+        game->player.chips = chipsBeforeSettlement / 2;
+        logPush(game, "Survival triggered. Half your chips remain.", MSG_WIN);
     }
 
     applyRoundRecovery(game);
