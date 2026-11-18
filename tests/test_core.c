@@ -269,6 +269,22 @@ static void testTwinSplitAndPayoutCapCore(void) {
     assert(strstr(game.lastPayoutBreakdown, "Won 400") != NULL);
 }
 
+static void testUnaffordableRunTermination(void) {
+    Game game;
+
+    rngInit(13579U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.player.chips = 9;
+    game.state = STATE_MENU;
+    assert(endRunIfUnaffordable(&game, 10) == 1);
+    assert(game.state == STATE_QUIT);
+
+    game.player.chips = 10;
+    game.state = STATE_MENU;
+    assert(endRunIfUnaffordable(&game, 10) == 0);
+    assert(game.state == STATE_MENU);
+}
+
 static void testBossPrepTransaction(void) {
     Game game;
 
@@ -331,6 +347,7 @@ int main(void) {
     testSettlementPushAndSurrender();
     testInsuranceSettlement();
     testTwinSplitAndPayoutCapCore();
+    testUnaffordableRunTermination();
     testBossPrepTransaction();
     testInterruptedRoundRecovery();
 
