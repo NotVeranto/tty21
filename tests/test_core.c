@@ -484,6 +484,22 @@ static void testGreedMarksUpdateRunEarnings(void) {
     assert(game.totalMarksEarned == 5);
 }
 
+static void testOddSurrenderBetsRoundLossUp(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    assert(applySurrenderLoss(&game, 1) == 1);
+    assert(game.player.chips == 99);
+
+    setupCoreSettlement(&game);
+    assert(applySurrenderLoss(&game, 3) == 2);
+    assert(game.player.chips == 98);
+
+    setupCoreSettlement(&game);
+    assert(applySurrenderLoss(&game, 4) == 2);
+    assert(game.player.chips == 98);
+}
+
 static void testSettlementPushAndSurrender(void) {
     Game game;
 
@@ -893,6 +909,7 @@ int main(void) {
     testDoubleDipAppliesToSplitDoubles();
     testCompoundingPaysOncePerRound();
     testSettlementPushAndSurrender();
+    testOddSurrenderBetsRoundLossUp();
     testInsuranceSettlement();
     testInsuranceCoversWholeTwinHand();
     testDealersFavorCoversTwinBust();
