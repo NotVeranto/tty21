@@ -335,7 +335,7 @@ void renderHelpOverlay(const Game *game) {
         printf(SCR_CURSOR, bottomRow, leftColumn);
         printf("Min bet: %d    Max bet: %d",
                getMinBet(game, game->run.floor, game->mode),
-               getMaxBet(game, getMinBet(game, game->run.floor, game->mode)));
+               getMaxBet(game));
         bottomRow += 2;
 
         printf(SCR_CURSOR, bottomRow, leftColumn);
@@ -484,7 +484,7 @@ void renderHelpOverlay(const Game *game) {
         }
         printf("Min bet: %d    Max bet: %d\n",
                getMinBet(game, game->run.floor, game->mode),
-               getMaxBet(game, getMinBet(game, game->run.floor, game->mode)));
+               getMaxBet(game));
         printf("\nPress any key to return.\n");
         fflush(stdout);
     }
