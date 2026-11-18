@@ -66,11 +66,10 @@ void floorMenu(Game *game) {
 
     currentMinBet = getMinBet(game, game->run.floor, game->mode);
 
-    if (game->player.chips < currentMinBet) {
+    if (endRunIfUnaffordable(game, currentMinBet)) {
         renderTableMessage("You cannot afford the minimum bet. Run over.",
-                      ROW_RESULT,
-                      MSG_LOSS);
-        game->state = STATE_QUIT;
+                           ROW_RESULT,
+                           MSG_LOSS);
         return;
     }
 
