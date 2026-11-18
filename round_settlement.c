@@ -786,6 +786,7 @@ MessageStyle resolveRound(Game *game) {
                 twistActive(game, TWIST_GREED) &&
                 !greedAwarded) {
                 game->run.marks += 1;
+                game->totalMarksEarned++;
                 greedAwarded = 1;
             }
         }
