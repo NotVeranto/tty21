@@ -1,5 +1,8 @@
 #define _DEFAULT_SOURCE
-#include "render.h"
+#include "render_transitions.h"
+#include "render_control.h"
+#include "render_terminal.h"
+#include "terminal.h"
 #include "render_style.h"
 #include "render_layout.h"
 #include "terminal.h"
