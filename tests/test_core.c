@@ -119,7 +119,7 @@ static void testFloorMenuAndAdvancement(void) {
     game.safetyNetArmed = 1;
     assert(advanceToNextFloor(&game));
     assert(game.run.floor == floorBefore + 1);
-    assert(game.player.chips == chipsBefore + 1);
+    assert(game.player.chips == nextMinBet);
     assert(game.safetyNetArmed == 0);
     assert(game.run.roundsOnFloor == 0);
 }
