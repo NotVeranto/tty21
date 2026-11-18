@@ -103,13 +103,16 @@ void computeAdvanceForecast(const Game *game,
         game->loanDueFloor <= game->run.floor + 1) {
         out->loanDue = game->loanAmount;
     }
-    out->postChips = game->player.chips -
-                     out->fee - out->loanDue;
+    {
+        int floorIncome = game->player.perkOwned[PERK_BANKROLL] ? 5 : 0;
+        out->postChips = game->player.chips - out->fee -
+                         out->loanDue + floorIncome;
+    }
     if (out->postChips < 0) out->postChips = 0;
     out->affordable =
-        game->player.chips >= out->fee +
-                              out->nextMinBet +
-                              out->loanDue;
+        (long long)game->player.chips +
+            (game->player.perkOwned[PERK_BANKROLL] ? 5LL : 0LL) >=
+        (long long)out->fee + out->nextMinBet + out->loanDue;
 }
 
 // Returns the maximum legal bet, including the floor-based roguelike cap.
