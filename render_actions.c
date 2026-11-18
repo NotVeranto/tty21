@@ -1,4 +1,7 @@
-#include "render.h"
+#include "render_actions.h"
+#include "render_control.h"
+#include "render_terminal.h"
+#include "terminal.h"
 #include "render_style.h"
 
 #include <stdio.h>
