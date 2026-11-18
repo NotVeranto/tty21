@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Apply Insurance's once-per-floor protection to the full loss of a Twin/multiple-dealer player hand.
 - Reject purchases for perks that are not offered in the current shop pool.
 - Apply Survival after aggregating all loss components in Twin/multiple-dealer rounds.
+- Verify Survival and Extra Life recovery ordering and charge preservation with core regressions.
 
 ## [0.1.0] - 2026-11-04
 
