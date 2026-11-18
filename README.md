@@ -119,7 +119,7 @@ During the player's turn:
 Between rounds:
 
 - `c` — continue on the current floor.
-- `a` — advance to the next floor (the advance fee and next minimum bet must be affordable).
+- `a` — advance to the next floor (the advance fee and next minimum bet must be affordable, accounting for Bankroll floor income before any due loan is repaid).
 - `w` — save the current roguelike run.
 - `s` — open the shop.
 - `q` — quit the run; the save is preserved.
