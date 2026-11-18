@@ -29,6 +29,25 @@ void roundSettleInsurance(Game *game) {
     settleInsurance(game);
 }
 
+int applyLossForSettlement(Game *game, long long lossValue) {
+    int chipsBeforeLoss;
+    int lossAmount;
+
+    chipsBeforeLoss = game->player.chips;
+    if (chipsBeforeLoss <= 0) {
+        return 0;
+    }
+
+    if (lossValue > chipsBeforeLoss) {
+        lossAmount = chipsBeforeLoss;
+    } else {
+        lossAmount = (int)lossValue;
+    }
+
+    game->player.chips -= lossAmount;
+    return lossAmount;
+}
+
 int applyLoss(Game *game, long long lossValue) {
     int chipsBeforeLoss;
     int lossAmount;
