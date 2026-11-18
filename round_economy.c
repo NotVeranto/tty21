@@ -110,11 +110,8 @@ int getMaxBet(const Game *game, int minBet) {
         cap /= 2;
     }
 
-    if (cap >= minBet) {
-        maxBet = cap;
-    }
-
-    return maxBet;
+    (void)minBet;
+    return cap;
 }
 
 // Returns the minimum bet for a floor.
