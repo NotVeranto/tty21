@@ -1,6 +1,7 @@
 #include "render_oracle.h"
 
-#include "render.h"
+#include "render_control.h"
+#include "render_rows.h"
 #include "render_style.h"
 #include "round_rules.h"
 
