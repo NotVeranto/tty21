@@ -6,10 +6,7 @@
 #include "round_cards.h"
 #include "round_economy.h"
 #include "round_input.h"
-#include "render_table.h"
-#include "render_actions.h"
-#include "render_help.h"
-#include "render_rows.h"
+#include "round_presentation.h"
 #include "input.h"
 #include "input_map.h"
 #include "rng.h"
@@ -109,7 +106,7 @@ static void splitHand(Game *game) {
         logPush(game, msg, MSG_ACTION);
     }
 
-    renderTable(game, game->state == STATE_PLAYER_TURN);
+    roundPresentTable(game, game->state == STATE_PLAYER_TURN);
 }
 
 static int buildPlayerActions(const Game *game, ActionId *actions) {
@@ -151,7 +148,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
     if (action == ACTION_HIT) {
         if (game->player.hands[game->player.activeHand].count >= MAX_HAND_SIZE) {
             logPush(game, "Hand is full.", MSG_DEFAULT);
-            renderTable(game, game->state == STATE_PLAYER_TURN);
+            roundPresentTable(game, game->state == STATE_PLAYER_TURN);
             return;
         }
         if (game->run.floor >= 10 && game->run.dealerId == DEALER_DEVIL) {
@@ -181,7 +178,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                 logPush(game,
                          "Second Wind! Hand reset to 11.",
                          MSG_WIN);
-                renderTable(game, 1);
+                roundPresentTable(game, 1);
             } else {
                 advanceActiveHand(game);
             }
@@ -196,7 +193,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             logPush(game, msg, MSG_ACTION);
         }
 
-        renderTable(game, game->state == STATE_PLAYER_TURN);
+        roundPresentTable(game, game->state == STATE_PLAYER_TURN);
     } else if (action == ACTION_STAND) {
         if (twistActive(game, TWIST_STICKY_HANDS) &&
             calculatePlayerHandValue(game) < 15) {
@@ -257,7 +254,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
                 advanceActiveHand(game);
             }
 
-            renderTable(game, game->state == STATE_PLAYER_TURN);
+            roundPresentTable(game, game->state == STATE_PLAYER_TURN);
         }
     } else if (action == ACTION_DOUBLE) {
         if (!canDouble(game)) {
@@ -283,7 +280,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             }
 
             advanceActiveHand(game);
-            renderTable(game, game->state == STATE_PLAYER_TURN);
+            roundPresentTable(game, game->state == STATE_PLAYER_TURN);
         }
     } else if (action == ACTION_SPLIT) {
         if (!canSplit(game)) {
@@ -325,7 +322,7 @@ static void dispatchPlayerAction(Game *game, ActionId action) {
             logPush(game,
                     "Peek: hole card revealed.",
                     MSG_ACTION);
-            renderTable(game, 1);
+            roundPresentTable(game, 1);
         }
     } else if (action == ACTION_SURRENDER) {
         int bet = game->player.bets[game->player.activeHand];
@@ -358,23 +355,21 @@ void playerTurn(Game *game) {
                 actionIndex = actionCount - 1;
             }
 
-            renderTable(game, 1);
-            renderActionBar(actions,
+            roundPresentTable(game, 1);
+            roundPresentActionBar(actions,
                             actionCount,
-                            actionIndex,
-                            ROW_PROMPT,
-                            game->mode == MODE_ROGUELIKE);
+                            actionIndex, game->mode == MODE_ROGUELIKE);
 
             event = readKey();
 
             if (event.type == KEY_CHAR && event.ch == '?') {
-                renderHelpOverlay(game);
+                roundPresentHelp(game);
                 (void)readKey();
-                renderTable(game, 1);
-                renderActionBar(actions,
+                roundPresentTable(game, 1);
+                roundPresentActionBar(actions,
                                 actionCount,
                                 actionIndex,
-                                ROW_PROMPT,
+                                ROUND_MESSAGE_PROMPT,
                                 game->mode == MODE_ROGUELIKE);
                 continue;
             }
@@ -427,9 +422,9 @@ void playerTurn(Game *game) {
                 actionIndex = actionCount - 1;
             }
 
-            renderTable(game, 1);
-            renderTableMessage("Choose action: [h/s/d/p/k/u/q]: ",
-                          ROW_PROMPT,
+            roundPresentTable(game, 1);
+            roundPresentMessage("Choose action: [h/s/d/p/k/u/q]: ",
+                          ROUND_MESSAGE_PROMPT,
                           MSG_DEFAULT);
             inputCharacter = getchar();
 
@@ -444,12 +439,12 @@ void playerTurn(Game *game) {
                 }
 
                 if (event.type == KEY_CHAR && event.ch == '?') {
-                    renderHelpOverlay(game);
-                    renderTable(game, 1);
-                    renderActionBar(actions,
+                    roundPresentHelp(game);
+                    roundPresentTable(game, 1);
+                    roundPresentActionBar(actions,
                                     actionCount,
                                     actionIndex,
-                                    ROW_PROMPT,
+                                    ROUND_MESSAGE_PROMPT,
                                     game->mode == MODE_ROGUELIKE);
                     continue;
                 }
@@ -473,13 +468,13 @@ void playerTurn(Game *game) {
                             dispatchPlayerAction(game, action);
                         }
                     } else {
-                        renderTableMessage("Invalid action. Enter h, s, d, p, k, or q.",
-                                      ROW_PROMPT,
+                        roundPresentMessage("Invalid action. Enter h, s, d, p, k, or q.",
+                                      ROUND_MESSAGE_PROMPT,
                                       MSG_DEFAULT);
                     }
                 } else {
-                    renderTableMessage("Invalid action. Enter h, s, d, p, k, or q.",
-                                  ROW_PROMPT,
+                    roundPresentMessage("Invalid action. Enter h, s, d, p, k, or q.",
+                                  ROUND_MESSAGE_PROMPT,
                                   MSG_DEFAULT);
                 }
             }

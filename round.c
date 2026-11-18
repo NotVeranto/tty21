@@ -5,7 +5,7 @@
 #include "round_economy.h"
 #include "round_rules.h"
 #include "round_input.h"
-#include "render_table.h"
+#include "round_presentation.h"
 #include "input.h"
 #include "input_map.h"
 #include "rng.h"
@@ -149,7 +149,7 @@ void startRound(Game *game) {
 
     game->peekActive = 0;
 
-    renderTable(game, 0);
+    roundPresentTable(game, 0);
 
     betAmount = readBet(game);
 
@@ -207,26 +207,26 @@ void startRound(Game *game) {
 
     drawCard(game, &game->player.hands[0], 1);
     if (!game->fastMode && isatty(STDOUT_FILENO)) {
-        renderTable(game, 1);
-        renderPause(game, 150);
+        roundPresentTable(game, 1);
+        roundPause(game, 150);
     }
 
     drawCard(game, &game->dealer.hands[0], 0);
     if (!game->fastMode && isatty(STDOUT_FILENO)) {
-        renderTable(game, 1);
-        renderPause(game, 150);
+        roundPresentTable(game, 1);
+        roundPause(game, 150);
     }
 
     drawCard(game, &game->player.hands[0], 1);
     if (!game->fastMode && isatty(STDOUT_FILENO)) {
-        renderTable(game, 1);
-        renderPause(game, 150);
+        roundPresentTable(game, 1);
+        roundPause(game, 150);
     }
 
     drawCard(game, &game->dealer.hands[0], 0);
     if (!game->fastMode && isatty(STDOUT_FILENO)) {
-        renderTable(game, 1);
-        renderPause(game, 150);
+        roundPresentTable(game, 1);
+        roundPause(game, 150);
     }
     game->dealer.handCount = dealerHandsCount(game->run.dealerId);
 

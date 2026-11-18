@@ -54,7 +54,7 @@ Add a regression test for every confirmed defect.
 
 ## Stage 3 — Maintainability and architecture
 
-**Status:** in progress. Core renderer extraction, narrow public interfaces, and settlement/presentation separation are in place. Table layout now owns message alignment and passes it explicitly to a stateless message renderer. Remaining work is to move the remaining round-flow presentation coordination out of round handlers and complete the shared presentation-state audit.
+**Status:** in progress. Core renderer extraction, narrow public interfaces, and settlement/presentation separation are in place. Table layout now owns message alignment and passes it explicitly to a stateless message renderer. Round handlers now use a dedicated presentation coordinator for table, prompt, action-bar, help, and pause operations. Remaining work is to audit shared presentation-state ownership and verify that core rules remain independently testable.
 
 Refactor only where it reduces real coupling or makes future work safer.
 
