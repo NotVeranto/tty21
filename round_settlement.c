@@ -82,7 +82,7 @@ static int calculateHandPayout(Game *game, SettlementContext *ctx,
         if (twistActive(game, TWIST_DESPERATION) && game->player.usedDouble[playerHandIndex]) basePayout *= 3;
         if (twistActive(game, TWIST_HIGH_STAKES)) basePayout *= 2;
         if (twistActive(game, TWIST_BLOOD_PACT)) basePayout *= 2;
-        if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble[playerHandIndex] && !game->player.usedSplit[playerHandIndex])
+        if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble[playerHandIndex])
             basePayout += splitBet / 2;
         if (game->player.perkOwned[PERK_COMPOUNDING] &&
             !ctx->compoundingAwarded) {
@@ -97,7 +97,7 @@ static int calculateHandPayout(Game *game, SettlementContext *ctx,
         if (twistActive(game, TWIST_BLOOD_PACT)) basePayout *= 2;
         if (twistActive(game, TWIST_HALF_PAYOUT)) basePayout /= 2;
         if (twistActive(game, TWIST_JACKPOT) && rngRange(0, 99) < 5) basePayout *= 10;
-        if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble[playerHandIndex] && !game->player.usedSplit[playerHandIndex])
+        if (game->player.perkOwned[PERK_DOUBLE_DIP] && game->player.usedDouble[playerHandIndex])
             basePayout += splitBet / 2;
         if (game->player.perkOwned[PERK_COMPOUNDING] &&
             !ctx->compoundingAwarded) {
