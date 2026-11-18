@@ -99,7 +99,7 @@ static void testLoanEligibilityIncludesAdvance(void) {
 
     assert(getMinBet(&game, game.run.floor, game.mode) == 52);
     assert(getMinBet(&game, game.run.floor + 1, game.mode) == 74);
-    assert(!canPurchaseShopService(&game, 'l', 52) == 0);
+    assert(canPurchaseShopService(&game, 'l', 52));
     assert(purchaseShopService(&game, 'l', 52));
     assert(game.player.chips == 110);
     assert(game.loanAmount == 75);
