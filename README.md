@@ -18,7 +18,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 ### Blackjack
 
 - Hit, stand, double down, and split.
-- Surrender: give up an eligible hand and lose half its bet.
+- Surrender: give up an eligible hand and lose half its bet, rounded up to a whole chip.
 - Dealer peek, insurance, and even money when applicable.
 - Multiple dealer hands and special dealer abilities.
 - Classic blackjack mode without roguelike progression.
