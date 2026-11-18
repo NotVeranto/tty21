@@ -110,8 +110,25 @@ static void testBetLimits(void) {
     game.player.chips = 300;
     assert(getMaxBet(&game, minBet) == 100);
 
+    /* A bankroll below the cap threshold must not bypass the cap. */
+    game.player.chips = 100;
+    assert(getMaxBet(&game, minBet) == 33);
+    assert(getMaxBet(&game, minBet) < minBet);
+
+    game.run.floor = 8;
+    game.player.chips = 60;
+    minBet = getMinBet(&game, game.run.floor, game.mode);
+    assert(minBet == 34);
+    assert(getMaxBet(&game, minBet) == 30);
+    assert(getMaxBet(&game, minBet) < minBet);
+
+    game.run.floor = 12;
+    game.player.chips = 222;
+    minBet = getMinBet(&game, game.run.floor, game.mode);
+    assert(getMaxBet(&game, minBet) == minBet);
+
     game.mode = MODE_CLASSIC;
-    assert(getMaxBet(&game, 1) == 300);
+    assert(getMaxBet(&game, 1) == 222);
 }
 
 static void testFloorMenuAndAdvancement(void) {
