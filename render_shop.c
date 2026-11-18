@@ -3,6 +3,7 @@
 #include "render_rows.h"
 #include "render_terminal.h"
 #include "render_layout.h"
+#include "render_cards.h"
 #include "render_style.h"
 #include "render_log.h"
 #include "terminal.h"
