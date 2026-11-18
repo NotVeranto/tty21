@@ -89,6 +89,31 @@ static void testShopPurchaseTransactions(void) {
     assert(!canPurchaseShopService(&game, 'z', 10));
 }
 
+static void testBetLimits(void) {
+    Game game;
+    int minBet;
+
+    rngInit(11223U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+
+    game.player.chips = 100;
+    game.run.floor = 8;
+    minBet = getMinBet(&game, game.run.floor, game.mode);
+    assert(minBet == 34);
+    assert(getMaxBet(&game, minBet) == 50);
+
+    game.run.floor = 12;
+    minBet = getMinBet(&game, game.run.floor, game.mode);
+    assert(minBet == 74);
+    assert(getMaxBet(&game, minBet) == 100);
+
+    game.player.chips = 300;
+    assert(getMaxBet(&game, minBet) == 100);
+
+    game.mode = MODE_CLASSIC;
+    assert(getMaxBet(&game, 1) == 300);
+}
+
 static void testFloorMenuAndAdvancement(void) {
     Game game;
     int floorBefore;
@@ -367,6 +392,7 @@ static void testInterruptedRoundRecovery(void) {
 int main(void) {
     testInitialStateAndShopOffers();
     testShopPurchaseTransactions();
+    testBetLimits();
     testFloorMenuAndAdvancement();
     testClassicMenuReturnTransition();
     testSettlementCore();
