@@ -33,26 +33,6 @@ static void printHelpColumnLine(int row,
     printf("%.*s", length, text);
 }
 
-static int effectiveMaxBet(const Game *game) {
-    int cap;
-    int limit;
-
-    cap = game->player.chips;
-    if (game->mode == MODE_ROGUELIKE) {
-        limit = game->player.chips;
-        if (game->run.floor >= 12) {
-            limit = game->player.chips / 3;
-        } else if (game->run.floor >= 8) {
-            limit = game->player.chips / 2;
-        }
-        if (limit > 0) {
-            cap = limit;
-        }
-    }
-
-    return cap;
-}
-
 static int shouldShowNextFloor(const Game *game) {
     return game->state == STATE_MENU &&
            game->mode == MODE_ROGUELIKE;
@@ -355,7 +335,7 @@ void renderHelpOverlay(const Game *game) {
         printf(SCR_CURSOR, bottomRow, leftColumn);
         printf("Min bet: %d    Max bet: %d",
                getMinBet(game, game->run.floor, game->mode),
-               effectiveMaxBet(game));
+               getMaxBet(game, getMinBet(game, game->run.floor, game->mode)));
         bottomRow += 2;
 
         printf(SCR_CURSOR, bottomRow, leftColumn);
