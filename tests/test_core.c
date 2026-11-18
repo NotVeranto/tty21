@@ -250,6 +250,24 @@ static void testSettlementCore(void) {
     assert(game.player.chips == 110);
 }
 
+static void testGreedMarksUpdateRunEarnings(void) {
+    Game game;
+
+    setupCoreSettlement(&game);
+    game.mode = MODE_ROGUELIKE;
+    game.run.twistId = TWIST_GREED;
+    game.run.marks = 4;
+    game.totalMarksEarned = 4;
+    addCoreCard(&game.player.hands[0], TEN);
+    addCoreCard(&game.player.hands[0], KING);
+    addCoreCard(&game.dealer.hands[0], TEN);
+    addCoreCard(&game.dealer.hands[0], EIGHT);
+
+    assert(resolveRound(&game) == MSG_WIN);
+    assert(game.run.marks == 5);
+    assert(game.totalMarksEarned == 5);
+}
+
 static void testSettlementPushAndSurrender(void) {
     Game game;
 
@@ -444,6 +462,7 @@ int main(void) {
     testAdvanceForecastIgnoresCurrentFloorModifiers();
     testClassicMenuReturnTransition();
     testSettlementCore();
+    testGreedMarksUpdateRunEarnings();
     testSettlementPushAndSurrender();
     testInsuranceSettlement();
     testTwinSplitAndPayoutCapCore();
