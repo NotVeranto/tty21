@@ -17,6 +17,7 @@ int getMinBet(const Game *game, int floor, GameMode mode);
 int getMaxBet(const Game *game);
 void creditChips(Game *game, int amount);
 int applyLoss(Game *game, long long lossValue);
+int applySurrenderLoss(Game *game, int bet);
 int applyLossForSettlement(Game *game, long long lossValue);
 void computeAdvanceForecast(const Game *game,
                             AdvanceForecast *out);
