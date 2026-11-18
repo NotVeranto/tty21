@@ -246,8 +246,24 @@ void recoverInterruptedRound(Game *game) {
 
 int purchasePerk(Game *game, int perkIndex) {
     char message[128];
+    int shopIndex;
+    int offered;
 
     if (perkIndex < PERK_SECOND_WIND || perkIndex >= PERK_COUNT) {
+        return 0;
+    }
+
+    offered = 0;
+    for (shopIndex = 0; shopIndex < game->run.shopPerkCount;
+         shopIndex++) {
+        if (game->run.shopPerks[shopIndex] == (PerkId)perkIndex) {
+            offered = 1;
+            break;
+        }
+    }
+
+    if (!offered) {
+        logPush(game, "Perk is not offered this floor.", MSG_DEFAULT);
         return 0;
     }
 
