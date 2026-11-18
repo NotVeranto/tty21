@@ -20,6 +20,8 @@ jobs:
         run: make clean && make CC=${{ matrix.compiler }}
       - name: Unit tests
         run: make CC=${{ matrix.compiler }} test-unit
+      - name: Core tests
+        run: make CC=${{ matrix.compiler }} test-core
       - name: CLI smoke tests
         run: make CC=${{ matrix.compiler }} test-smoke
 
