@@ -159,22 +159,22 @@ static void testAdvanceForecastIncludesBankrollIncome(void) {
     initGame(&game, MODE_ROGUELIKE);
     game.run.floor = 8;
     game.state = STATE_MENU;
-    game.player.chips = 220;
+    game.player.chips = 172;
     game.player.perkOwned[PERK_BANKROLL] = 1;
     game.loanAmount = 75;
     game.loanDueFloor = 9;
 
     computeAdvanceForecast(&game, &forecast);
-    assert(forecast.nextMinBet == 50);
-    assert(forecast.fee == 100);
+    assert(forecast.nextMinBet == 34);
+    assert(forecast.fee == 68);
     assert(forecast.loanDue == 75);
-    assert(forecast.postChips == 50);
+    assert(forecast.postChips == 34);
     assert(forecast.affordable);
 
     assert(advanceToNextFloor(&game));
     assert(game.run.floor == 9);
     assert(game.player.chips >= getMinBet(&game, 9, game.mode));
-    assert(game.player.chips == 50);
+    assert(game.player.chips == 34);
     assert(game.loanAmount == 0);
 }
 
