@@ -709,7 +709,8 @@ int advanceToNextFloor(Game *game) {
     AdvanceForecast forecast;
     char feeMsg[64];
 
-    if (game->mode != MODE_ROGUELIKE) {
+    if (game->mode != MODE_ROGUELIKE ||
+        game->state != STATE_MENU) {
         return 0;
     }
 
