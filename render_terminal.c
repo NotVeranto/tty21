@@ -7,13 +7,9 @@
 #include <string.h>
 #include <unistd.h>
 
-int renderTerminalDimensionsOk(int width, int height) {
-    return terminalDimensionsOk(width, height);
-}
-
 int renderTerminalSizeOk(int *width, int *height) {
     terminalGetSize(width, height);
-    return renderTerminalDimensionsOk(*width, *height);
+    return terminalDimensionsOk(*width, *height);
 }
 
 void renderTooSmallScreen(int currentWidth,
