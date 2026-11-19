@@ -289,5 +289,5 @@ void run_simulation_tests(void) {
     RUN_TEST(roguelike_runner_executes_policy_shop_purchase);
     RUN_TEST(balanced_shop_policy_prioritizes_survival_and_funds_it);
     RUN_TEST(roguelike_batch_aggregates_reproducible_seeded_runs);
-    RUN_TEST(roguelike_batch_compares_policies_on_the_same_seed_set);
+    RUN_TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set);
 }
