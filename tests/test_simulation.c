@@ -248,7 +248,7 @@ TEST(roguelike_runner_uses_boss_preparation_policy) {
         game.player.chips = 100000;
 
         ASSERT_EQ_INT(1, simulateRoguelikeRun(
-            &game, 1, minimum_bet_policy, NULL,
+            &game, 32, minimum_bet_policy, NULL,
             stand_policy, NULL, advance_floor_policy, NULL,
             disable_boss_rule_policy, &prepCalls, NULL, NULL, &stats));
         if (prepCalls > 0) {
