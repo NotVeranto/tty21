@@ -288,7 +288,7 @@ TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds) {
 
     for (index = 0; index < 16; index++) {
         Game diagnosticGame;
-        SimulationRunStats diagnosticStats;
+        SimulationRunStats diagnosticStats = {0};
         rngInit(seeds[index], 1);
         initGame(&diagnosticGame, MODE_ROGUELIKE);
         diagnosticGame.fastMode = 1;
