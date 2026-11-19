@@ -2,6 +2,8 @@
 #include "game.h"
 #include "round_simulation.h"
 #include "round_economy.h"
+#include "round_cards.h"
+#include "round_rules.h"
 #include "rng.h"
 
 static ActionId stand_policy(const Game *game,
@@ -13,6 +15,25 @@ static ActionId stand_policy(const Game *game,
     (void)context;
     for (index = 0; index < actionCount; index++) {
         if (actions[index] == ACTION_STAND) return ACTION_STAND;
+    }
+    return ACTION_COUNT;
+}
+
+static ActionId progressing_policy(const Game *game,
+                                   const ActionId *actions,
+                                   int actionCount,
+                                   void *context) {
+    int index;
+    int standBlocked =
+        (twistActive(game, TWIST_STICKY_HANDS) &&
+         calculatePlayerHandValue(game) < 15) ||
+        (game->run.floor >= 10 &&
+         game->run.dealerId == DEALER_BUTCHER &&
+         calculatePlayerHandValue(game) < 15);
+    (void)context;
+    for (index = 0; index < actionCount; index++) {
+        if (standBlocked && actions[index] == ACTION_HIT) return ACTION_HIT;
+        if (!standBlocked && actions[index] == ACTION_STAND) return ACTION_STAND;
     }
     return ACTION_COUNT;
 }
@@ -281,57 +302,15 @@ TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds) {
     };
     SimulationBatchStats baseline;
     SimulationBatchStats paid;
-    SimulationBatchStats singleRun;
     BossPrepComparisonContext comparison = {0, 0};
-    BossPrepComparisonContext singleComparison = {0, 0};
-    int index;
-
-    for (index = 0; index < 16; index++) {
-        Game diagnosticGame;
-        SimulationRunStats diagnosticStats = {0};
-        rngInit(seeds[index], 1);
-        initGame(&diagnosticGame, MODE_ROGUELIKE);
-        diagnosticGame.fastMode = 1;
-        diagnosticGame.saveEnabled = 0;
-        if (!simulateRoguelikeRun(
-                &diagnosticGame, 32, minimum_bet_policy, NULL,
-                stand_policy, NULL, advance_floor_policy, NULL,
-                NULL, NULL, simulationBalancedShopPolicy, NULL,
-                &diagnosticStats)) {
-            printf("\\n    baseline run failed for seed %u: state=%d "
-                   "floor=%d rounds=%d chips=%d minBet=%d maxBet=%d "
-                   "roundInProgress=%d roundNumber=%d nextBet=%d\\n",
-                   seeds[index], diagnosticGame.state,
-                   diagnosticGame.run.floor, diagnosticStats.rounds,
-                   diagnosticGame.player.chips,
-                   getMinBet(&diagnosticGame, diagnosticGame.run.floor,
-                             diagnosticGame.mode),
-                   getMaxBet(&diagnosticGame),
-                   diagnosticGame.roundInProgress,
-                   diagnosticGame.roundNumber,
-                   minimum_bet_policy(&diagnosticGame, NULL));
-            ASSERT_EQ_INT(1, 0);
-        }
-    }
-    for (index = 0; index < 16; index++) {
-        if (!simulateRoguelikeBatch(
-                &seeds[index], 1, 48, minimum_bet_policy, NULL,
-                stand_policy, NULL, advance_floor_policy, NULL,
-                pay_for_boss_rule_when_affordable, &singleComparison,
-                simulationBalancedShopPolicy, NULL, &singleRun)) {
-            printf("\\n    paid batch failed for seed %u\\n",
-                   seeds[index]);
-            ASSERT_EQ_INT(1, 0);
-        }
-    }
 
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
         seeds, 16, 32, minimum_bet_policy, NULL,
-        stand_policy, NULL, advance_floor_policy, NULL,
+        progressing_policy, NULL, advance_floor_policy, NULL,
         NULL, NULL, simulationBalancedShopPolicy, NULL, &baseline));
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
-        seeds, 16, 48, minimum_bet_policy, NULL,
-        stand_policy, NULL, advance_floor_policy, NULL,
+        seeds, 16, 32, minimum_bet_policy, NULL,
+        progressing_policy, NULL, advance_floor_policy, NULL,
         pay_for_boss_rule_when_affordable, &comparison,
         simulationBalancedShopPolicy, NULL, &paid));
 
