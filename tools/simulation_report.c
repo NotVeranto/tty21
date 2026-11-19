@@ -50,7 +50,7 @@ static void print_batch(const char *label, const SimulationBatchStats *stats) {
            stats->runsCompleted, stats->totalRounds,
            stats->totalRounds / runs);
     printf("  outcomes: wins %d (%.1f%%) | losses %d (%.1f%%) | "
-           "pushes %d (%.1f%%)\\n",
+           "pushes %d (%.1f%%)\n",
            stats->totalWins, outcomes > 0.0 ? 100.0 * stats->totalWins / outcomes : 0.0,
            stats->totalLosses, outcomes > 0.0 ? 100.0 * stats->totalLosses / outcomes : 0.0,
            stats->totalPushes, outcomes > 0.0 ? 100.0 * stats->totalPushes / outcomes : 0.0);
