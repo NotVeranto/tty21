@@ -272,28 +272,28 @@ TEST(roguelike_batch_aggregates_reproducible_seeded_runs) {
     ASSERT_TRUE(first.deepestFloorReached >= first.shallowestFloorReached);
 }
 
-TEST(roguelike_batch_compares_policies_on_the_same_seed_set) {
-    static const unsigned int seeds[] = {101, 202, 303, 404};
-    SimulationBatchStats staying;
-    SimulationBatchStats advancing;
+TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set) {
+    static const unsigned int seeds[] = {17, 29, 41, 53};
+    SimulationBatchStats baseline;
+    SimulationBatchStats balanced;
 
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
-        seeds, 4, 10, minimum_bet_policy, NULL,
-        first_legal_policy, NULL, stay_on_floor_policy, NULL,
-        NULL, NULL, &staying));
+        seeds, 4, 8, minimum_bet_policy, NULL,
+        stand_policy, NULL, advance_floor_policy, NULL,
+        NULL, NULL, &baseline));
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
-        seeds, 4, 10, minimum_bet_policy, NULL,
-        first_legal_policy, NULL, advance_floor_policy, NULL,
-        NULL, NULL, &advancing));
+        seeds, 4, 8, minimum_bet_policy, NULL,
+        stand_policy, NULL, advance_floor_policy, NULL,
+        simulationBalancedShopPolicy, NULL, &balanced));
 
-    ASSERT_EQ_INT(4, staying.runsCompleted);
-    ASSERT_EQ_INT(4, advancing.runsCompleted);
-    ASSERT_TRUE(staying.totalFloorsReached >= staying.runsCompleted);
-    ASSERT_TRUE(advancing.totalFloorsReached >= advancing.runsCompleted);
-    ASSERT_TRUE(staying.deepestFloorReached >=
-                staying.shallowestFloorReached);
-    ASSERT_TRUE(advancing.deepestFloorReached >=
-                advancing.shallowestFloorReached);
+    ASSERT_EQ_INT(4, baseline.runsCompleted);
+    ASSERT_EQ_INT(4, balanced.runsCompleted);
+    ASSERT_TRUE(baseline.totalFloorsReached >= baseline.runsCompleted);
+    ASSERT_TRUE(balanced.totalFloorsReached >= balanced.runsCompleted);
+    ASSERT_TRUE(baseline.deepestFloorReached >=
+                baseline.shallowestFloorReached);
+    ASSERT_TRUE(balanced.deepestFloorReached >=
+                balanced.shallowestFloorReached);
 }
 
 void run_simulation_tests(void) {
