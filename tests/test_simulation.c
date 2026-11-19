@@ -281,7 +281,33 @@ TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds) {
     };
     SimulationBatchStats baseline;
     SimulationBatchStats paid;
+    SimulationBatchStats singleRun;
     BossPrepComparisonContext comparison = {0, 0};
+    BossPrepComparisonContext singleComparison = {0, 0};
+    int index;
+
+    for (index = 0; index < 16; index++) {
+        if (!simulateRoguelikeBatch(
+                &seeds[index], 1, 32, minimum_bet_policy, NULL,
+                stand_policy, NULL, advance_floor_policy, NULL,
+                NULL, NULL, simulationBalancedShopPolicy, NULL,
+                &singleRun)) {
+            printf("\\n    baseline batch failed for seed %u\\n",
+                   seeds[index]);
+            ASSERT_EQ_INT(1, 0);
+        }
+    }
+    for (index = 0; index < 16; index++) {
+        if (!simulateRoguelikeBatch(
+                &seeds[index], 1, 48, minimum_bet_policy, NULL,
+                stand_policy, NULL, advance_floor_policy, NULL,
+                pay_for_boss_rule_when_affordable, &singleComparison,
+                simulationBalancedShopPolicy, NULL, &singleRun)) {
+            printf("\\n    paid batch failed for seed %u\\n",
+                   seeds[index]);
+            ASSERT_EQ_INT(1, 0);
+        }
+    }
 
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
         seeds, 16, 32, minimum_bet_policy, NULL,
