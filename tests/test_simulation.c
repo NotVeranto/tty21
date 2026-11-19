@@ -76,7 +76,7 @@ TEST(policy_runner_completes_and_repeats_seeded_round) {
     ASSERT_EQ_INT(firstStyle, secondStyle);
 }
 
-TEST(full_hand_can_stand_through_low-total_restrictions) {
+TEST(full_hand_can_stand_through_low_total_restrictions) {
     Game game;
     ActionId actions[ACTION_COUNT + 1];
     int actionCount;
