@@ -1,6 +1,7 @@
 #include "test.h"
 #include "game.h"
 #include "round_simulation.h"
+#include "round_economy.h"
 #include "rng.h"
 
 static ActionId stand_policy(const Game *game,
