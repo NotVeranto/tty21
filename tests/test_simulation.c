@@ -4,6 +4,15 @@
 #include "round_economy.h"
 #include "rng.h"
 
+static ActionId first_legal_policy(const Game *game,
+                                  const ActionId *actions,
+                                  int actionCount,
+                                  void *context) {
+    (void)game;
+    (void)context;
+    return actionCount > 0 ? actions[0] : ACTION_COUNT;
+}
+
 static ActionId stand_policy(const Game *game,
                              const ActionId *actions,
                              int actionCount,
@@ -270,11 +279,11 @@ TEST(roguelike_batch_compares_policies_on_the_same_seed_set) {
 
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
         seeds, 4, 10, minimum_bet_policy, NULL,
-        stand_policy, NULL, stay_on_floor_policy, NULL,
+        first_legal_policy, NULL, stay_on_floor_policy, NULL,
         NULL, NULL, &staying));
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
         seeds, 4, 10, minimum_bet_policy, NULL,
-        stand_policy, NULL, advance_floor_policy, NULL,
+        first_legal_policy, NULL, advance_floor_policy, NULL,
         NULL, NULL, &advancing));
 
     ASSERT_EQ_INT(4, staying.runsCompleted);
