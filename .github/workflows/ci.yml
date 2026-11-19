@@ -19,6 +19,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y gcc clang make
       - name: Build
         run: make clean && make CC=${{ matrix.compiler }}
+      - name: Build simulation report
+        run: make CC=${{ matrix.compiler }} tools/simulation_report
       - name: Unit tests
         run: make CC=${{ matrix.compiler }} test-unit
       - name: Core tests
