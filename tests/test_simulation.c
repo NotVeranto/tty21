@@ -238,7 +238,7 @@ TEST(roguelike_runner_uses_boss_preparation_policy) {
     for (seed = 1; seed <= 64 && !exercised; seed++) {
         Game game;
         SimulationRunStats stats;
-        BossPrepComparisonContext comparison = {0, 0};
+        int prepCalls = 0;
 
         rngInit(seed, 1);
         initGame(&game, MODE_ROGUELIKE);
@@ -281,7 +281,7 @@ TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds) {
     };
     SimulationBatchStats baseline;
     SimulationBatchStats paid;
-    int prepCalls = 0;
+    BossPrepComparisonContext comparison = {0, 0};
 
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
         seeds, 16, 48, minimum_bet_policy, NULL,
