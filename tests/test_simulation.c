@@ -372,6 +372,13 @@ TEST(roguelike_batch_aggregates_reproducible_seeded_runs) {
     ASSERT_EQ_INT(first.totalPushes, second.totalPushes);
     ASSERT_EQ_INT(first.totalFinalChips, second.totalFinalChips);
     ASSERT_EQ_INT(first.totalPeakChips, second.totalPeakChips);
+    ASSERT_EQ_INT(first.minFinalChips, second.minFinalChips);
+    ASSERT_EQ_INT(first.maxFinalChips, second.maxFinalChips);
+    ASSERT_EQ_INT(first.profitableRuns, second.profitableRuns);
+    ASSERT_EQ_INT(first.bankruptRuns, second.bankruptRuns);
+    ASSERT_TRUE(first.minFinalChips <= first.maxFinalChips);
+    ASSERT_TRUE(first.profitableRuns >= 0 && first.profitableRuns <= 4);
+    ASSERT_TRUE(first.bankruptRuns >= 0 && first.bankruptRuns <= 4);
     ASSERT_EQ_INT(first.totalFloorsReached, second.totalFloorsReached);
     ASSERT_EQ_INT(first.totalBossesDefeated, second.totalBossesDefeated);
     ASSERT_EQ_INT(first.totalMarksEarned, second.totalMarksEarned);
