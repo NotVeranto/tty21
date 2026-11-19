@@ -30,6 +30,10 @@ static ActionId progressing_policy(const Game *game,
     for (index = 0; index < actionCount; index++) {
         if (standBlocked && actions[index] == ACTION_HIT) return ACTION_HIT;
         if (!standBlocked && actions[index] == ACTION_STAND) return ACTION_STAND;
+        if (standBlocked && actions[index] == ACTION_STAND &&
+            calculatePlayerHandValue(game) < 15 &&
+            game->player.hands[game->player.activeHand].count >=
+                MAX_HAND_SIZE) return ACTION_STAND;
     }
     return ACTION_COUNT;
 }
