@@ -183,7 +183,7 @@ TEST(roguelike_runner_advances_floors_and_tracks_progression) {
     first.saveEnabled = 0;
     ASSERT_EQ_INT(1, simulateRoguelikeRun(
         &first, 8, minimum_bet_policy, NULL,
-        stand_policy, NULL, advance_floor_policy, NULL, &firstStats));
+        stand_policy, NULL, advance_floor_policy, NULL, NULL, NULL, &firstStats));
 
     rngInit(441122, 1);
     initGame(&second, MODE_ROGUELIKE);
@@ -191,7 +191,7 @@ TEST(roguelike_runner_advances_floors_and_tracks_progression) {
     second.saveEnabled = 0;
     ASSERT_EQ_INT(1, simulateRoguelikeRun(
         &second, 8, minimum_bet_policy, NULL,
-        stand_policy, NULL, advance_floor_policy, NULL, &secondStats));
+        stand_policy, NULL, advance_floor_policy, NULL, NULL, NULL, &secondStats));
 
     ASSERT_TRUE(firstStats.rounds > 0);
     ASSERT_TRUE(firstStats.rounds <= 8);
