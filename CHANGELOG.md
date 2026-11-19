@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keep player-action dispatch free of table-rendering calls; the interactive loop redraws after dispatch, while non-interactive drivers can reuse the same state transitions.
 - Expose deterministic round startup, policy-driven headless round and Classic-session runners, and a roguelike runner with floor and shop policies plus progression statistics.
 - Add a built-in balanced shop strategy that prioritizes durable perks and funds an offered upgrade through surplus-chip conversion when appropriate.
+- Add a seeded roguelike batch runner that aggregates run outcomes and progression metrics across a reusable seed list for strategy comparisons.
 
 ### Fixed
 
