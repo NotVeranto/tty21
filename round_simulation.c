@@ -379,6 +379,18 @@ int simulateRoguelikeBatch(const unsigned int *seeds,
         result.totalStartingChips += runStats.startingChips;
         result.totalFinalChips += runStats.finalChips;
         result.totalPeakChips += runStats.peakChips;
+        if (index == 0 || runStats.finalChips < result.minFinalChips) {
+            result.minFinalChips = runStats.finalChips;
+        }
+        if (index == 0 || runStats.finalChips > result.maxFinalChips) {
+            result.maxFinalChips = runStats.finalChips;
+        }
+        if (runStats.finalChips > runStats.startingChips) {
+            result.profitableRuns++;
+        }
+        if (runStats.finalChips <= 0) {
+            result.bankruptRuns++;
+        }
         result.totalFloorsReached += runStats.floorsReached;
         result.totalBossesDefeated += runStats.bossesDefeated;
         result.totalMarksEarned += runStats.marksEarned;
