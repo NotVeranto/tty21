@@ -34,6 +34,22 @@ typedef struct {
     int marksEarned;
 } SimulationRunStats;
 
+typedef struct {
+    int runsCompleted;
+    int totalRounds;
+    int totalWins;
+    int totalLosses;
+    int totalPushes;
+    int totalStartingChips;
+    int totalFinalChips;
+    int totalPeakChips;
+    int totalFloorsReached;
+    int totalBossesDefeated;
+    int totalMarksEarned;
+    int shallowestFloorReached;
+    int deepestFloorReached;
+} SimulationBatchStats;
+
 int simulateRound(Game *game,
                   int betAmount,
                   int insuranceDecision,
@@ -63,5 +79,21 @@ int simulateRoguelikeRun(Game *game,
                          SimulationShopPolicy shopPolicy,
                          void *shopContext,
                          SimulationRunStats *stats);
+
+/* Runs one fresh roguelike game per seed and aggregates the outcomes.
+ * The same seed array can be passed to multiple policies for paired
+ * strategy comparisons. */
+int simulateRoguelikeBatch(const unsigned int *seeds,
+                           int seedCount,
+                           int maxRoundsPerRun,
+                           SimulationBetPolicy betPolicy,
+                           void *betContext,
+                           RoundPolicy roundPolicy,
+                           void *roundContext,
+                           SimulationFloorPolicy floorPolicy,
+                           void *floorContext,
+                           SimulationShopPolicy shopPolicy,
+                           void *shopContext,
+                           SimulationBatchStats *stats);
 
 #endif
