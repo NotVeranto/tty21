@@ -470,6 +470,7 @@ TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set) {
 
 void run_simulation_tests(void) {
     RUN_TEST(policy_runner_completes_and_repeats_seeded_round);
+    RUN_TEST(full_hand_can_stand_through_low_total_restrictions);
     RUN_TEST(policy_runner_rejects_unavailable_policy_action);
     RUN_TEST(classic_session_collects_reproducible_run_statistics);
     RUN_TEST(roguelike_runner_advances_floors_and_tracks_progression);
