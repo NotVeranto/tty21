@@ -9,6 +9,7 @@ typedef ActionId (*RoundPolicy)(const Game *game,
                                 int actionCount,
                                 void *context);
 typedef int (*SimulationBetPolicy)(const Game *game, void *context);
+typedef char (*SimulationFloorPolicy)(const Game *game, void *context);
 
 typedef struct {
     int rounds;
@@ -18,9 +19,11 @@ typedef struct {
     int startingChips;
     int finalChips;
     int peakChips;
+    int floorsReached;
+    int bossesDefeated;
+    int marksEarned;
 } SimulationRunStats;
 
-/* Runs and settles one round; returns 1 on completion, 0 on invalid/incomplete. */
 int simulateRound(Game *game,
                   int betAmount,
                   int insuranceDecision,
@@ -29,8 +32,6 @@ int simulateRound(Game *game,
                   void *policyContext,
                   MessageStyle *resultStyle);
 
-/* Runs a Classic session until the bet policy stops, bankroll is insufficient,
- * or maxRounds is reached. Returns 1 for a completed session. */
 int simulateClassicRun(Game *game,
                        int maxRounds,
                        SimulationBetPolicy betPolicy,
@@ -38,5 +39,17 @@ int simulateClassicRun(Game *game,
                        RoundPolicy roundPolicy,
                        void *roundContext,
                        SimulationRunStats *stats);
+
+/* Roguelike floor policy returns 'c' to continue, 'a' to advance, or 'q'
+ * to stop. Shop decisions are deliberately left to a later policy layer. */
+int simulateRoguelikeRun(Game *game,
+                         int maxRounds,
+                         SimulationBetPolicy betPolicy,
+                         void *betContext,
+                         RoundPolicy roundPolicy,
+                         void *roundContext,
+                         SimulationFloorPolicy floorPolicy,
+                         void *floorContext,
+                         SimulationRunStats *stats);
 
 #endif
