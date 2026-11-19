@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Compare baseline and mark-funded boss-preparation policies over the same deterministic seed set in the roguelike batch regression suite.
+
+### Added
+
 - Expose the production player-action availability and dispatch functions for deterministic policy-driven tests without synthesizing terminal key input.
 
 ### Fixed
