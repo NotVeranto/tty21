@@ -389,31 +389,48 @@ TEST(roguelike_batch_aggregates_reproducible_seeded_runs) {
 }
 
 TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set) {
-    static const unsigned int seeds[] = {17, 29, 41, 53};
+    static const unsigned int seeds[] = {
+        3,  7,  11, 19, 23, 31, 37, 43,
+        47, 59, 61, 67, 71, 79, 83, 89
+    };
     SimulationBatchStats baseline;
     SimulationBatchStats balanced;
 
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
-        seeds, 4, 8, minimum_bet_policy, NULL,
-        stand_policy, NULL, advance_floor_policy, NULL,
+        seeds, 16, 32, minimum_bet_policy, NULL,
+        progressing_policy, NULL, advance_floor_policy, NULL,
         NULL, NULL, NULL, NULL, &baseline));
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
-        seeds, 4, 8, minimum_bet_policy, NULL,
-        stand_policy, NULL, advance_floor_policy, NULL,
+        seeds, 16, 32, minimum_bet_policy, NULL,
+        progressing_policy, NULL, advance_floor_policy, NULL,
         NULL, NULL, simulationBalancedShopPolicy, NULL, &balanced));
 
-    ASSERT_EQ_INT(4, baseline.runsCompleted);
-    ASSERT_EQ_INT(4, balanced.runsCompleted);
-    ASSERT_EQ_INT(4, baseline.stopReasonCounts[SIMULATION_STOP_MAX_ROUNDS] +
+    ASSERT_EQ_INT(16, baseline.runsCompleted);
+    ASSERT_EQ_INT(16, balanced.runsCompleted);
+    ASSERT_EQ_INT(16, baseline.stopReasonCounts[SIMULATION_STOP_MAX_ROUNDS] +
                   baseline.stopReasonCounts[SIMULATION_STOP_INSUFFICIENT_BANKROLL] +
                   baseline.stopReasonCounts[SIMULATION_STOP_POLICY] +
                   baseline.stopReasonCounts[SIMULATION_STOP_GAME_QUIT]);
-    ASSERT_EQ_INT(4, balanced.stopReasonCounts[SIMULATION_STOP_MAX_ROUNDS] +
+    ASSERT_EQ_INT(16, balanced.stopReasonCounts[SIMULATION_STOP_MAX_ROUNDS] +
                   balanced.stopReasonCounts[SIMULATION_STOP_INSUFFICIENT_BANKROLL] +
                   balanced.stopReasonCounts[SIMULATION_STOP_POLICY] +
                   balanced.stopReasonCounts[SIMULATION_STOP_GAME_QUIT]);
     ASSERT_TRUE(baseline.totalFloorsReached >= baseline.runsCompleted);
     ASSERT_TRUE(balanced.totalFloorsReached >= balanced.runsCompleted);
+    ASSERT_TRUE(baseline.minFinalChips <= baseline.maxFinalChips);
+    ASSERT_TRUE(balanced.minFinalChips <= balanced.maxFinalChips);
+    ASSERT_TRUE(baseline.profitableRuns >= 0 &&
+                baseline.profitableRuns <= baseline.runsCompleted);
+    ASSERT_TRUE(balanced.profitableRuns >= 0 &&
+                balanced.profitableRuns <= balanced.runsCompleted);
+    ASSERT_TRUE(baseline.bankruptRuns >= 0 &&
+                baseline.bankruptRuns <= baseline.runsCompleted);
+    ASSERT_TRUE(balanced.bankruptRuns >= 0 &&
+                balanced.bankruptRuns <= balanced.runsCompleted);
+    ASSERT_TRUE(baseline.profitableRuns + baseline.bankruptRuns <=
+                baseline.runsCompleted);
+    ASSERT_TRUE(balanced.profitableRuns + balanced.bankruptRuns <=
+                balanced.runsCompleted);
     ASSERT_TRUE(baseline.deepestFloorReached >=
                 baseline.shallowestFloorReached);
     ASSERT_TRUE(balanced.deepestFloorReached >=
