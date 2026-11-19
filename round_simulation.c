@@ -5,6 +5,8 @@
 #include "round_dealer.h"
 #include "round_settlement.h"
 
+#include <stddef.h>
+
 #define SIMULATION_ACTION_LIMIT 256
 
 int simulateRound(Game *game,
