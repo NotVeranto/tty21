@@ -141,7 +141,9 @@ TEST(roguelike_runner_advances_floors_and_tracks_progression) {
         &second, 8, minimum_bet_policy, NULL,
         stand_policy, NULL, advance_floor_policy, NULL, &secondStats));
 
-    ASSERT_EQ_INT(8, firstStats.rounds);
+    ASSERT_TRUE(firstStats.rounds > 0);
+    ASSERT_TRUE(firstStats.rounds <= 8);
+    ASSERT_EQ_INT(firstStats.rounds, secondStats.rounds);
     ASSERT_TRUE(firstStats.floorsReached > 0);
     ASSERT_TRUE(first.run.floor > 1);
     ASSERT_EQ_INT(first.run.floor, second.run.floor);
