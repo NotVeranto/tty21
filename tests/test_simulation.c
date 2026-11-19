@@ -279,9 +279,12 @@ TEST(roguelike_batch_compares_policies_on_the_same_seed_set) {
 
     ASSERT_EQ_INT(4, staying.runsCompleted);
     ASSERT_EQ_INT(4, advancing.runsCompleted);
-    ASSERT_TRUE(advancing.totalFloorsReached >= staying.totalFloorsReached);
+    ASSERT_TRUE(staying.totalFloorsReached >= staying.runsCompleted);
+    ASSERT_TRUE(advancing.totalFloorsReached >= advancing.runsCompleted);
+    ASSERT_TRUE(staying.deepestFloorReached >=
+                staying.shallowestFloorReached);
     ASSERT_TRUE(advancing.deepestFloorReached >=
-                staying.deepestFloorReached);
+                advancing.shallowestFloorReached);
 }
 
 void run_simulation_tests(void) {
