@@ -32,7 +32,7 @@ static int run_seeded_stand_round(unsigned int seed,
     }
     if (game.roundNumber != 1 || game.roundInProgress ||
         game.state != STATE_BET || game.player.chips < 0 ||
-        game.lastPayoutBreakdown[0] == '\\0') {
+        game.lastPayoutBreakdown[0] == '\0') {
         return 0;
     }
     *finalChips = game.player.chips;
