@@ -284,7 +284,7 @@ TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds) {
     BossPrepComparisonContext comparison = {0, 0};
 
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
-        seeds, 16, 48, minimum_bet_policy, NULL,
+        seeds, 16, 32, minimum_bet_policy, NULL,
         stand_policy, NULL, advance_floor_policy, NULL,
         NULL, NULL, simulationBalancedShopPolicy, NULL, &baseline));
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
