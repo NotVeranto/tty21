@@ -105,8 +105,6 @@ static void splitHand(Game *game) {
                  game->player.handCount);
         logPush(game, msg, MSG_ACTION);
     }
-
-    roundPresentTable(game, game->state == STATE_PLAYER_TURN);
 }
 
 int getPlayerActions(const Game *game, ActionId *actions) {
@@ -170,7 +168,6 @@ void applyPlayerAction(Game *game, ActionId action) {
     if (action == ACTION_HIT) {
         if (game->player.hands[game->player.activeHand].count >= MAX_HAND_SIZE) {
             logPush(game, "Hand is full.", MSG_DEFAULT);
-            roundPresentTable(game, game->state == STATE_PLAYER_TURN);
             return;
         }
         if (game->run.floor >= 10 && game->run.dealerId == DEALER_DEVIL) {
@@ -200,7 +197,6 @@ void applyPlayerAction(Game *game, ActionId action) {
                 logPush(game,
                          "Second Wind! Hand reset to 11.",
                          MSG_WIN);
-                roundPresentTable(game, 1);
             } else {
                 advanceActiveHand(game);
             }
@@ -214,8 +210,6 @@ void applyPlayerAction(Game *game, ActionId action) {
                      value);
             logPush(game, msg, MSG_ACTION);
         }
-
-        roundPresentTable(game, game->state == STATE_PLAYER_TURN);
     } else if (action == ACTION_STAND) {
         if (twistActive(game, TWIST_STICKY_HANDS) &&
             calculatePlayerHandValue(game) < 15) {
@@ -275,8 +269,6 @@ void applyPlayerAction(Game *game, ActionId action) {
                 logPush(game, msg, MSG_ACTION);
                 advanceActiveHand(game);
             }
-
-            roundPresentTable(game, game->state == STATE_PLAYER_TURN);
         }
     } else if (action == ACTION_DOUBLE) {
         if (!canDouble(game)) {
@@ -302,7 +294,6 @@ void applyPlayerAction(Game *game, ActionId action) {
             }
 
             advanceActiveHand(game);
-            roundPresentTable(game, game->state == STATE_PLAYER_TURN);
         }
     } else if (action == ACTION_SPLIT) {
         if (!canSplit(game)) {
@@ -344,7 +335,6 @@ void applyPlayerAction(Game *game, ActionId action) {
             logPush(game,
                     "Peek: hole card revealed.",
                     MSG_ACTION);
-            roundPresentTable(game, 1);
         }
     } else if (action == ACTION_SURRENDER) {
         int bet = game->player.bets[game->player.activeHand];
