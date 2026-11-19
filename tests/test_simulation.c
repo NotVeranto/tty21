@@ -1,6 +1,7 @@
 #include "test.h"
 #include "game.h"
 #include "round_simulation.h"
+#include "round_actions.h"
 #include "round_economy.h"
 #include "round_cards.h"
 #include "round_rules.h"
@@ -73,6 +74,36 @@ TEST(policy_runner_completes_and_repeats_seeded_round) {
                                        &secondChips, &secondStyle));
     ASSERT_EQ_INT(firstChips, secondChips);
     ASSERT_EQ_INT(firstStyle, secondStyle);
+}
+
+TEST(full_hand_can_stand_through_low-total_restrictions) {
+    Game game;
+    ActionId actions[ACTION_COUNT + 1];
+    int actionCount;
+    int index;
+    int standAvailable = 0;
+
+    rngInit(92, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.state = STATE_PLAYER_TURN;
+    game.run.twistId = TWIST_STICKY_HANDS;
+    game.player.handCount = 1;
+    game.player.activeHand = 0;
+    game.player.hands[0].count = MAX_HAND_SIZE;
+    for (index = 0; index < MAX_HAND_SIZE; index++) {
+        game.player.hands[0].cards[index].rank = TWO;
+        game.player.hands[0].cards[index].cursed = CURSED_NONE;
+    }
+
+    actionCount = getPlayerActions(&game, actions);
+    for (index = 0; index < actionCount; index++) {
+        if (actions[index] == ACTION_STAND) standAvailable = 1;
+        ASSERT_TRUE(actions[index] != ACTION_HIT);
+    }
+    ASSERT_EQ_INT(1, standAvailable);
+
+    applyPlayerAction(&game, ACTION_STAND);
+    ASSERT_EQ_INT(STATE_DEALER_TURN, game.state);
 }
 
 TEST(policy_runner_rejects_unavailable_policy_action) {
