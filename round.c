@@ -137,28 +137,30 @@ static void askEvenMoney(Game *game) {
     game->state = STATE_RESULT;
 }
 
-void startRound(Game *game) {
+int startRoundWithBet(Game *game, int betAmount,
+                      int insuranceDecision, int evenMoneyDecision) {
     int playerValue;
-    int betAmount;
     int upcardRank;
     int upcardIsAce;
     int upcardIsTen;
     int dealerBJ;
     int playerBJ;
 
-    game->peekActive = 0;
+    int minimumBet;
+    int maximumBet;
+    int dealerDivisor;
 
-    roundPresentTable(game, 0);
-
-    betAmount = readBet(game);
-
-    if (betAmount < 0 || game->state == STATE_QUIT) {
-        if (game->state != STATE_QUIT) {
-            game->playerQuit = 1;
-        }
-        game->state = STATE_QUIT;
-        return;
+    if (game == NULL || game->state != STATE_BET) return 0;
+    minimumBet = getMinBet(game, game->run.floor, game->mode);
+    maximumBet = getMaxBet(game);
+    dealerDivisor = dealerHandsCount(game->run.dealerId);
+    if (maximumBet < minimumBet || betAmount < minimumBet ||
+        betAmount > maximumBet || betAmount > game->player.chips ||
+        (dealerDivisor > 1 && betAmount % dealerDivisor != 0)) {
+        return 0;
     }
+
+    game->peekActive = 0;
 
     {
         int handIndex;
@@ -317,12 +319,33 @@ void startRound(Game *game) {
         !twistActive(game, TWIST_ACES_LOW) &&
         !effectiveDealerAcesCountAsOne(game, game->run.dealerId)) {
         if (playerBJ && dealerHandsCount(game->run.dealerId) == 1) {
-            askEvenMoney(game);
+            if (evenMoneyDecision < 0) {
+                askEvenMoney(game);
+            } else if (evenMoneyDecision) {
+                int evenMoneyBet = game->player.bets[0];
+                creditChips(game, evenMoneyBet);
+                game->player.insuranceBet = 0;
+                game->player.evenMoneyTaken = 1;
+                game->state = STATE_RESULT;
+            }
             if (game->state == STATE_RESULT) {
-                return;
+                return 1;
             }
         } else {
-            askInsurance(game);
+            if (insuranceDecision < 0) {
+                askInsurance(game);
+            } else if (insuranceDecision) {
+                int cost = game->player.bets[0] / 2;
+                if (cost < 1) cost = 1;
+                if (game->player.chips >= cost) {
+                    char message[80];
+                    game->player.chips -= cost;
+                    game->player.insuranceBet = cost;
+                    snprintf(message, sizeof(message),
+                             "Insurance placed: %d chips.", cost);
+                    logPush(game, message, MSG_INFO);
+                }
+            }
         }
     }
 
@@ -372,12 +395,26 @@ void startRound(Game *game) {
 
             logPush(game, "Devil forces a double down.", MSG_DEALER);
             game->state = STATE_DEALER_TURN;
-            return;
+            return 1;
         }
     }
 
-    flushInput();
     game->state = STATE_PLAYER_TURN;
+    return 1;
 }
 
 
+
+void startRound(Game *game) {
+    int betAmount;
+
+    roundPresentTable(game, 0);
+    betAmount = readBet(game);
+    if (betAmount < 0 || game->state == STATE_QUIT) {
+        if (game->state != STATE_QUIT) game->playerQuit = 1;
+        game->state = STATE_QUIT;
+        return;
+    }
+    (void)startRoundWithBet(game, betAmount, -1, -1);
+    if (game->state == STATE_PLAYER_TURN) flushInput();
+}
