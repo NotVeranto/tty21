@@ -98,6 +98,7 @@ TEST(classic_session_collects_reproducible_run_statistics) {
                                         stand_policy, NULL, &secondStats));
 
     ASSERT_EQ_INT(25, firstStats.rounds);
+    ASSERT_EQ_INT(SIMULATION_STOP_MAX_ROUNDS, firstStats.stopReason);
     ASSERT_EQ_INT(firstStats.rounds, firstStats.wins +
                   firstStats.losses + firstStats.pushes);
     ASSERT_EQ_INT(firstStats.startingChips, 100);
@@ -238,6 +239,18 @@ TEST(roguelike_batch_aggregates_reproducible_seeded_runs) {
 
     ASSERT_EQ_INT(4, first.runsCompleted);
     ASSERT_EQ_INT(4, second.runsCompleted);
+    ASSERT_EQ_INT(4, first.stopReasonCounts[SIMULATION_STOP_MAX_ROUNDS] +
+                  first.stopReasonCounts[SIMULATION_STOP_INSUFFICIENT_BANKROLL] +
+                  first.stopReasonCounts[SIMULATION_STOP_POLICY] +
+                  first.stopReasonCounts[SIMULATION_STOP_GAME_QUIT]);
+    ASSERT_EQ_INT(first.stopReasonCounts[SIMULATION_STOP_MAX_ROUNDS],
+                  second.stopReasonCounts[SIMULATION_STOP_MAX_ROUNDS]);
+    ASSERT_EQ_INT(first.stopReasonCounts[SIMULATION_STOP_INSUFFICIENT_BANKROLL],
+                  second.stopReasonCounts[SIMULATION_STOP_INSUFFICIENT_BANKROLL]);
+    ASSERT_EQ_INT(first.stopReasonCounts[SIMULATION_STOP_POLICY],
+                  second.stopReasonCounts[SIMULATION_STOP_POLICY]);
+    ASSERT_EQ_INT(first.stopReasonCounts[SIMULATION_STOP_GAME_QUIT],
+                  second.stopReasonCounts[SIMULATION_STOP_GAME_QUIT]);
     ASSERT_EQ_INT(400, first.totalStartingChips);
     ASSERT_TRUE(first.totalRounds > 0);
     ASSERT_EQ_INT(first.totalRounds,
@@ -273,6 +286,14 @@ TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set) {
 
     ASSERT_EQ_INT(4, baseline.runsCompleted);
     ASSERT_EQ_INT(4, balanced.runsCompleted);
+    ASSERT_EQ_INT(4, baseline.stopReasonCounts[SIMULATION_STOP_MAX_ROUNDS] +
+                  baseline.stopReasonCounts[SIMULATION_STOP_INSUFFICIENT_BANKROLL] +
+                  baseline.stopReasonCounts[SIMULATION_STOP_POLICY] +
+                  baseline.stopReasonCounts[SIMULATION_STOP_GAME_QUIT]);
+    ASSERT_EQ_INT(4, balanced.stopReasonCounts[SIMULATION_STOP_MAX_ROUNDS] +
+                  balanced.stopReasonCounts[SIMULATION_STOP_INSUFFICIENT_BANKROLL] +
+                  balanced.stopReasonCounts[SIMULATION_STOP_POLICY] +
+                  balanced.stopReasonCounts[SIMULATION_STOP_GAME_QUIT]);
     ASSERT_TRUE(baseline.totalFloorsReached >= baseline.runsCompleted);
     ASSERT_TRUE(balanced.totalFloorsReached >= balanced.runsCompleted);
     ASSERT_TRUE(baseline.deepestFloorReached >=
