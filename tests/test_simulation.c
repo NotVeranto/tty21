@@ -260,6 +260,50 @@ TEST(roguelike_runner_uses_boss_preparation_policy) {
     ASSERT_EQ_INT(1, exercised);
 }
 
+static int pay_for_boss_rule_when_affordable(const Game *game, void *context) {
+    int *attempts = (int *)context;
+    (*attempts)++;
+    return game->run.marks >= game->bossRulePaid;
+}
+
+TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds) {
+    static const unsigned int seeds[] = {
+        3, 7, 11, 19, 23, 31, 37, 43,
+        47, 59, 61, 67, 71, 79, 83, 89
+    };
+    SimulationBatchStats baseline;
+    SimulationBatchStats paid;
+    int prepCalls = 0;
+
+    ASSERT_EQ_INT(1, simulateRoguelikeBatch(
+        seeds, 16, 48, minimum_bet_policy, NULL,
+        stand_policy, NULL, advance_floor_policy, NULL,
+        NULL, NULL, simulationBalancedShopPolicy, NULL, &baseline));
+    ASSERT_EQ_INT(1, simulateRoguelikeBatch(
+        seeds, 16, 48, minimum_bet_policy, NULL,
+        stand_policy, NULL, advance_floor_policy, NULL,
+        pay_for_boss_rule_when_affordable, &prepCalls,
+        simulationBalancedShopPolicy, NULL, &paid));
+
+    ASSERT_EQ_INT(16, baseline.runsCompleted);
+    ASSERT_EQ_INT(16, paid.runsCompleted);
+    ASSERT_TRUE(prepCalls > 0);
+    ASSERT_TRUE(baseline.totalFloorsReached >= 16);
+    ASSERT_TRUE(paid.totalFloorsReached >= 16);
+    ASSERT_TRUE(baseline.totalBossesDefeated >= 0);
+    ASSERT_TRUE(paid.totalBossesDefeated >= 0);
+    ASSERT_TRUE(baseline.totalFinalChips >= 0);
+    ASSERT_TRUE(paid.totalFinalChips >= 0);
+    ASSERT_EQ_INT(16, baseline.stopReasonCounts[SIMULATION_STOP_MAX_ROUNDS] +
+                  baseline.stopReasonCounts[SIMULATION_STOP_INSUFFICIENT_BANKROLL] +
+                  baseline.stopReasonCounts[SIMULATION_STOP_POLICY] +
+                  baseline.stopReasonCounts[SIMULATION_STOP_GAME_QUIT]);
+    ASSERT_EQ_INT(16, paid.stopReasonCounts[SIMULATION_STOP_MAX_ROUNDS] +
+                  paid.stopReasonCounts[SIMULATION_STOP_INSUFFICIENT_BANKROLL] +
+                  paid.stopReasonCounts[SIMULATION_STOP_POLICY] +
+                  paid.stopReasonCounts[SIMULATION_STOP_GAME_QUIT]);
+}
+
 TEST(roguelike_batch_aggregates_reproducible_seeded_runs) {
     static const unsigned int seeds[] = {17, 29, 41, 53};
     SimulationBatchStats first;
@@ -347,6 +391,6 @@ void run_simulation_tests(void) {
     RUN_TEST(roguelike_runner_executes_policy_shop_purchase);
     RUN_TEST(roguelike_runner_uses_boss_preparation_policy);
     RUN_TEST(balanced_shop_policy_prioritizes_survival_and_funds_it);
-    RUN_TEST(roguelike_batch_aggregates_reproducible_seeded_runs);
+    RUN_TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds);\n    RUN_TEST(roguelike_batch_aggregates_reproducible_seeded_runs);
     RUN_TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set);
 }
