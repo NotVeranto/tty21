@@ -299,13 +299,17 @@ TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds) {
                 NULL, NULL, simulationBalancedShopPolicy, NULL,
                 &diagnosticStats)) {
             printf("\\n    baseline run failed for seed %u: state=%d "
-                   "floor=%d rounds=%d chips=%d minBet=%d maxBet=%d\\n",
+                   "floor=%d rounds=%d chips=%d minBet=%d maxBet=%d "
+                   "roundInProgress=%d roundNumber=%d nextBet=%d\\n",
                    seeds[index], diagnosticGame.state,
                    diagnosticGame.run.floor, diagnosticStats.rounds,
                    diagnosticGame.player.chips,
                    getMinBet(&diagnosticGame, diagnosticGame.run.floor,
                              diagnosticGame.mode),
-                   getMaxBet(&diagnosticGame));
+                   getMaxBet(&diagnosticGame),
+                   diagnosticGame.roundInProgress,
+                   diagnosticGame.roundNumber,
+                   minimum_bet_policy(&diagnosticGame, NULL));
             ASSERT_EQ_INT(1, 0);
         }
     }
