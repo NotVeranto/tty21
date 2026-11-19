@@ -4,15 +4,6 @@
 #include "round_economy.h"
 #include "rng.h"
 
-static ActionId first_legal_policy(const Game *game,
-                                  const ActionId *actions,
-                                  int actionCount,
-                                  void *context) {
-    (void)game;
-    (void)context;
-    return actionCount > 0 ? actions[0] : ACTION_COUNT;
-}
-
 static ActionId stand_policy(const Game *game,
                              const ActionId *actions,
                              int actionCount,
@@ -191,12 +182,6 @@ TEST(roguelike_runner_executes_policy_shop_purchase) {
     }
     ASSERT_EQ_INT(STATE_QUIT, game.state);
     ASSERT_EQ_INT(1, stats.rounds);
-}
-
-static char stay_on_floor_policy(const Game *game, void *context) {
-    (void)game;
-    (void)context;
-    return 'c';
 }
 
 static char advance_floor_policy(const Game *game, void *context) {
