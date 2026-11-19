@@ -184,6 +184,12 @@ TEST(roguelike_runner_executes_policy_shop_purchase) {
     ASSERT_EQ_INT(1, stats.rounds);
 }
 
+static char stay_on_floor_policy(const Game *game, void *context) {
+    (void)game;
+    (void)context;
+    return 'c';
+}
+
 static char advance_floor_policy(const Game *game, void *context) {
     (void)game;
     (void)context;
@@ -257,6 +263,27 @@ TEST(roguelike_batch_aggregates_reproducible_seeded_runs) {
     ASSERT_TRUE(first.deepestFloorReached >= first.shallowestFloorReached);
 }
 
+TEST(roguelike_batch_compares_policies_on_the_same_seed_set) {
+    static const unsigned int seeds[] = {101, 202, 303, 404};
+    SimulationBatchStats staying;
+    SimulationBatchStats advancing;
+
+    ASSERT_EQ_INT(1, simulateRoguelikeBatch(
+        seeds, 4, 10, minimum_bet_policy, NULL,
+        stand_policy, NULL, stay_on_floor_policy, NULL,
+        NULL, NULL, &staying));
+    ASSERT_EQ_INT(1, simulateRoguelikeBatch(
+        seeds, 4, 10, minimum_bet_policy, NULL,
+        stand_policy, NULL, advance_floor_policy, NULL,
+        NULL, NULL, &advancing));
+
+    ASSERT_EQ_INT(4, staying.runsCompleted);
+    ASSERT_EQ_INT(4, advancing.runsCompleted);
+    ASSERT_TRUE(advancing.totalFloorsReached >= staying.totalFloorsReached);
+    ASSERT_TRUE(advancing.deepestFloorReached >=
+                staying.deepestFloorReached);
+}
+
 void run_simulation_tests(void) {
     RUN_TEST(policy_runner_completes_and_repeats_seeded_round);
     RUN_TEST(policy_runner_rejects_unavailable_policy_action);
@@ -265,4 +292,5 @@ void run_simulation_tests(void) {
     RUN_TEST(roguelike_runner_executes_policy_shop_purchase);
     RUN_TEST(balanced_shop_policy_prioritizes_survival_and_funds_it);
     RUN_TEST(roguelike_batch_aggregates_reproducible_seeded_runs);
+    RUN_TEST(roguelike_batch_compares_policies_on_the_same_seed_set);
 }
