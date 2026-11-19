@@ -53,7 +53,7 @@ test-sanitize:
 	$(MAKE) CFLAGS='$(filter-out -MMD -MP,$(CFLAGS)) -fsanitize=address,undefined -fno-omit-frame-pointer' test-unit test-core
 
 clean:
-	rm -f $(OBJS) $(TARGET) *.d tests/tty21_tests tests/tty21_tests.d tests/tty21_core_tests
+	rm -f $(OBJS) $(TARGET) *.d tests/tty21_tests tests/tty21_tests.d tests/tty21_core_tests $(SIMULATION_REPORT)
 
 install: $(TARGET)
 	install -Dm755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
