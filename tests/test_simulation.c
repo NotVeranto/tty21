@@ -108,6 +108,11 @@ TEST(classic_session_collects_reproducible_run_statistics) {
 }
 
 
+static int minimum_bet_policy(const Game *game, void *context) {
+    (void)context;
+    return getMinBet(game, game->run.floor, game->mode);
+}
+
 static char advance_floor_policy(const Game *game, void *context) {
     (void)game;
     (void)context;
@@ -126,7 +131,7 @@ TEST(roguelike_runner_advances_floors_and_tracks_progression) {
     first.fastMode = 1;
     first.saveEnabled = 0;
     ASSERT_EQ_INT(1, simulateRoguelikeRun(
-        &first, 8, fixed_bet_policy, &bet,
+        &first, 8, minimum_bet_policy, NULL,
         stand_policy, NULL, advance_floor_policy, NULL, &firstStats));
 
     rngInit(441122, 1);
@@ -134,7 +139,7 @@ TEST(roguelike_runner_advances_floors_and_tracks_progression) {
     second.fastMode = 1;
     second.saveEnabled = 0;
     ASSERT_EQ_INT(1, simulateRoguelikeRun(
-        &second, 8, fixed_bet_policy, &bet,
+        &second, 8, minimum_bet_policy, NULL,
         stand_policy, NULL, advance_floor_policy, NULL, &secondStats));
 
     ASSERT_EQ_INT(8, firstStats.rounds);
