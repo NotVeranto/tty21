@@ -297,3 +297,65 @@ int simulateRoguelikeRun(Game *game,
     *stats = result;
     return 1;
 }
+
+int simulateRoguelikeBatch(const unsigned int *seeds,
+                           int seedCount,
+                           int maxRoundsPerRun,
+                           SimulationBetPolicy betPolicy,
+                           void *betContext,
+                           RoundPolicy roundPolicy,
+                           void *roundContext,
+                           SimulationFloorPolicy floorPolicy,
+                           void *floorContext,
+                           SimulationShopPolicy shopPolicy,
+                           void *shopContext,
+                           SimulationBatchStats *stats) {
+    SimulationBatchStats result;
+    SimulationRunStats runStats;
+    Game game;
+    int index;
+
+    if (seeds == NULL || seedCount <= 0 || maxRoundsPerRun <= 0 ||
+        betPolicy == NULL || roundPolicy == NULL || floorPolicy == NULL ||
+        stats == NULL) {
+        return 0;
+    }
+
+    memset(&result, 0, sizeof(result));
+    for (index = 0; index < seedCount; index++) {
+        rngInit(seeds[index], 1);
+        initGame(&game, MODE_ROGUELIKE);
+        game.fastMode = 1;
+        game.saveEnabled = 0;
+
+        if (!simulateRoguelikeRun(
+                &game, maxRoundsPerRun, betPolicy, betContext,
+                roundPolicy, roundContext, floorPolicy, floorContext,
+                shopPolicy, shopContext, &runStats)) {
+            return 0;
+        }
+
+        result.runsCompleted++;
+        result.totalRounds += runStats.rounds;
+        result.totalWins += runStats.wins;
+        result.totalLosses += runStats.losses;
+        result.totalPushes += runStats.pushes;
+        result.totalStartingChips += runStats.startingChips;
+        result.totalFinalChips += runStats.finalChips;
+        result.totalPeakChips += runStats.peakChips;
+        result.totalFloorsReached += runStats.floorsReached;
+        result.totalBossesDefeated += runStats.bossesDefeated;
+        result.totalMarksEarned += runStats.marksEarned;
+
+        if (index == 0 || runStats.floorsReached <
+                          result.shallowestFloorReached) {
+            result.shallowestFloorReached = runStats.floorsReached;
+        }
+        if (runStats.floorsReached > result.deepestFloorReached) {
+            result.deepestFloorReached = runStats.floorsReached;
+        }
+    }
+
+    *stats = result;
+    return 1;
+}
