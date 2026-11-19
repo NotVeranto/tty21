@@ -172,7 +172,7 @@ TEST(roguelike_runner_executes_policy_shop_purchase) {
     ASSERT_EQ_INT(1, simulateRoguelikeRun(
         &game, 1, minimum_bet_policy, NULL,
         stand_policy, NULL, shop_test_floor_policy, &floorCalls,
-        buy_first_affordable_perk, NULL, &stats));
+        NULL, NULL, buy_first_affordable_perk, NULL, &stats));
 
     {
         int ownedAfter = 0;
@@ -202,7 +202,7 @@ TEST(roguelike_runner_advances_floors_and_tracks_progression) {
     first.saveEnabled = 0;
     ASSERT_EQ_INT(1, simulateRoguelikeRun(
         &first, 8, minimum_bet_policy, NULL,
-        stand_policy, NULL, advance_floor_policy, NULL, NULL, NULL, &firstStats));
+        stand_policy, NULL, advance_floor_policy, NULL, NULL, NULL, NULL, NULL, &firstStats));
 
     rngInit(441122, 1);
     initGame(&second, MODE_ROGUELIKE);
@@ -210,7 +210,7 @@ TEST(roguelike_runner_advances_floors_and_tracks_progression) {
     second.saveEnabled = 0;
     ASSERT_EQ_INT(1, simulateRoguelikeRun(
         &second, 8, minimum_bet_policy, NULL,
-        stand_policy, NULL, advance_floor_policy, NULL, NULL, NULL, &secondStats));
+        stand_policy, NULL, advance_floor_policy, NULL, NULL, NULL, NULL, NULL, &secondStats));
 
     ASSERT_TRUE(firstStats.rounds > 0);
     ASSERT_TRUE(firstStats.rounds <= 8);
@@ -231,11 +231,11 @@ TEST(roguelike_batch_aggregates_reproducible_seeded_runs) {
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
         seeds, 4, 8, minimum_bet_policy, NULL,
         stand_policy, NULL, advance_floor_policy, NULL,
-        NULL, NULL, &first));
+        NULL, NULL, NULL, NULL, &first));
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
         seeds, 4, 8, minimum_bet_policy, NULL,
         stand_policy, NULL, advance_floor_policy, NULL,
-        NULL, NULL, &second));
+        NULL, NULL, NULL, NULL, &second));
 
     ASSERT_EQ_INT(4, first.runsCompleted);
     ASSERT_EQ_INT(4, second.runsCompleted);
@@ -278,11 +278,11 @@ TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set) {
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
         seeds, 4, 8, minimum_bet_policy, NULL,
         stand_policy, NULL, advance_floor_policy, NULL,
-        NULL, NULL, &baseline));
+        NULL, NULL, NULL, NULL, &baseline));
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
         seeds, 4, 8, minimum_bet_policy, NULL,
         stand_policy, NULL, advance_floor_policy, NULL,
-        simulationBalancedShopPolicy, NULL, &balanced));
+        NULL, NULL, simulationBalancedShopPolicy, NULL, &balanced));
 
     ASSERT_EQ_INT(4, baseline.runsCompleted);
     ASSERT_EQ_INT(4, balanced.runsCompleted);
