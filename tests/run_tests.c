@@ -11,6 +11,7 @@ void run_dealers_tests(void);
 void run_perks_tests(void);
 void run_run_tests(void);
 void run_settlement_tests(void);
+void run_action_tests(void);
 void run_save_tests(void);
 void run_render_tests(void);
 
@@ -26,6 +27,7 @@ int main(void) {
     run_perks_tests();
     run_run_tests();
     run_settlement_tests();
+    run_action_tests();
     run_save_tests();
     run_render_tests();
 
