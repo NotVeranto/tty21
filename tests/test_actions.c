@@ -71,7 +71,7 @@ TEST(deterministic_round_start_uses_production_deal_logic) {
     initGame(&game, MODE_CLASSIC);
     game.fastMode = 1;
     game.saveEnabled = 0;
-    ASSERT_EQ_INT(0, startRoundWithBet(&game, 1, 0, 0));
+    ASSERT_EQ_INT(0, startRoundWithBet(&game, 0, 0, 0));
     ASSERT_EQ_INT(STATE_BET, game.state);
     ASSERT_EQ_INT(0, game.roundNumber);
 
