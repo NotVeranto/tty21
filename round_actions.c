@@ -211,12 +211,16 @@ void applyPlayerAction(Game *game, ActionId action) {
             logPush(game, msg, MSG_ACTION);
         }
     } else if (action == ACTION_STAND) {
-        if (twistActive(game, TWIST_STICKY_HANDS) &&
+        if (game->player.hands[game->player.activeHand].count <
+                MAX_HAND_SIZE &&
+            twistActive(game, TWIST_STICKY_HANDS) &&
             calculatePlayerHandValue(game) < 15) {
             logPush(game,
                     "Sticky Hands: cannot stand below 15.",
                     MSG_DEFAULT);
-        } else if (game->run.floor >= 10 &&
+        } else if (game->player.hands[game->player.activeHand].count <
+                       MAX_HAND_SIZE &&
+                   game->run.floor >= 10 &&
                    game->run.dealerId == DEALER_BUTCHER &&
                    calculatePlayerHandValue(game) < 15) {
             logPush(game,
