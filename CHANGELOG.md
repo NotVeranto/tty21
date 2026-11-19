@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Reject player-action requests outside the player-turn state or outside the currently available action list, preventing callers from bypassing action eligibility.
 - Keep player-action dispatch free of table-rendering calls; the interactive loop redraws after dispatch, while non-interactive drivers can reuse the same state transitions.
+- Expose deterministic round startup with a validated wager and explicit insurance/even-money decisions, reusing the production deal and round rules without terminal input.
 
 ### Fixed
 
