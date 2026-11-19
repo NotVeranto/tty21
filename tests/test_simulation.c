@@ -125,8 +125,6 @@ TEST(roguelike_runner_advances_floors_and_tracks_progression) {
     Game second;
     SimulationRunStats firstStats;
     SimulationRunStats secondStats;
-    int bet = 2;
-
     rngInit(441122, 1);
     initGame(&first, MODE_ROGUELIKE);
     first.fastMode = 1;
