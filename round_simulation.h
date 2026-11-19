@@ -8,8 +8,19 @@ typedef ActionId (*RoundPolicy)(const Game *game,
                                 const ActionId *actions,
                                 int actionCount,
                                 void *context);
+typedef int (*SimulationBetPolicy)(const Game *game, void *context);
 
-/* Returns 1 when the round is fully settled, 0 for invalid or incomplete runs. */
+typedef struct {
+    int rounds;
+    int wins;
+    int losses;
+    int pushes;
+    int startingChips;
+    int finalChips;
+    int peakChips;
+} SimulationRunStats;
+
+/* Runs and settles one round; returns 1 on completion, 0 on invalid/incomplete. */
 int simulateRound(Game *game,
                   int betAmount,
                   int insuranceDecision,
@@ -17,5 +28,15 @@ int simulateRound(Game *game,
                   RoundPolicy policy,
                   void *policyContext,
                   MessageStyle *resultStyle);
+
+/* Runs a Classic session until the bet policy stops, bankroll is insufficient,
+ * or maxRounds is reached. Returns 1 for a completed session. */
+int simulateClassicRun(Game *game,
+                       int maxRounds,
+                       SimulationBetPolicy betPolicy,
+                       void *betContext,
+                       RoundPolicy roundPolicy,
+                       void *roundContext,
+                       SimulationRunStats *stats);
 
 #endif
