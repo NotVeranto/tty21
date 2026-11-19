@@ -107,8 +107,48 @@ TEST(classic_session_collects_reproducible_run_statistics) {
     ASSERT_EQ_INT(firstStats.pushes, secondStats.pushes);
 }
 
+
+static char advance_floor_policy(const Game *game, void *context) {
+    (void)game;
+    (void)context;
+    return 'a';
+}
+
+TEST(roguelike_runner_advances_floors_and_tracks_progression) {
+    Game first;
+    Game second;
+    SimulationRunStats firstStats;
+    SimulationRunStats secondStats;
+    int bet = 2;
+
+    rngInit(441122, 1);
+    initGame(&first, MODE_ROGUELIKE);
+    first.fastMode = 1;
+    first.saveEnabled = 0;
+    ASSERT_EQ_INT(1, simulateRoguelikeRun(
+        &first, 8, fixed_bet_policy, &bet,
+        stand_policy, NULL, advance_floor_policy, NULL, &firstStats));
+
+    rngInit(441122, 1);
+    initGame(&second, MODE_ROGUELIKE);
+    second.fastMode = 1;
+    second.saveEnabled = 0;
+    ASSERT_EQ_INT(1, simulateRoguelikeRun(
+        &second, 8, fixed_bet_policy, &bet,
+        stand_policy, NULL, advance_floor_policy, NULL, &secondStats));
+
+    ASSERT_EQ_INT(8, firstStats.rounds);
+    ASSERT_TRUE(firstStats.floorsReached > 0);
+    ASSERT_TRUE(first.run.floor > 1);
+    ASSERT_EQ_INT(first.run.floor, second.run.floor);
+    ASSERT_EQ_INT(firstStats.finalChips, secondStats.finalChips);
+    ASSERT_EQ_INT(firstStats.marksEarned, secondStats.marksEarned);
+    ASSERT_EQ_INT(firstStats.floorsReached, secondStats.floorsReached);
+}
+
 void run_simulation_tests(void) {
     RUN_TEST(policy_runner_completes_and_repeats_seeded_round);
     RUN_TEST(policy_runner_rejects_unavailable_policy_action);
     RUN_TEST(classic_session_collects_reproducible_run_statistics);
+    RUN_TEST(roguelike_runner_advances_floors_and_tracks_progression);
 }
