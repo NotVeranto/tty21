@@ -53,6 +53,10 @@ typedef struct {
     int totalStartingChips;
     int totalFinalChips;
     int totalPeakChips;
+    int minFinalChips;
+    int maxFinalChips;
+    int profitableRuns;
+    int bankruptRuns;
     int totalFloorsReached;
     int totalBossesDefeated;
     int totalMarksEarned;
@@ -95,7 +99,8 @@ int simulateRoguelikeRun(Game *game,
 
 /* Runs one fresh roguelike game per seed and aggregates the outcomes.
  * The same seed array can be passed to multiple policies for paired
- * strategy comparisons. */
+ * strategy comparisons. Final-bankroll range and profit/bankruptcy counts
+ * expose outcome spread beyond the batch mean. */
 int simulateRoguelikeBatch(const unsigned int *seeds,
                            int seedCount,
                            int maxRoundsPerRun,
