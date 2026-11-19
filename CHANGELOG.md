@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Compare baseline and mark-funded boss-preparation policies over the same deterministic seed set in the roguelike batch regression suite.
+- Report minimum/maximum final bankroll and profitable/bankrupt run counts in roguelike batch statistics for more informative paired balance comparisons.
 
 ### Added
 
