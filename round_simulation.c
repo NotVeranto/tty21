@@ -150,13 +150,20 @@ int simulateClassicRun(Game *game,
     memset(&result, 0, sizeof(result));
     result.startingChips = game->player.chips;
     result.peakChips = game->player.chips;
+    result.stopReason = SIMULATION_STOP_MAX_ROUNDS;
 
     while (result.rounds < maxRounds && game->state == STATE_BET) {
         minimumBet = getMinBet(game, game->run.floor, game->mode);
-        if (game->player.chips < minimumBet) break;
+        if (game->player.chips < minimumBet) {
+            result.stopReason = SIMULATION_STOP_INSUFFICIENT_BANKROLL;
+            break;
+        }
 
         betAmount = betPolicy(game, betContext);
-        if (betAmount == 0) break;
+        if (betAmount == 0) {
+            result.stopReason = SIMULATION_STOP_POLICY;
+            break;
+        }
         if (betAmount < minimumBet ||
             betAmount > getMaxBet(game) ||
             betAmount > game->player.chips) {
@@ -178,6 +185,9 @@ int simulateClassicRun(Game *game,
         }
     }
 
+    if (game->state == STATE_QUIT) {
+        result.stopReason = SIMULATION_STOP_GAME_QUIT;
+    }
     result.finalChips = game->player.chips;
     *stats = result;
     return 1;
@@ -216,6 +226,7 @@ int simulateRoguelikeRun(Game *game,
     result.floorsReached = game->totalFloorsReached;
     result.bossesDefeated = game->totalBossesDefeated;
     result.marksEarned = game->totalMarksEarned;
+    result.stopReason = SIMULATION_STOP_MAX_ROUNDS;
 
     while (1) {
         if (game->state == STATE_BOSS_PREP) {
@@ -255,21 +266,35 @@ int simulateRoguelikeRun(Game *game,
                 if (floorAction == 'q' || floorAction == 'Q' ||
                     floorAction == 'a' || floorAction == 'A' ||
                     floorAction == 'c' || floorAction == 'C') {
+                    result.stopReason = game->state == STATE_QUIT
+                        ? SIMULATION_STOP_GAME_QUIT : SIMULATION_STOP_POLICY;
                     break;
                 }
                 return 0;
             }
-            if (game->state == STATE_QUIT) break;
+            if (game->state == STATE_QUIT) {
+                result.stopReason = SIMULATION_STOP_GAME_QUIT;
+                break;
+            }
             continue;
         }
 
         if (game->state != STATE_BET) return 0;
-        if (result.rounds >= maxRounds) break;
+        if (result.rounds >= maxRounds) {
+            result.stopReason = SIMULATION_STOP_MAX_ROUNDS;
+            break;
+        }
         minimumBet = getMinBet(game, game->run.floor, game->mode);
-        if (game->player.chips < minimumBet) break;
+        if (game->player.chips < minimumBet) {
+            result.stopReason = SIMULATION_STOP_INSUFFICIENT_BANKROLL;
+            break;
+        }
 
         betAmount = betPolicy(game, betContext);
-        if (betAmount == 0) break;
+        if (betAmount == 0) {
+            result.stopReason = SIMULATION_STOP_POLICY;
+            break;
+        }
         if (betAmount < minimumBet ||
             betAmount > getMaxBet(game) ||
             betAmount > game->player.chips) {
@@ -288,7 +313,10 @@ int simulateRoguelikeRun(Game *game,
         if (game->player.chips > result.peakChips) {
             result.peakChips = game->player.chips;
         }
-        if (game->state == STATE_QUIT) break;
+        if (game->state == STATE_QUIT) {
+            result.stopReason = SIMULATION_STOP_GAME_QUIT;
+            break;
+        }
     }
 
     result.finalChips = game->player.chips;
@@ -347,6 +375,10 @@ int simulateRoguelikeBatch(const unsigned int *seeds,
         result.totalFloorsReached += runStats.floorsReached;
         result.totalBossesDefeated += runStats.bossesDefeated;
         result.totalMarksEarned += runStats.marksEarned;
+        if (runStats.stopReason >= 0 &&
+            runStats.stopReason < SIMULATION_STOP_REASON_COUNT) {
+            result.stopReasonCounts[runStats.stopReason]++;
+        }
 
         if (index == 0 || runStats.floorsReached <
                           result.shallowestFloorReached) {
