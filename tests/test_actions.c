@@ -1,6 +1,8 @@
 #include "test.h"
 #include "game.h"
 #include "round_actions.h"
+#include "round.h"
+#include "rng.h"
 
 #include <string.h>
 
@@ -62,7 +64,29 @@ TEST(actions_reject_unavailable_and_out_of_turn_requests) {
     ASSERT_EQ_INT(100, game.player.chips);
 }
 
+TEST(deterministic_round_start_uses_production_deal_logic) {
+    Game game;
+
+    rngInit(12345);
+    initGame(&game, MODE_CLASSIC);
+    game.fastMode = 1;
+    game.saveEnabled = 0;
+    ASSERT_EQ_INT(0, startRoundWithBet(&game, 1, 0, 0));
+    ASSERT_EQ_INT(STATE_BET, game.state);
+    ASSERT_EQ_INT(0, game.roundNumber);
+
+    ASSERT_EQ_INT(1, startRoundWithBet(&game, 10, 0, 0));
+    ASSERT_EQ_INT(1, game.roundNumber);
+    ASSERT_EQ_INT(10, game.player.bets[0]);
+    ASSERT_EQ_INT(2, game.player.hands[0].count);
+    ASSERT_TRUE(game.roundInProgress);
+    ASSERT_TRUE(game.state == STATE_PLAYER_TURN ||
+                game.state == STATE_DEALER_TURN ||
+                game.state == STATE_RESULT);
+}
+
 void run_action_tests(void) {
     RUN_TEST(actions_expose_and_apply_surrender_without_terminal_input);
     RUN_TEST(actions_reject_unavailable_and_out_of_turn_requests);
+    RUN_TEST(deterministic_round_start_uses_production_deal_logic);
 }
