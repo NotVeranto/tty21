@@ -67,7 +67,7 @@ TEST(actions_reject_unavailable_and_out_of_turn_requests) {
 TEST(deterministic_round_start_uses_production_deal_logic) {
     Game game;
 
-    rngInit(12345);
+    rngInit(12345, 1);
     initGame(&game, MODE_CLASSIC);
     game.fastMode = 1;
     game.saveEnabled = 0;
