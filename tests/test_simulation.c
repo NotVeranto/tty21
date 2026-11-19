@@ -67,7 +67,48 @@ TEST(policy_runner_rejects_unavailable_policy_action) {
     ASSERT_EQ_INT(0, game.roundNumber);
 }
 
+
+static int fixed_bet_policy(const Game *game, void *context) {
+    (void)game;
+    return *(const int *)context;
+}
+
+TEST(classic_session_collects_reproducible_run_statistics) {
+    Game first;
+    Game second;
+    SimulationRunStats firstStats;
+    SimulationRunStats secondStats;
+    int bet = 10;
+
+    rngInit(77123, 1);
+    initGame(&first, MODE_CLASSIC);
+    first.fastMode = 1;
+    first.saveEnabled = 0;
+    ASSERT_EQ_INT(1, simulateClassicRun(&first, 25,
+                                        fixed_bet_policy, &bet,
+                                        stand_policy, NULL, &firstStats));
+
+    rngInit(77123, 1);
+    initGame(&second, MODE_CLASSIC);
+    second.fastMode = 1;
+    second.saveEnabled = 0;
+    ASSERT_EQ_INT(1, simulateClassicRun(&second, 25,
+                                        fixed_bet_policy, &bet,
+                                        stand_policy, NULL, &secondStats));
+
+    ASSERT_EQ_INT(25, firstStats.rounds);
+    ASSERT_EQ_INT(firstStats.rounds, firstStats.wins +
+                  firstStats.losses + firstStats.pushes);
+    ASSERT_EQ_INT(firstStats.startingChips, 100);
+    ASSERT_EQ_INT(firstStats.finalChips, secondStats.finalChips);
+    ASSERT_EQ_INT(firstStats.peakChips, secondStats.peakChips);
+    ASSERT_EQ_INT(firstStats.wins, secondStats.wins);
+    ASSERT_EQ_INT(firstStats.losses, secondStats.losses);
+    ASSERT_EQ_INT(firstStats.pushes, secondStats.pushes);
+}
+
 void run_simulation_tests(void) {
     RUN_TEST(policy_runner_completes_and_repeats_seeded_round);
     RUN_TEST(policy_runner_rejects_unavailable_policy_action);
+    RUN_TEST(classic_session_collects_reproducible_run_statistics);
 }
