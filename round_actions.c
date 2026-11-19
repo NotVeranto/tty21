@@ -109,7 +109,7 @@ static void splitHand(Game *game) {
     roundPresentTable(game, game->state == STATE_PLAYER_TURN);
 }
 
-static int buildPlayerActions(const Game *game, ActionId *actions) {
+int getPlayerActions(const Game *game, ActionId *actions) {
     int actionCount;
 
     actionCount = 0;
@@ -142,7 +142,7 @@ static int buildPlayerActions(const Game *game, ActionId *actions) {
     return actionCount;
 }
 
-static void dispatchPlayerAction(Game *game, ActionId action) {
+void applyPlayerAction(Game *game, ActionId action) {
     int value;
 
     if (action == ACTION_HIT) {
@@ -349,7 +349,7 @@ void playerTurn(Game *game) {
 
     if (inputIsRaw()) {
         while (game->state == STATE_PLAYER_TURN) {
-            actionCount = buildPlayerActions(game, actions);
+            actionCount = getPlayerActions(game, actions);
 
             if (actionIndex >= actionCount) {
                 actionIndex = actionCount - 1;
@@ -384,7 +384,7 @@ void playerTurn(Game *game) {
                                             0,
                                             1);
             } else if (event.type == KEY_ENTER) {
-                dispatchPlayerAction(game, actions[actionIndex]);
+                applyPlayerAction(game, actions[actionIndex]);
             } else if (event.type == KEY_ESC ||
                        event.type == KEY_UP || event.type == KEY_DOWN ||
                        event.type == KEY_NONE) {
@@ -405,7 +405,7 @@ void playerTurn(Game *game) {
 
                     if (matchedIndex >= 0) {
                         actionIndex = matchedIndex;
-                        dispatchPlayerAction(game, action);
+                        applyPlayerAction(game, action);
                     }
                 }
             } else if (event.type == KEY_EOF) {
@@ -415,7 +415,7 @@ void playerTurn(Game *game) {
         }
     } else {
         while (game->state == STATE_PLAYER_TURN) {
-            actionCount = buildPlayerActions(game, actions);
+            actionCount = getPlayerActions(game, actions);
 
             if (actionIndex >= actionCount) {
                 actionIndex = actionCount - 1;
@@ -463,7 +463,7 @@ void playerTurn(Game *game) {
 
                         if (matchedIndex >= 0) {
                             actionIndex = matchedIndex;
-                            dispatchPlayerAction(game, action);
+                            applyPlayerAction(game, action);
                         }
                     } else {
                         roundPresentMessage("Invalid action. Enter h, s, d, p, k, or q.",
