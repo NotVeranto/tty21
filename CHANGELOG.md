@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Expose the production player-action availability and dispatch functions for deterministic policy-driven tests without synthesizing terminal key input.
+
 ### Fixed
 
 - Round odd-chip surrender losses up to the next whole chip instead of allowing a one-chip bet to surrender for free.
