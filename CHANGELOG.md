@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Expose deterministic round startup, policy-driven headless round and Classic-session runners, and a roguelike runner with floor and shop policies plus progression statistics.
 - Add a built-in balanced shop strategy that prioritizes durable perks and funds an offered upgrade through surplus-chip conversion when appropriate.
 - Add a seeded roguelike batch runner that aggregates run outcomes and progression metrics across a reusable seed list for strategy comparisons.
+- Classify simulation run stop reasons and aggregate their counts across batches, distinguishing round limits, insufficient bankroll, policy stops, and explicit game quits.
 
 ### Fixed
 
