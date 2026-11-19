@@ -10,6 +10,7 @@ typedef ActionId (*RoundPolicy)(const Game *game,
                                 void *context);
 typedef int (*SimulationBetPolicy)(const Game *game, void *context);
 typedef char (*SimulationFloorPolicy)(const Game *game, void *context);
+typedef int (*SimulationBossPrepPolicy)(const Game *game, void *context);
 /* Return perkIndex + 1, negative service character, or 0 to close the shop. */
 typedef int (*SimulationShopPolicy)(const Game *game,
                                     int currentMinBet,
@@ -86,6 +87,8 @@ int simulateRoguelikeRun(Game *game,
                          void *roundContext,
                          SimulationFloorPolicy floorPolicy,
                          void *floorContext,
+                         SimulationBossPrepPolicy bossPrepPolicy,
+                         void *bossPrepContext,
                          SimulationShopPolicy shopPolicy,
                          void *shopContext,
                          SimulationRunStats *stats);
@@ -102,6 +105,8 @@ int simulateRoguelikeBatch(const unsigned int *seeds,
                            void *roundContext,
                            SimulationFloorPolicy floorPolicy,
                            void *floorContext,
+                           SimulationBossPrepPolicy bossPrepPolicy,
+                           void *bossPrepContext,
                            SimulationShopPolicy shopPolicy,
                            void *shopContext,
                            SimulationBatchStats *stats);
