@@ -223,6 +223,42 @@ TEST(roguelike_runner_advances_floors_and_tracks_progression) {
     ASSERT_EQ_INT(firstStats.floorsReached, secondStats.floorsReached);
 }
 
+
+static int disable_boss_rule_policy(const Game *game, void *context) {
+    int *calls = (int *)context;
+    (void)game;
+    (*calls)++;
+    return 1;
+}
+
+TEST(roguelike_runner_uses_boss_preparation_policy) {
+    unsigned int seed;
+    int exercised = 0;
+
+    for (seed = 1; seed <= 64 && !exercised; seed++) {
+        Game game;
+        SimulationRunStats stats;
+        int prepCalls = 0;
+
+        rngInit(seed, 1);
+        initGame(&game, MODE_ROGUELIKE);
+        game.fastMode = 1;
+        game.saveEnabled = 0;
+        game.run.marks = 1000;
+
+        ASSERT_EQ_INT(1, simulateRoguelikeRun(
+            &game, 1, minimum_bet_policy, NULL,
+            stand_policy, NULL, advance_floor_policy, NULL,
+            disable_boss_rule_policy, &prepCalls, NULL, NULL, &stats));
+        if (prepCalls > 0) {
+            ASSERT_EQ_INT(1, game.bossRuleDisabled);
+            exercised = 1;
+        }
+    }
+
+    ASSERT_EQ_INT(1, exercised);
+}
+
 TEST(roguelike_batch_aggregates_reproducible_seeded_runs) {
     static const unsigned int seeds[] = {17, 29, 41, 53};
     SimulationBatchStats first;
@@ -308,6 +344,7 @@ void run_simulation_tests(void) {
     RUN_TEST(classic_session_collects_reproducible_run_statistics);
     RUN_TEST(roguelike_runner_advances_floors_and_tracks_progression);
     RUN_TEST(roguelike_runner_executes_policy_shop_purchase);
+    RUN_TEST(roguelike_runner_uses_boss_preparation_policy);
     RUN_TEST(balanced_shop_policy_prioritizes_survival_and_funds_it);
     RUN_TEST(roguelike_batch_aggregates_reproducible_seeded_runs);
     RUN_TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set);
