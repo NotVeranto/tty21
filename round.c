@@ -370,13 +370,13 @@ int startRoundWithBet(Game *game, int betAmount,
             logPush(game, "Dealer peeks. Blackjack.", MSG_LOSS);
         game->state = game->dealer.handCount > 1
                           ? STATE_DEALER_TURN : STATE_RESULT;
-        return;
+        return 1;
     }
 
     if (playerValue >= 21) {
         game->state = game->dealer.handCount > 1
                           ? STATE_DEALER_TURN : STATE_RESULT;
-        return;
+        return 1;
     }
 
     if (dealerForcesDouble(game->run.dealerId) &&
