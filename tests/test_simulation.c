@@ -287,13 +287,25 @@ TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds) {
     int index;
 
     for (index = 0; index < 16; index++) {
-        if (!simulateRoguelikeBatch(
-                &seeds[index], 1, 32, minimum_bet_policy, NULL,
+        Game diagnosticGame;
+        SimulationRunStats diagnosticStats;
+        rngInit(seeds[index], 1);
+        initGame(&diagnosticGame, MODE_ROGUELIKE);
+        diagnosticGame.fastMode = 1;
+        diagnosticGame.saveEnabled = 0;
+        if (!simulateRoguelikeRun(
+                &diagnosticGame, 32, minimum_bet_policy, NULL,
                 stand_policy, NULL, advance_floor_policy, NULL,
                 NULL, NULL, simulationBalancedShopPolicy, NULL,
-                &singleRun)) {
-            printf("\\n    baseline batch failed for seed %u\\n",
-                   seeds[index]);
+                &diagnosticStats)) {
+            printf("\\n    baseline run failed for seed %u: state=%d "
+                   "floor=%d rounds=%d chips=%d minBet=%d maxBet=%d\\n",
+                   seeds[index], diagnosticGame.state,
+                   diagnosticGame.run.floor, diagnosticStats.rounds,
+                   diagnosticGame.player.chips,
+                   getMinBet(&diagnosticGame, diagnosticGame.run.floor,
+                             diagnosticGame.mode),
+                   getMaxBet(&diagnosticGame));
             ASSERT_EQ_INT(1, 0);
         }
     }
