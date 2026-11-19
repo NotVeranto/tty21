@@ -238,7 +238,7 @@ TEST(roguelike_runner_uses_boss_preparation_policy) {
     for (seed = 1; seed <= 64 && !exercised; seed++) {
         Game game;
         SimulationRunStats stats;
-        int prepCalls = 0;
+        BossPrepComparisonContext comparison = {0, 0};
 
         rngInit(seed, 1);
         initGame(&game, MODE_ROGUELIKE);
@@ -260,10 +260,18 @@ TEST(roguelike_runner_uses_boss_preparation_policy) {
     ASSERT_EQ_INT(1, exercised);
 }
 
+typedef struct {
+    int attempts;
+    int purchases;
+} BossPrepComparisonContext;
+
 static int pay_for_boss_rule_when_affordable(const Game *game, void *context) {
-    int *attempts = (int *)context;
-    (*attempts)++;
-    return game->run.marks >= game->bossRulePaid;
+    BossPrepComparisonContext *comparison =
+        (BossPrepComparisonContext *)context;
+    comparison->attempts++;
+    if (game->run.marks < game->bossRulePaid) return 0;
+    comparison->purchases++;
+    return 1;
 }
 
 TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds) {
@@ -282,12 +290,12 @@ TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds) {
     ASSERT_EQ_INT(1, simulateRoguelikeBatch(
         seeds, 16, 48, minimum_bet_policy, NULL,
         stand_policy, NULL, advance_floor_policy, NULL,
-        pay_for_boss_rule_when_affordable, &prepCalls,
+        pay_for_boss_rule_when_affordable, &comparison,
         simulationBalancedShopPolicy, NULL, &paid));
 
     ASSERT_EQ_INT(16, baseline.runsCompleted);
     ASSERT_EQ_INT(16, paid.runsCompleted);
-    ASSERT_TRUE(prepCalls > 0);
+    ASSERT_TRUE(comparison.attempts > 0);\n    ASSERT_TRUE(comparison.purchases > 0);
     ASSERT_TRUE(baseline.totalFloorsReached >= 16);
     ASSERT_TRUE(paid.totalFloorsReached >= 16);
     ASSERT_TRUE(baseline.totalBossesDefeated >= 0);
