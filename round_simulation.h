@@ -10,6 +10,10 @@ typedef ActionId (*RoundPolicy)(const Game *game,
                                 void *context);
 typedef int (*SimulationBetPolicy)(const Game *game, void *context);
 typedef char (*SimulationFloorPolicy)(const Game *game, void *context);
+/* Return perkIndex + 1, negative service character, or 0 to close the shop. */
+typedef int (*SimulationShopPolicy)(const Game *game,
+                                    int currentMinBet,
+                                    void *context);
 
 typedef struct {
     int rounds;
@@ -50,6 +54,8 @@ int simulateRoguelikeRun(Game *game,
                          void *roundContext,
                          SimulationFloorPolicy floorPolicy,
                          void *floorContext,
+                         SimulationShopPolicy shopPolicy,
+                         void *shopContext,
                          SimulationRunStats *stats);
 
 #endif
