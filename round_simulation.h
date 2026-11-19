@@ -15,6 +15,12 @@ typedef int (*SimulationShopPolicy)(const Game *game,
                                     int currentMinBet,
                                     void *context);
 
+/* Default mark-conscious policy: prioritizes durable run upgrades and only
+ * converts surplus chips when that can fund an offered perk. */
+int simulationBalancedShopPolicy(const Game *game,
+                                 int currentMinBet,
+                                 void *context);
+
 typedef struct {
     int rounds;
     int wins;
@@ -45,7 +51,7 @@ int simulateClassicRun(Game *game,
                        SimulationRunStats *stats);
 
 /* Roguelike floor policy returns 'c' to continue, 'a' to advance, or 'q'
- * to stop. Shop decisions are deliberately left to a later policy layer. */
+ * to stop. The optional shop policy returns encoded perk/service decisions. */
 int simulateRoguelikeRun(Game *game,
                          int maxRounds,
                          SimulationBetPolicy betPolicy,
