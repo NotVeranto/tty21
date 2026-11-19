@@ -123,11 +123,15 @@ int simulateRoguelikeRun(Game *game,
                          void *roundContext,
                          SimulationFloorPolicy floorPolicy,
                          void *floorContext,
+                         SimulationShopPolicy shopPolicy,
+                         void *shopContext,
                          SimulationRunStats *stats) {
     SimulationRunStats result;
     MessageStyle resultStyle;
     int betAmount;
     int minimumBet;
+    int shopAction;
+    int shopStep;
     char floorAction;
     FloorMenuActionResult menuResult;
 
@@ -148,6 +152,30 @@ int simulateRoguelikeRun(Game *game,
     while (result.rounds < maxRounds) {
         if (game->state == STATE_BOSS_PREP) {
             completeBossPrep(game, 0);
+        }
+
+        if (game->state == STATE_SHOP) {
+            if (shopPolicy != NULL) {
+                for (shopStep = 0; shopStep < PERK_COUNT + 8; shopStep++) {
+                    shopAction = shopPolicy(
+                        game, getMinBet(game, game->run.floor, game->mode),
+                        shopContext);
+                    if (shopAction == 0) break;
+                    if (shopAction > 0) {
+                        if (shopAction > PERK_COUNT ||
+                            !purchasePerk(game, shopAction - 1)) break;
+                    } else {
+                        char serviceId = (char)(-shopAction);
+                        if (!purchaseShopService(
+                                game, serviceId,
+                                getMinBet(game, game->run.floor, game->mode))) {
+                            break;
+                        }
+                    }
+                }
+            }
+            (void)handleShopMenuAction(game, 'q');
+            continue;
         }
 
         if (game->state == STATE_MENU) {
