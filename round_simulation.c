@@ -201,6 +201,8 @@ int simulateRoguelikeRun(Game *game,
                          void *roundContext,
                          SimulationFloorPolicy floorPolicy,
                          void *floorContext,
+                         SimulationBossPrepPolicy bossPrepPolicy,
+                         void *bossPrepContext,
                          SimulationShopPolicy shopPolicy,
                          void *shopContext,
                          SimulationRunStats *stats) {
@@ -230,7 +232,9 @@ int simulateRoguelikeRun(Game *game,
 
     while (1) {
         if (game->state == STATE_BOSS_PREP) {
-            completeBossPrep(game, 0);
+            int disableFirstRule = bossPrepPolicy != NULL
+                ? bossPrepPolicy(game, bossPrepContext) : 0;
+            completeBossPrep(game, disableFirstRule != 0);
         }
 
         if (game->state == STATE_SHOP) {
@@ -336,6 +340,8 @@ int simulateRoguelikeBatch(const unsigned int *seeds,
                            void *roundContext,
                            SimulationFloorPolicy floorPolicy,
                            void *floorContext,
+                           SimulationBossPrepPolicy bossPrepPolicy,
+                           void *bossPrepContext,
                            SimulationShopPolicy shopPolicy,
                            void *shopContext,
                            SimulationBatchStats *stats) {
@@ -360,6 +366,7 @@ int simulateRoguelikeBatch(const unsigned int *seeds,
         if (!simulateRoguelikeRun(
                 &game, maxRoundsPerRun, betPolicy, betContext,
                 roundPolicy, roundContext, floorPolicy, floorContext,
+                bossPrepPolicy, bossPrepContext,
                 shopPolicy, shopContext, &runStats)) {
             return 0;
         }
