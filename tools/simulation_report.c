@@ -42,11 +42,18 @@ static char advance_floor_policy(const Game *game, void *context) {
 
 static void print_batch(const char *label, const SimulationBatchStats *stats) {
     double runs = (double)stats->runsCompleted;
+    double outcomes = (double)(stats->totalWins + stats->totalLosses +
+                                stats->totalPushes);
 
     printf("%s\n", label);
     printf("  runs: %d | rounds: %d (%.2f/run)\n",
            stats->runsCompleted, stats->totalRounds,
            stats->totalRounds / runs);
+    printf("  outcomes: wins %d (%.1f%%) | losses %d (%.1f%%) | "
+           "pushes %d (%.1f%%)\\n",
+           stats->totalWins, outcomes > 0.0 ? 100.0 * stats->totalWins / outcomes : 0.0,
+           stats->totalLosses, outcomes > 0.0 ? 100.0 * stats->totalLosses / outcomes : 0.0,
+           stats->totalPushes, outcomes > 0.0 ? 100.0 * stats->totalPushes / outcomes : 0.0);
     printf("  final chips: avg %.2f | min %d | max %d\n",
            stats->totalFinalChips / runs,
            stats->minFinalChips, stats->maxFinalChips);
