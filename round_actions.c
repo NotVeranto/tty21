@@ -112,6 +112,15 @@ static void splitHand(Game *game) {
 int getPlayerActions(const Game *game, ActionId *actions) {
     int actionCount;
 
+    if (game == NULL || actions == NULL ||
+        game->state != STATE_PLAYER_TURN ||
+        game->player.handCount < 1 ||
+        game->player.handCount > MAX_PLAYER_HANDS ||
+        game->player.activeHand < 0 ||
+        game->player.activeHand >= game->player.handCount) {
+        return 0;
+    }
+
     actionCount = 0;
     if (game->player.hands[game->player.activeHand].count < MAX_HAND_SIZE)
         actions[actionCount++] = ACTION_HIT;
@@ -143,7 +152,20 @@ int getPlayerActions(const Game *game, ActionId *actions) {
 }
 
 void applyPlayerAction(Game *game, ActionId action) {
+    ActionId actions[ACTION_COUNT + 1];
+    int actionCount;
+    int actionIndex;
+    int actionAvailable;
     int value;
+
+    if (game == NULL || game->state != STATE_PLAYER_TURN) return;
+
+    actionCount = getPlayerActions(game, actions);
+    actionAvailable = 0;
+    for (actionIndex = 0; actionIndex < actionCount; actionIndex++) {
+        if (actions[actionIndex] == action) actionAvailable = 1;
+    }
+    if (!actionAvailable) return;
 
     if (action == ACTION_HIT) {
         if (game->player.hands[game->player.activeHand].count >= MAX_HAND_SIZE) {
