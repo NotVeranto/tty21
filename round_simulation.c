@@ -156,7 +156,11 @@ int simulateRoguelikeRun(Game *game,
                 game, floorAction,
                 getMinBet(game, game->run.floor, game->mode));
             if (menuResult != FLOOR_MENU_HANDLED) {
-                if (floorAction == 'q' || floorAction == 'Q') break;
+                if (floorAction == 'q' || floorAction == 'Q' ||
+                    floorAction == 'a' || floorAction == 'A' ||
+                    floorAction == 'c' || floorAction == 'C') {
+                    break;
+                }
                 return 0;
             }
             if (game->state == STATE_QUIT) break;
