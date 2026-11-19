@@ -134,6 +134,24 @@ static int buy_first_affordable_perk(const Game *game,
     return 0;
 }
 
+TEST(balanced_shop_policy_prioritizes_survival_and_funds_it) {
+    Game game;
+    rngInit(8128, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.state = STATE_SHOP;
+    game.run.marks = 48;
+    game.run.shopPerkCount = 3;
+    game.run.shopPerks[0] = PERK_BANKROLL;
+    game.run.shopPerks[1] = PERK_SURVIVAL;
+    game.run.shopPerks[2] = PERK_PEEK;
+
+    ASSERT_EQ_INT(-(int)'v',
+                  simulationBalancedShopPolicy(&game, 10, NULL));
+    game.run.marks = 50;
+    ASSERT_EQ_INT((int)PERK_SURVIVAL + 1,
+                  simulationBalancedShopPolicy(&game, 10, NULL));
+}
+
 TEST(roguelike_runner_executes_policy_shop_purchase) {
     Game game;
     SimulationRunStats stats;
@@ -210,4 +228,5 @@ void run_simulation_tests(void) {
     RUN_TEST(classic_session_collects_reproducible_run_statistics);
     RUN_TEST(roguelike_runner_advances_floors_and_tracks_progression);
     RUN_TEST(roguelike_runner_executes_policy_shop_purchase);
+    RUN_TEST(balanced_shop_policy_prioritizes_survival_and_funds_it);
 }
