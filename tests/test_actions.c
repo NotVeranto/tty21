@@ -44,6 +44,25 @@ TEST(actions_expose_and_apply_surrender_without_terminal_input) {
     ASSERT_EQ_INT(STATE_RESULT, game.state);
 }
 
+TEST(actions_reject_unavailable_and_out_of_turn_requests) {
+    Game game;
+    ActionId actions[ACTION_COUNT + 1];
+
+    setup_action_game(&game, 10);
+    ASSERT_TRUE(getPlayerActions(&game, actions) > 0);
+    applyPlayerAction(&game, ACTION_SPLIT);
+    ASSERT_EQ_INT(100, game.player.chips);
+    ASSERT_EQ_INT(1, game.player.handCount);
+    ASSERT_EQ_INT(STATE_PLAYER_TURN, game.state);
+
+    game.state = STATE_MENU;
+    ASSERT_EQ_INT(0, getPlayerActions(&game, actions));
+    applyPlayerAction(&game, ACTION_STAND);
+    ASSERT_EQ_INT(STATE_MENU, game.state);
+    ASSERT_EQ_INT(100, game.player.chips);
+}
+
 void run_action_tests(void) {
     RUN_TEST(actions_expose_and_apply_surrender_without_terminal_input);
+    RUN_TEST(actions_reject_unavailable_and_out_of_turn_requests);
 }
