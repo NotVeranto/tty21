@@ -1,6 +1,9 @@
 #include "game.h"
+#include "round_cards.h"
 #include "round_economy.h"
+#include "round_rules.h"
 #include "round_simulation.h"
+#include "twists.h"
 
 #include <stdio.h>
 
