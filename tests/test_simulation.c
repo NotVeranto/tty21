@@ -222,6 +222,41 @@ TEST(roguelike_runner_advances_floors_and_tracks_progression) {
     ASSERT_EQ_INT(firstStats.floorsReached, secondStats.floorsReached);
 }
 
+TEST(roguelike_batch_aggregates_reproducible_seeded_runs) {
+    static const unsigned int seeds[] = {17, 29, 41, 53};
+    SimulationBatchStats first;
+    SimulationBatchStats second;
+
+    ASSERT_EQ_INT(1, simulateRoguelikeBatch(
+        seeds, 4, 8, minimum_bet_policy, NULL,
+        stand_policy, NULL, advance_floor_policy, NULL,
+        NULL, NULL, &first));
+    ASSERT_EQ_INT(1, simulateRoguelikeBatch(
+        seeds, 4, 8, minimum_bet_policy, NULL,
+        stand_policy, NULL, advance_floor_policy, NULL,
+        NULL, NULL, &second));
+
+    ASSERT_EQ_INT(4, first.runsCompleted);
+    ASSERT_EQ_INT(4, second.runsCompleted);
+    ASSERT_EQ_INT(400, first.totalStartingChips);
+    ASSERT_TRUE(first.totalRounds > 0);
+    ASSERT_EQ_INT(first.totalRounds,
+                  first.totalWins + first.totalLosses + first.totalPushes);
+    ASSERT_EQ_INT(first.totalRounds, second.totalRounds);
+    ASSERT_EQ_INT(first.totalWins, second.totalWins);
+    ASSERT_EQ_INT(first.totalLosses, second.totalLosses);
+    ASSERT_EQ_INT(first.totalPushes, second.totalPushes);
+    ASSERT_EQ_INT(first.totalFinalChips, second.totalFinalChips);
+    ASSERT_EQ_INT(first.totalPeakChips, second.totalPeakChips);
+    ASSERT_EQ_INT(first.totalFloorsReached, second.totalFloorsReached);
+    ASSERT_EQ_INT(first.totalBossesDefeated, second.totalBossesDefeated);
+    ASSERT_EQ_INT(first.totalMarksEarned, second.totalMarksEarned);
+    ASSERT_EQ_INT(first.shallowestFloorReached,
+                  second.shallowestFloorReached);
+    ASSERT_EQ_INT(first.deepestFloorReached, second.deepestFloorReached);
+    ASSERT_TRUE(first.deepestFloorReached >= first.shallowestFloorReached);
+}
+
 void run_simulation_tests(void) {
     RUN_TEST(policy_runner_completes_and_repeats_seeded_round);
     RUN_TEST(policy_runner_rejects_unavailable_policy_action);
@@ -229,4 +264,5 @@ void run_simulation_tests(void) {
     RUN_TEST(roguelike_runner_advances_floors_and_tracks_progression);
     RUN_TEST(roguelike_runner_executes_policy_shop_purchase);
     RUN_TEST(balanced_shop_policy_prioritizes_survival_and_funds_it);
+    RUN_TEST(roguelike_batch_aggregates_reproducible_seeded_runs);
 }
