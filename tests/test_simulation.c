@@ -245,6 +245,7 @@ TEST(roguelike_runner_uses_boss_preparation_policy) {
         game.fastMode = 1;
         game.saveEnabled = 0;
         game.run.marks = 1000;
+        game.player.chips = 100000;
 
         ASSERT_EQ_INT(1, simulateRoguelikeRun(
             &game, 1, minimum_bet_policy, NULL,
