@@ -4,6 +4,7 @@
 #include "round_actions.h"
 #include "round_dealer.h"
 #include "round_settlement.h"
+#include "rng.h"
 #include "round_economy.h"
 #include "game.h"
 
