@@ -12,6 +12,73 @@
 
 #define SIMULATION_ACTION_LIMIT 256
 
+int simulationBalancedShopPolicy(const Game *game,
+                                 int currentMinBet,
+                                 void *context) {
+    static const PerkId priority[] = {
+        PERK_SURVIVAL,
+        PERK_EXTRA_LIFE,
+        PERK_DEALERS_FAVOR,
+        PERK_BANKROLL,
+        PERK_COMPOUNDING,
+        PERK_DOUBLE_DIP,
+        PERK_INSURANCE_PERK,
+        PERK_MARKED_CARD,
+        PERK_PEEK,
+        PERK_SECOND_WIND,
+        PERK_SPLIT_MASTERY,
+        PERK_SIXTH_SENSE,
+        PERK_ACE_HIGH
+    };
+    char services[7];
+    int serviceCount;
+    int index;
+    int offerIndex;
+    int perkOffered;
+    int nextPerkCost;
+    (void)context;
+
+    if (game == NULL || game->state != STATE_SHOP) return 0;
+
+    for (index = 0; index < (int)(sizeof(priority) / sizeof(priority[0]));
+         index++) {
+        PerkId perk = priority[index];
+        perkOffered = 0;
+        for (offerIndex = 0; offerIndex < game->run.shopPerkCount;
+             offerIndex++) {
+            if (game->run.shopPerks[offerIndex] == perk) {
+                perkOffered = 1;
+                break;
+            }
+        }
+        if (!perkOffered || game->player.perkOwned[perk] ||
+            isPerkLockedThisFloor(game, perk)) continue;
+        if (game->run.marks >= perkCost(perk)) return (int)perk + 1;
+
+        nextPerkCost = perkCost(perk);
+        serviceCount = getShopServiceOffers(game, services, 7);
+        for (offerIndex = 0; offerIndex < serviceCount; offerIndex++) {
+            if (services[offerIndex] == 'v' &&
+                game->run.marks + 2 <= nextPerkCost &&
+                canPurchaseShopService(game, 'v', currentMinBet) &&
+                game->player.chips >= currentMinBet + 10) {
+                return -(int)'v';
+            }
+        }
+        break;
+    }
+
+    serviceCount = getShopServiceOffers(game, services, 7);
+    for (index = 0; index < serviceCount; index++) {
+        if (services[index] == 'n' &&
+            game->player.chips < currentMinBet * 2 &&
+            canPurchaseShopService(game, 'n', currentMinBet)) {
+            return -(int)'n';
+        }
+    }
+    return 0;
+}
+
 int simulateRound(Game *game,
                   int betAmount,
                   int insuranceDecision,
