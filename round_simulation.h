@@ -21,8 +21,17 @@ int simulationBalancedShopPolicy(const Game *game,
                                  int currentMinBet,
                                  void *context);
 
+typedef enum {
+    SIMULATION_STOP_MAX_ROUNDS = 0,
+    SIMULATION_STOP_INSUFFICIENT_BANKROLL,
+    SIMULATION_STOP_POLICY,
+    SIMULATION_STOP_GAME_QUIT,
+    SIMULATION_STOP_REASON_COUNT
+} SimulationStopReason;
+
 typedef struct {
     int rounds;
+    SimulationStopReason stopReason;
     int wins;
     int losses;
     int pushes;
@@ -48,6 +57,7 @@ typedef struct {
     int totalMarksEarned;
     int shallowestFloorReached;
     int deepestFloorReached;
+    int stopReasonCounts[SIMULATION_STOP_REASON_COUNT];
 } SimulationBatchStats;
 
 int simulateRound(Game *game,
