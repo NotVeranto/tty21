@@ -149,7 +149,7 @@ int simulateRoguelikeRun(Game *game,
     result.bossesDefeated = game->totalBossesDefeated;
     result.marksEarned = game->totalMarksEarned;
 
-    while (result.rounds < maxRounds) {
+    while (1) {
         if (game->state == STATE_BOSS_PREP) {
             completeBossPrep(game, 0);
         }
@@ -196,6 +196,7 @@ int simulateRoguelikeRun(Game *game,
         }
 
         if (game->state != STATE_BET) return 0;
+        if (result.rounds >= maxRounds) break;
         minimumBet = getMinBet(game, game->run.floor, game->mode);
         if (game->player.chips < minimumBet) break;
 
