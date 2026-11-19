@@ -114,6 +114,58 @@ static int minimum_bet_policy(const Game *game, void *context) {
     return getMinBet(game, game->run.floor, game->mode);
 }
 
+static char shop_test_floor_policy(const Game *game, void *context) {
+    int *calls = (int *)context;
+    (void)game;
+    if ((*calls)++ == 0) return 's';
+    return 'q';
+}
+
+static int buy_first_affordable_perk(const Game *game,
+                                    int currentMinBet,
+                                    void *context) {
+    int index;
+    (void)context;
+    for (index = 0; index < game->run.shopPerkCount; index++) {
+        PerkId perk = game->run.shopPerks[index];
+        if (game->run.marks >= perkCost(perk)) return (int)perk + 1;
+    }
+    (void)currentMinBet;
+    return 0;
+}
+
+TEST(roguelike_runner_executes_policy_shop_purchase) {
+    Game game;
+    SimulationRunStats stats;
+    int floorCalls = 0;
+    int ownedBefore = 0;
+    int index;
+
+    rngInit(98117, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.fastMode = 1;
+    game.saveEnabled = 0;
+    game.run.marks = 100;
+    for (index = 0; index < PERK_COUNT; index++) {
+        ownedBefore += game.player.perkOwned[index];
+    }
+
+    ASSERT_EQ_INT(1, simulateRoguelikeRun(
+        &game, 1, minimum_bet_policy, NULL,
+        stand_policy, NULL, shop_test_floor_policy, &floorCalls,
+        buy_first_affordable_perk, NULL, &stats));
+
+    {
+        int ownedAfter = 0;
+        for (index = 0; index < PERK_COUNT; index++) {
+            ownedAfter += game.player.perkOwned[index];
+        }
+        ASSERT_EQ_INT(ownedBefore + 1, ownedAfter);
+    }
+    ASSERT_EQ_INT(STATE_QUIT, game.state);
+    ASSERT_EQ_INT(1, stats.rounds);
+}
+
 static char advance_floor_policy(const Game *game, void *context) {
     (void)game;
     (void)context;
@@ -157,4 +209,5 @@ void run_simulation_tests(void) {
     RUN_TEST(policy_runner_rejects_unavailable_policy_action);
     RUN_TEST(classic_session_collects_reproducible_run_statistics);
     RUN_TEST(roguelike_runner_advances_floors_and_tracks_progression);
+    RUN_TEST(roguelike_runner_executes_policy_shop_purchase);
 }
