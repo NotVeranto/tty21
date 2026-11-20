@@ -6,6 +6,7 @@
 #include "twists.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #define REPORT_RUNS 256
 #define REPORT_ROUNDS_PER_RUN 100
