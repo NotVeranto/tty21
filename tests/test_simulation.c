@@ -110,6 +110,12 @@ TEST(full_hand_can_stand_through_low_total_restrictions) {
 }
 
 
+static int quit_test_bet_policy(const Game *game, void *context) {
+    (void)game;
+    (void)context;
+    return 10;
+}
+
 static ActionId quit_policy(const Game *game,
                             const ActionId *actions,
                             int actionCount,
@@ -144,7 +150,7 @@ TEST(policy_runner_reports_quit_without_failing_or_settling_round) {
     game.fastMode = 1;
     game.saveEnabled = 0;
     ASSERT_EQ_INT(1, simulateClassicRun(
-        &game, 10, minimum_bet_policy, NULL,
+        &game, 10, quit_test_bet_policy, NULL,
         quit_policy, NULL, &stats));
     ASSERT_EQ_INT(0, stats.rounds);
     ASSERT_EQ_INT(SIMULATION_STOP_GAME_QUIT, stats.stopReason);
