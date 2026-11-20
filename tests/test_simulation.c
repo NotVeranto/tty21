@@ -422,18 +422,26 @@ TEST(roguelike_batch_aggregates_reproducible_seeded_runs) {
     ASSERT_TRUE(first.deepestFloorReached >= first.shallowestFloorReached);
 }
 
-TEST(roguelike_batch_stops_when_bet_cap_is_below_minimum) {
-    const unsigned int seed = 88109U;
-    SimulationBatchStats stats;
+TEST(roguelike_runner_stops_when_bet_cap_is_below_minimum) {
+    Game game;
+    SimulationRunStats stats;
 
-    ASSERT_EQ_INT(1, simulateRoguelikeBatch(
-        &seed, 1, 100, minimum_bet_policy, NULL,
+    rngInit(88109U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.fastMode = 1;
+    game.saveEnabled = 0;
+    game.run.floor = 8;
+    game.player.chips = 60;
+
+    ASSERT_TRUE(getMinBet(&game, game.run.floor, game.mode) == 34);
+    ASSERT_TRUE(getMaxBet(&game) == 30);
+    ASSERT_EQ_INT(1, simulateRoguelikeRun(
+        &game, 100, minimum_bet_policy, NULL,
         progressing_policy, NULL, advance_floor_policy, NULL,
         NULL, NULL, NULL, NULL, &stats));
-    ASSERT_EQ_INT(1, stats.runsCompleted);
-    ASSERT_EQ_INT(1,
-        stats.stopReasonCounts[SIMULATION_STOP_INSUFFICIENT_BANKROLL]);
-    ASSERT_TRUE(stats.deepestFloorReached >= 8);
+    ASSERT_EQ_INT(0, stats.rounds);
+    ASSERT_EQ_INT(SIMULATION_STOP_INSUFFICIENT_BANKROLL, stats.stopReason);
+    ASSERT_EQ_INT(60, stats.finalChips);
 }
 
 TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set) {
