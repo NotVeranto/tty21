@@ -60,7 +60,7 @@ int simulationBalancedShopPolicy(const Game *game,
         serviceCount = getShopServiceOffers(game, services, 7);
         for (offerIndex = 0; offerIndex < serviceCount; offerIndex++) {
             if (services[offerIndex] == 'v' &&
-                game->run.marks + 2 <= nextPerkCost &&
+                game->run.marks < nextPerkCost &&
                 canPurchaseShopService(game, 'v', currentMinBet) &&
                 game->player.chips >= currentMinBet + 10) {
                 return -(int)'v';
