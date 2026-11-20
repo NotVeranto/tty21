@@ -331,6 +331,8 @@ int simulateRoguelikeRun(Game *game,
                 result.failureState = game->state;
                 result.failureFloor = game->run.floor;
                 result.failureDeckTop = game->deck.top;
+                result.failurePlayerHandCount = game->player.handCount;
+                result.failureActiveHand = game->player.activeHand;
                 result.failureHandCount = game->player.handCount > 0 &&
                     game->player.activeHand < game->player.handCount
                     ? game->player.hands[game->player.activeHand].count : 0;
@@ -414,6 +416,8 @@ int simulateRoguelikeBatch(const unsigned int *seeds,
             result.failureDeckTop = runStats.failureDeckTop;
             result.failureHandValue = runStats.failureHandValue;
             result.failureHandCount = runStats.failureHandCount;
+            result.failurePlayerHandCount = runStats.failurePlayerHandCount;
+            result.failureActiveHand = runStats.failureActiveHand;
             result.failureTwist = runStats.failureTwist;
             result.failureDealer = runStats.failureDealer;
             *stats = result;
