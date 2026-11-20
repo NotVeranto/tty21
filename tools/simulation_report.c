@@ -129,10 +129,10 @@ static void print_floor_marks(const char *label,
                               const ReportFloorContext *report) {
     int floor;
 
-    printf("%s\\n", label);
+    printf("%s\n", label);
     for (floor = 1; floor <= 15; floor++) {
         if (report->visitsByFloor[floor] > 0) {
-            printf("  floor %2d: runs %3d | avg marks %.1f\\n",
+            printf("  floor %2d: runs %3d | avg marks %.1f\n",
                    floor, report->visitsByFloor[floor],
                    (double)report->marksAtShop[floor] /
                        report->visitsByFloor[floor]);
