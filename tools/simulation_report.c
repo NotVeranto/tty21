@@ -65,6 +65,8 @@ typedef struct {
     unsigned int lastSeed;
     int lastFloor;
     int shopsVisited;
+    long long marksAtShop[16];
+    int visitsByFloor[16];
 } ReportFloorContext;
 
 typedef struct {
@@ -90,6 +92,10 @@ static char visit_shop_then_advance_policy(const Game *game, void *context) {
     if (report->lastFloor != game->run.floor) {
         report->lastFloor = game->run.floor;
         report->shopsVisited++;
+        if (game->run.floor >= 1 && game->run.floor <= 15) {
+            report->marksAtShop[game->run.floor] += game->run.marks;
+            report->visitsByFloor[game->run.floor]++;
+        }
         return 's';
     }
 
