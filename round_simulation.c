@@ -46,6 +46,8 @@ int simulationBalancedShopPolicy(const Game *game,
     int offerIndex;
     int perkOffered;
     int nextPerkCost;
+    long long conversionCost;
+    long long requiredMarks;
     (void)context;
 
     if (game == NULL || game->state != STATE_SHOP) return 0;
@@ -66,12 +68,15 @@ int simulationBalancedShopPolicy(const Game *game,
         if (game->run.marks >= perkCost(perk)) return (int)perk + 1;
 
         nextPerkCost = perkCost(perk);
+        requiredMarks = (long long)nextPerkCost - game->run.marks;
+        conversionCost = ((requiredMarks + 1) / 2) * 10;
         serviceCount = getShopServiceOffers(game, services, 7);
         for (offerIndex = 0; offerIndex < serviceCount; offerIndex++) {
             if (services[offerIndex] == 'v' &&
-                game->run.marks < nextPerkCost &&
+                requiredMarks > 0 &&
                 canPurchaseShopService(game, 'v', currentMinBet) &&
-                game->player.chips >= currentMinBet + 10) {
+                (long long)game->player.chips - conversionCost >=
+                    (long long)currentMinBet * 2) {
                 return -(int)'v';
             }
         }
