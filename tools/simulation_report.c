@@ -156,7 +156,7 @@ static void print_batch(const char *label, const SimulationBatchStats *stats) {
 }
 
 
-typedef struct { PerkId target; int purchases; } ReportSinglePerkContext;
+typedef struct { PerkId target; int offers; int affordable; int purchases; } ReportSinglePerkContext;
 
 static int single_perk_shop_policy(const Game *game, int currentMinBet,
                                    void *context) {
@@ -165,12 +165,16 @@ static int single_perk_shop_policy(const Game *game, int currentMinBet,
     (void)currentMinBet;
     if (game == NULL || report == NULL || game->state != STATE_SHOP ||
         game->player.perkOwned[report->target] ||
-        isPerkLockedThisFloor(game, report->target) ||
-        game->run.marks < perkCost(report->target)) return 0;
+        isPerkLockedThisFloor(game, report->target)) return 0;
     for (index = 0; index < game->run.shopPerkCount; index++) {
         if (game->run.shopPerks[index] == report->target) {
-            report->purchases++;
-            return (int)report->target + 1;
+            report->offers++;
+            if (game->run.marks >= perkCost(report->target)) {
+                report->affordable++;
+                report->purchases++;
+                return (int)report->target + 1;
+            }
+            return 0;
         }
     }
     return 0;
@@ -279,7 +283,7 @@ int main(void) {
              perkIndex < (int)(sizeof(evaluatedPerks) / sizeof(evaluatedPerks[0]));
              perkIndex++) {
             ReportFloorContext floorContext = {0U, 0, 0};
-            ReportSinglePerkContext perkContext = {evaluatedPerks[perkIndex], 0};
+            ReportSinglePerkContext perkContext = {evaluatedPerks[perkIndex], 0, 0, 0};
             SimulationBatchStats perkStats;
             const char *name = perkName(evaluatedPerks[perkIndex]);
             if (!simulateRoguelikeBatch(
@@ -291,7 +295,9 @@ int main(void) {
                 fprintf(stderr, "error: single-perk simulation failed for %s\\n", name);
                 return 1;
             }
-            print_perk_comparison(name, &baseline, &perkStats, perkContext.purchases);
+            print_perk_comparison(name, &baseline, &perkStats,
+                                  perkContext.offers, perkContext.affordable,
+                                  perkContext.purchases);
         }
     }
     puts("\\nNote: same seeds and baseline policies are used for each perk. "
