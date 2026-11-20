@@ -42,6 +42,7 @@ typedef struct {
     int floorsReached;
     int bossesDefeated;
     int marksEarned;
+    int failureReason;
 } SimulationRunStats;
 
 typedef struct {
@@ -63,6 +64,9 @@ typedef struct {
     int shallowestFloorReached;
     int deepestFloorReached;
     int stopReasonCounts[SIMULATION_STOP_REASON_COUNT];
+    int failedSeedIndex;
+    unsigned int failedSeed;
+    int failureReason;
 } SimulationBatchStats;
 
 /* Returns 0 on failure, 1 on settlement, or 2 when the policy quits. */
