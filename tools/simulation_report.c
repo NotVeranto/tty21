@@ -3,6 +3,7 @@
 #include "round_economy.h"
 #include "round_rules.h"
 #include "round_simulation.h"
+#include "rng.h"
 #include "twists.h"
 
 #include <stdio.h>
