@@ -90,6 +90,32 @@ int main(void) {
         seeds[index] = 1000U + (unsigned int)index * 7919U;
     }
 
+    /*
+     * Probe each seed independently before aggregating. This keeps a failed
+     * run actionable: the batch API intentionally reports only success/fail.
+     */
+    for (index = 0; index < REPORT_RUNS; index++) {
+        SimulationBatchStats probe;
+        if (!simulateRoguelikeBatch(
+                &seeds[index], 1, REPORT_ROUNDS_PER_RUN,
+                minimum_bet_policy, NULL, progressing_policy, NULL,
+                advance_floor_policy, NULL, NULL, NULL, NULL, NULL,
+                &probe)) {
+            fprintf(stderr, "error: baseline failed for seed %u (index %d)\\n",
+                    seeds[index], index);
+            return 1;
+        }
+        if (!simulateRoguelikeBatch(
+                &seeds[index], 1, REPORT_ROUNDS_PER_RUN,
+                minimum_bet_policy, NULL, progressing_policy, NULL,
+                advance_floor_policy, NULL, NULL, NULL,
+                simulationBalancedShopPolicy, NULL, &probe)) {
+            fprintf(stderr, "error: balanced shop policy failed for seed %u (index %d)\\n",
+                    seeds[index], index);
+            return 1;
+        }
+    }
+
     if (!simulateRoguelikeBatch(
             seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
             minimum_bet_policy, NULL, progressing_policy, NULL,
