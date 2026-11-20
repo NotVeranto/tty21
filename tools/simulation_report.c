@@ -188,6 +188,17 @@ static int no_conversion_shop_policy(const Game *game,
             }
         }
     }
+    {
+        char services[7];
+        int serviceCount = getShopServiceOffers(game, services, 7);
+        for (offer = 0; offer < serviceCount; offer++) {
+            if (services[offer] == 'n' &&
+                game->player.chips < currentMinBet * 2 &&
+                canPurchaseShopService(game, 'n', currentMinBet)) {
+                return -(int)'n';
+            }
+        }
+    }
     return 0;
 }
 
