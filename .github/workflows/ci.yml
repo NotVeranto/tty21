@@ -21,6 +21,8 @@ jobs:
         run: make clean && make CC=${{ matrix.compiler }}
       - name: Build simulation report
         run: make CC=${{ matrix.compiler }} tools/simulation_report
+      - name: Run seeded simulation report
+        run: make CC=${{ matrix.compiler }} simulate-report
       - name: Unit tests
         run: make CC=${{ matrix.compiler }} test-unit
       - name: Core tests
