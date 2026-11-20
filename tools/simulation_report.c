@@ -74,6 +74,8 @@ typedef struct {
 typedef struct {
     int shopActions;
     int perkPurchases;
+    int maxPerksPerFloor;
+    int lastPurchaseFloor;
 } ReportShopContext;
 
 static char visit_shop_then_advance_policy(const Game *game, void *context) {
@@ -118,8 +120,20 @@ static int counted_balanced_shop_policy(const Game *game,
                                         int currentMinBet,
                                         void *context) {
     ReportShopContext *report = (ReportShopContext *)context;
-    int action = simulationBalancedShopPolicy(game, currentMinBet, NULL);
+    int action;
 
+    if (report != NULL && report->maxPerksPerFloor > 0 &&
+        report->perkPurchases > 0 &&
+        report->lastPurchaseFloor == game->run.floor) {
+        action = 0;
+    } else {
+        action = simulationBalancedShopPolicy(game, currentMinBet, NULL);
+    }
+
+    if (report != NULL && action > 0 &&
+        report->maxPerksPerFloor > 0) {
+        report->lastPurchaseFloor = game->run.floor;
+    }
     if (report != NULL && action != 0) {
         report->shopActions++;
         if (action > 0) report->perkPurchases++;
@@ -240,7 +254,8 @@ typedef struct {
 
 static int run_starting_mark_grant_batch(
     const unsigned int *seeds, int seedCount, int startingMarks,
-    ReportGrantStats *grantStats) {
+    ReportGrantStats *grantStats,
+    int maxPerksPerFloor) {
     int index;
     memset(grantStats, 0, sizeof(*grantStats));
     grantStats->startingMarks = startingMarks;
@@ -248,7 +263,7 @@ static int run_starting_mark_grant_batch(
         Game game;
         SimulationRunStats runStats;
         ReportFloorContext floorContext = {0};
-        ReportShopContext shopContext = {0, 0};
+        ReportShopContext shopContext = {0, 0, maxPerksPerFloor, -1};
         rngInit(seeds[index], 1);
         initGame(&game, MODE_ROGUELIKE);
         game.fastMode = 1;
@@ -320,9 +335,10 @@ int main(void) {
     SimulationBatchStats balanced;
     ReportFloorContext baselineFloor = {0};
     ReportFloorContext balancedFloor = {0};
-    ReportShopContext balancedShop = {0, 0};
+    ReportShopContext balancedShop = {0, 0, 0, -1};
     int index;
     ReportGrantStats grant15, grant30, grant45;
+    ReportGrantStats capped0, capped15, capped30, capped45;
 
     for (index = 0; index < REPORT_RUNS; index++) {
         seeds[index] = 1000U + (unsigned int)index * 7919U;
@@ -357,7 +373,7 @@ int main(void) {
 
     baselineFloor = (ReportFloorContext){0};
     balancedFloor = (ReportFloorContext){0};
-    balancedShop = (ReportShopContext){0, 0};
+    balancedShop = (ReportShopContext){0, 0, 0, -1};
 
     if (!simulateRoguelikeBatch(
             seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
@@ -393,15 +409,27 @@ int main(void) {
     printf("  shop actions: %d | perk purchases: %d\n",
            balancedShop.shopActions, balancedShop.perkPurchases);
     puts("\nStarting-mark grant experiment (same seeds, balanced shop purchases)");
-    if (!run_starting_mark_grant_batch(seeds, REPORT_RUNS, 15, &grant15) ||
-        !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 30, &grant30) ||
-        !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 45, &grant45)) {
+    if (!run_starting_mark_grant_batch(seeds, REPORT_RUNS, 15, &grant15, 0) ||
+        !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 30, &grant30, 0) ||
+        !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 45, &grant45, 0)) {
         return 1;
     }
     print_starting_mark_grant(&grant15, &balanced, REPORT_RUNS);
     print_starting_mark_grant(&grant30, &balanced, REPORT_RUNS);
     print_starting_mark_grant(&grant45, &balanced, REPORT_RUNS);
     puts("  Starting marks are granted once before floor 1; the balanced shop policy buys only current offers it can afford.");
+    puts("\\nOne-per-floor purchase cap (same seeds; deltas versus capped +0 baseline)");
+    if (!run_starting_mark_grant_batch(seeds, REPORT_RUNS, 0, &capped0, 1) ||
+        !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 15, &capped15, 1) ||
+        !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 30, &capped30, 1) ||
+        !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 45, &capped45, 1)) {
+        return 1;
+    }
+    print_starting_mark_grant(&capped0, &balanced, REPORT_RUNS);
+    print_starting_mark_grant(&capped15, &capped0, REPORT_RUNS);
+    print_starting_mark_grant(&capped30, &capped0, REPORT_RUNS);
+    print_starting_mark_grant(&capped45, &capped0, REPORT_RUNS);
+    puts("  Capped policy buys at most one perk per floor; +0 is the matched capped-policy control.");
     puts("\nSingle-perk purchases (delta versus no-purchase baseline)");
     {
         static const PerkId evaluatedPerks[] = {
