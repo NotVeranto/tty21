@@ -141,6 +141,72 @@ static int counted_balanced_shop_policy(const Game *game,
     return action;
 }
 
+typedef struct {
+    int strategy;
+    int actions;
+    int purchases;
+    int offers;
+    int affordable;
+} ReportConversionContext;
+
+static int no_conversion_shop_policy(const Game *game,
+                                     int currentMinBet,
+                                     void *context) {
+    static const PerkId balancedPriority[] = {
+        PERK_SURVIVAL, PERK_EXTRA_LIFE, PERK_DEALERS_FAVOR, PERK_BANKROLL,
+        PERK_COMPOUNDING, PERK_DOUBLE_DIP, PERK_INSURANCE_PERK,
+        PERK_MARKED_CARD, PERK_PEEK, PERK_SECOND_WIND, PERK_SPLIT_MASTERY,
+        PERK_SIXTH_SENSE, PERK_ACE_HIGH
+    };
+    static const PerkId defensivePriority[] = {
+        PERK_SURVIVAL, PERK_INSURANCE_PERK, PERK_BANKROLL,
+        PERK_EXTRA_LIFE, PERK_DEALERS_FAVOR, PERK_PEEK,
+        PERK_SECOND_WIND, PERK_COMPOUNDING, PERK_DOUBLE_DIP,
+        PERK_MARKED_CARD, PERK_SPLIT_MASTERY, PERK_SIXTH_SENSE,
+        PERK_ACE_HIGH
+    };
+    ReportConversionContext *stats = (ReportConversionContext *)context;
+    const PerkId *priority;
+    int priorityCount, p, offer;
+    (void)currentMinBet;
+    if (game == NULL || stats == NULL || game->state != STATE_SHOP) return 0;
+    priority = stats->strategy == 0 ? balancedPriority : defensivePriority;
+    priorityCount = stats->strategy == 0
+        ? (int)(sizeof(balancedPriority) / sizeof(balancedPriority[0]))
+        : (int)(sizeof(defensivePriority) / sizeof(defensivePriority[0]));
+    for (p = 0; p < priorityCount; p++) {
+        PerkId perk = priority[p];
+        if (game->player.perkOwned[perk] || isPerkLockedThisFloor(game, perk)) continue;
+        for (offer = 0; offer < game->run.shopPerkCount; offer++) {
+            if (game->run.shopPerks[offer] != perk) continue;
+            stats->offers++;
+            if (game->run.marks >= perkCost(perk)) {
+                stats->affordable++;
+                stats->purchases++;
+                stats->actions++;
+                return (int)perk + 1;
+            }
+        }
+    }
+    return 0;
+}
+
+static void print_conversion_comparison(
+    const char *label, const SimulationBatchStats *baseline,
+    const SimulationBatchStats *candidate,
+    const ReportConversionContext *context) {
+    double runs = (double)candidate->runsCompleted;
+    double baseRuns = (double)baseline->runsCompleted;
+    printf("  %-27s chips %+.2f | floors %+.2f | bosses %+.2f | bankrupt %+.1f pp | offers %d | affordable %d | purchases %d\n",
+           label,
+           candidate->totalFinalChips / runs - baseline->totalFinalChips / baseRuns,
+           candidate->totalFloorsReached / runs - baseline->totalFloorsReached / baseRuns,
+           candidate->totalBossesDefeated / runs - baseline->totalBossesDefeated / baseRuns,
+           100.0 * ((double)candidate->bankruptRuns / runs -
+                    (double)baseline->bankruptRuns / baseRuns),
+           context->offers, context->affordable, context->purchases);
+}
+
 static void print_floor_marks(const char *label,
                               const ReportFloorContext *report) {
     int floor;
@@ -459,6 +525,35 @@ int main(void) {
     print_starting_mark_grant_vs_grant(&capped30, &capped0, REPORT_RUNS);
     print_starting_mark_grant_vs_grant(&capped45, &capped0, REPORT_RUNS);
     puts("  Capped policy buys at most one perk per floor; +0 is the matched capped-policy control.");
+    puts("\nChip-conversion strategy comparison (same seeds; deltas versus no-purchase baseline)");
+    {
+        ReportConversionContext noConvertBalanced = {0, 0, 0, 0, 0};
+        ReportConversionContext noConvertDefensive = {1, 0, 0, 0, 0};
+        SimulationBatchStats noConvertBalancedStats;
+        SimulationBatchStats noConvertDefensiveStats;
+        if (!simulateRoguelikeBatch(
+                seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
+                minimum_bet_policy, NULL, progressing_policy, NULL,
+                visit_shop_then_advance_policy, NULL,
+                NULL, NULL, no_conversion_shop_policy, &noConvertBalanced,
+                &noConvertBalancedStats) ||
+            !simulateRoguelikeBatch(
+                seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
+                minimum_bet_policy, NULL, progressing_policy, NULL,
+                visit_shop_then_advance_policy, NULL,
+                NULL, NULL, no_conversion_shop_policy, &noConvertDefensive,
+                &noConvertDefensiveStats)) {
+            fprintf(stderr, "error: chip-conversion strategy comparison failed\\n");
+            return 1;
+        }
+        print_conversion_comparison("balanced priority, no conversion",
+                                    &baseline, &noConvertBalancedStats,
+                                    &noConvertBalanced);
+        print_conversion_comparison("defensive priority, no conversion",
+                                    &baseline, &noConvertDefensiveStats,
+                                    &noConvertDefensive);
+        puts("  No-conversion policies buy only from held marks; they never exchange chips for marks.");
+    }
     puts("\nSingle-perk purchases (delta versus no-purchase baseline)");
     {
         static const PerkId evaluatedPerks[] = {
