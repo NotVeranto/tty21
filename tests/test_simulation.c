@@ -206,6 +206,17 @@ TEST(balanced_shop_policy_prioritizes_survival_and_funds_it) {
     game.run.marks = 50;
     ASSERT_EQ_INT((int)PERK_SURVIVAL + 1,
                   simulationBalancedShopPolicy(&game, 10, NULL));
+
+    game.run.marks = 0;
+    game.run.shopPerks[0] = PERK_DOUBLE_DIP;
+    ASSERT_EQ_INT(-(int)'v',
+                  simulationBalancedShopPolicy(&game, 10, NULL));
+    game.run.marks = 54;
+    ASSERT_EQ_INT(-(int)'v',
+                  simulationBalancedShopPolicy(&game, 10, NULL));
+    game.run.marks = 56;
+    ASSERT_EQ_INT((int)PERK_DOUBLE_DIP + 1,
+                  simulationBalancedShopPolicy(&game, 10, NULL));
 }
 
 TEST(roguelike_runner_executes_policy_shop_purchase) {
