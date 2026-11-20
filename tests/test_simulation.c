@@ -243,6 +243,7 @@ TEST(balanced_shop_policy_prioritizes_survival_and_funds_it) {
     rngInit(8128, 1);
     initGame(&game, MODE_ROGUELIKE);
     game.state = STATE_SHOP;
+    game.player.chips = 400;
     game.run.marks = 48;
     game.run.shopPerkCount = 3;
     game.run.shopPerks[0] = PERK_BANKROLL;
@@ -266,6 +267,23 @@ TEST(balanced_shop_policy_prioritizes_survival_and_funds_it) {
     game.run.marks = 56;
     ASSERT_EQ_INT((int)PERK_DOUBLE_DIP + 1,
                   simulationBalancedShopPolicy(&game, 10, NULL));
+}
+
+
+TEST(balanced_shop_policy_preserves_bet_reserve_when_perk_is_unfundable) {
+    Game game;
+
+    rngInit(8130, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.state = STATE_SHOP;
+    game.player.chips = 100;
+    game.run.marks = 0;
+    game.run.shopPerkCount = 1;
+    game.run.shopPerks[0] = PERK_SURVIVAL;
+
+    ASSERT_EQ_INT(0, simulationBalancedShopPolicy(&game, 10, NULL));
+    ASSERT_EQ_INT(100, game.player.chips);
+    ASSERT_EQ_INT(0, game.run.marks);
 }
 
 TEST(balanced_shop_policy_skips_unfundable_high_priority_perk) {
@@ -580,6 +598,7 @@ void run_simulation_tests(void) {
     RUN_TEST(roguelike_runner_uses_boss_preparation_policy);
     RUN_TEST(balanced_shop_policy_prioritizes_survival_and_funds_it);
     RUN_TEST(balanced_shop_policy_skips_unfundable_high_priority_perk);
+    RUN_TEST(balanced_shop_policy_preserves_bet_reserve_when_perk_is_unfundable);
     RUN_TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds);
     RUN_TEST(roguelike_batch_aggregates_reproducible_seeded_runs);
     RUN_TEST(roguelike_runner_stops_when_bet_cap_is_below_minimum);
