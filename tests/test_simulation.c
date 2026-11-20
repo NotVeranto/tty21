@@ -220,6 +220,22 @@ TEST(balanced_shop_policy_prioritizes_survival_and_funds_it) {
                   simulationBalancedShopPolicy(&game, 10, NULL));
 }
 
+TEST(balanced_shop_policy_skips_unfundable_high_priority_perk) {
+    Game game;
+
+    rngInit(8129, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.state = STATE_SHOP;
+    game.player.chips = 0;
+    game.run.marks = perkCost(PERK_PEEK);
+    game.run.shopPerkCount = 2;
+    game.run.shopPerks[0] = PERK_SURVIVAL;
+    game.run.shopPerks[1] = PERK_PEEK;
+
+    ASSERT_EQ_INT((int)PERK_PEEK + 1,
+                  simulationBalancedShopPolicy(&game, 10, NULL));
+}
+
 TEST(roguelike_runner_executes_policy_shop_purchase) {
     Game game;
     SimulationRunStats stats;
