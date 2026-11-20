@@ -69,6 +69,17 @@ static char visit_shop_then_advance_policy(const Game *game, void *context) {
         report->shopsVisited++;
         return 's';
     }
+
+    /*
+     * An unaffordable floor advance is a normal gameplay condition, not a
+     * simulation failure. Stay on this floor and keep playing until the
+     * bankroll can cover the forecast or the run naturally stops.
+     */
+    {
+        AdvanceForecast forecast;
+        computeAdvanceForecast(game, &forecast);
+        if (!forecast.affordable) return 'c';
+    }
     return 'a';
 }
 
