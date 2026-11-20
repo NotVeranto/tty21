@@ -115,6 +115,7 @@ int simulateRound(Game *game,
             }
             if (!actionAvailable) return 0;
             applyPlayerAction(game, action);
+            if (game->state == STATE_QUIT) return 2;
         } else if (game->state == STATE_DEALER_TURN) {
             dealerTurn(game);
         } else if (game->state == STATE_RESULT) {
@@ -171,9 +172,15 @@ int simulateClassicRun(Game *game,
             return 0;
         }
 
-        if (!simulateRound(game, betAmount, 0, 0,
-                           roundPolicy, roundContext, &resultStyle)) {
-            return 0;
+        {
+            int roundResult = simulateRound(
+                game, betAmount, 0, 0, roundPolicy, roundContext,
+                &resultStyle);
+            if (roundResult == 0) return 0;
+            if (roundResult == 2) {
+                result.stopReason = SIMULATION_STOP_GAME_QUIT;
+                break;
+            }
         }
 
         result.rounds++;
@@ -307,9 +314,15 @@ int simulateRoguelikeRun(Game *game,
             return 0;
         }
 
-        if (!simulateRound(game, betAmount, 0, 0,
-                           roundPolicy, roundContext, &resultStyle)) {
-            return 0;
+        {
+            int roundResult = simulateRound(
+                game, betAmount, 0, 0, roundPolicy, roundContext,
+                &resultStyle);
+            if (roundResult == 0) return 0;
+            if (roundResult == 2) {
+                result.stopReason = SIMULATION_STOP_GAME_QUIT;
+                break;
+            }
         }
 
         result.rounds++;
