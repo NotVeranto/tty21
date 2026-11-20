@@ -20,7 +20,18 @@ static ActionId progressing_policy(const Game *game,
                                    int actionCount,
                                    void *context) {
     int index;
-    int handValue = calculatePlayerHandValue(game);
+    int handValue;
+
+    if (game->player.handCount > 0 &&
+        game->player.activeHand >= 0 &&
+        game->player.activeHand < game->player.handCount &&
+        game->player.hands[game->player.activeHand].count == 0) {
+        for (index = 0; index < actionCount; index++) {
+            if (actions[index] == ACTION_QUIT) return ACTION_QUIT;
+        }
+    }
+
+    handValue = calculatePlayerHandValue(game);
     int standBlocked =
         (twistActive(game, TWIST_STICKY_HANDS) && handValue < 15) ||
         (game->run.floor >= 10 &&
