@@ -327,6 +327,17 @@ int simulateRoguelikeRun(Game *game,
                 game, betAmount, 0, 0, roundPolicy, roundContext,
                 &resultStyle);
             if (roundResult <= 0) {
+                result.failureState = game->state;
+                result.failureFloor = game->run.floor;
+                result.failureDeckTop = game->deck.top;
+                result.failureHandCount = game->player.handCount > 0 &&
+                    game->player.activeHand < game->player.handCount
+                    ? game->player.hands[game->player.activeHand].count : 0;
+                result.failureHandValue = game->player.handCount > 0 &&
+                    game->player.activeHand < game->player.handCount
+                    ? calculatePlayerHandValue(game) : 0;
+                result.failureTwist = game->run.twistId;
+                result.failureDealer = game->run.dealerId;
                 return failSimulationRun(
                     stats, &result, roundResult == 0 ? 3 : 30 - roundResult);
             }
@@ -397,6 +408,13 @@ int simulateRoguelikeBatch(const unsigned int *seeds,
             result.failedSeedIndex = index;
             result.failedSeed = seeds[index];
             result.failureReason = runStats.failureReason;
+            result.failureState = runStats.failureState;
+            result.failureFloor = runStats.failureFloor;
+            result.failureDeckTop = runStats.failureDeckTop;
+            result.failureHandValue = runStats.failureHandValue;
+            result.failureHandCount = runStats.failureHandCount;
+            result.failureTwist = runStats.failureTwist;
+            result.failureDealer = runStats.failureDealer;
             *stats = result;
             return 0;
         }
