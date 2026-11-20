@@ -298,21 +298,19 @@ static int run_starting_mark_grant_batch(
 }
 
 static void print_starting_mark_grant(const ReportGrantStats *stats,
-                                      const SimulationBatchStats *baseline,
+                                      const ReportGrantStats *baseline,
                                       int runs) {
     double count = (double)runs;
-    double baseRuns = (double)baseline->runsCompleted;
     printf("  +%2d marks | chips %.2f (%+.2f) | floors %.2f (%+.2f) | bosses %.2f (%+.2f) | bankrupt %.1f%% (%+.1f pp) | shop actions %d | purchases %d | shop marks:",
            stats->startingMarks,
            stats->finalChips / count,
-           stats->finalChips / count - baseline->totalFinalChips / baseRuns,
+           (stats->finalChips - baseline->finalChips) / count,
            stats->floors / count,
-           stats->floors / count - baseline->totalFloorsReached / baseRuns,
+           (double)(stats->floors - baseline->floors) / count,
            stats->bosses / count,
-           stats->bosses / count - baseline->totalBossesDefeated / baseRuns,
+           (double)(stats->bosses - baseline->bosses) / count,
            100.0 * stats->bankrupt / count,
-           100.0 * ((double)stats->bankrupt / count -
-                    (double)baseline->bankruptRuns / baseRuns),
+           100.0 * (stats->bankrupt - baseline->bankrupt) / count,
            stats->shopActions, stats->perkPurchases);
     {
         int floor;
