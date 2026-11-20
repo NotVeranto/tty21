@@ -65,6 +65,7 @@ typedef struct {
     int stopReasonCounts[SIMULATION_STOP_REASON_COUNT];
 } SimulationBatchStats;
 
+/* Returns 0 on failure, 1 on settlement, or 2 when the policy quits. */
 int simulateRound(Game *game,
                   int betAmount,
                   int insuranceDecision,
