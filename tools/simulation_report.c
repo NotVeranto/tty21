@@ -557,18 +557,20 @@ int main(void) {
     {
         ReportConversionContext noConvertBalanced = {0, 0, 0, 0, 0, 0, 0};
         ReportConversionContext noConvertDefensive = {1, 0, 0, 0, 0, 0, 0};
+        ReportFloorContext noConvertBalancedFloor = {0};
+        ReportFloorContext noConvertDefensiveFloor = {0};
         SimulationBatchStats noConvertBalancedStats;
         SimulationBatchStats noConvertDefensiveStats;
         if (!simulateRoguelikeBatch(
                 seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
                 minimum_bet_policy, NULL, progressing_policy, NULL,
-                visit_shop_then_advance_policy, NULL,
+                visit_shop_then_advance_policy, &noConvertBalancedFloor,
                 NULL, NULL, no_conversion_shop_policy, &noConvertBalanced,
                 &noConvertBalancedStats) ||
             !simulateRoguelikeBatch(
                 seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
                 minimum_bet_policy, NULL, progressing_policy, NULL,
-                visit_shop_then_advance_policy, NULL,
+                visit_shop_then_advance_policy, &noConvertDefensiveFloor,
                 NULL, NULL, no_conversion_shop_policy, &noConvertDefensive,
                 &noConvertDefensiveStats)) {
             fprintf(stderr, "error: chip-conversion strategy comparison failed\\n");
@@ -580,8 +582,9 @@ int main(void) {
         print_conversion_comparison("defensive priority, no conversion",
                                     &baseline, &noConvertDefensiveStats,
                                     &noConvertDefensive);
-        printf("  callback diagnostics: balanced calls %d | eligible %d; defensive calls %d | eligible %d\n",
-               noConvertBalanced.calls, noConvertBalanced.eligible,
+        printf("  callback diagnostics: balanced shops %d | calls %d | eligible %d; defensive shops %d | calls %d | eligible %d\n",
+               noConvertBalancedFloor.shopsVisited, noConvertBalanced.calls,
+               noConvertBalanced.eligible, noConvertDefensiveFloor.shopsVisited,
                noConvertDefensive.calls, noConvertDefensive.eligible);
         puts("  No-conversion policies skip unaffordable perks and buy only from held marks; they never exchange chips for marks.");
     }
