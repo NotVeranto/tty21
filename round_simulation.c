@@ -66,7 +66,7 @@ int simulationBalancedShopPolicy(const Game *game,
                 return -(int)'v';
             }
         }
-        break;
+        continue;
     }
 
     serviceCount = getShopServiceOffers(game, services, 7);
