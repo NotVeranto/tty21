@@ -146,7 +146,7 @@ int main(void) {
                 &seeds[index], 1, REPORT_ROUNDS_PER_RUN,
                 minimum_bet_policy, NULL, progressing_policy, NULL,
                 visit_shop_then_advance_policy, &balancedFloor,
-                NULL, NULL, NULL,
+                NULL, NULL,
                 counted_balanced_shop_policy, &balancedShop, &probe)) {
             fprintf(stderr, "error: balanced shop policy failed for seed %u (index %d)\n",
                     seeds[index], index);
@@ -167,7 +167,7 @@ int main(void) {
             seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
             minimum_bet_policy, NULL, progressing_policy, NULL,
             visit_shop_then_advance_policy, &balancedFloor,
-            NULL, NULL, NULL,
+            NULL, NULL,
             counted_balanced_shop_policy, &balancedShop, &balanced)) {
         fprintf(stderr, "error: simulation batch failed\n");
         return 1;
