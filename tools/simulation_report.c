@@ -328,7 +328,7 @@ static void print_starting_mark_grant_values(
             }
         }
     }
-    putchar('\\n');
+    putchar('\n');
 }
 
 static void print_starting_mark_grant(const ReportGrantStats *stats,
