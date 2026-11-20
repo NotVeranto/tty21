@@ -85,7 +85,7 @@ Refactor only where it reduces real coupling or makes future work safer.
 
 **Exit criteria:** progression feels intentional from early floors through deep runs; economy, perks, twists, and bosses reinforce rather than undermine one another.
 
-**Progress note (20 Nov 2026):** `make simulate-report` now evaluates each of the 13 perks independently against the no-purchase baseline over the same 256 deterministic seeds. Each strategy buys only its selected perk when it is both offered and affordable, and reports purchase count plus deltas in final chips, floors reached, bosses defeated, and bankruptcy rate. This isolates the signal from the previous all-perks priority policy; purchase counts must be read alongside outcome deltas because shop availability and affordability vary by run. The report remains a policy-dependent sample rather than a standalone balance verdict.\n\n## Stage 5 — UX/UI cohesion and interaction feedback
+**Progress note (20 Nov 2026):** `make simulate-report` now evaluates each of the 13 perks independently against the no-purchase baseline over the same 256 deterministic seeds. Each strategy buys only its selected perk when it is both offered and affordable, and reports offer, affordability, and purchase counts alongside deltas in final chips, floors reached, bosses defeated, and bankruptcy rate. This makes sparse results visible: a perk with few offers or affordable opportunities cannot support a strong balance conclusion. The report remains a policy-dependent sample rather than a standalone balance verdict.\n\n## Stage 5 — UX/UI cohesion and interaction feedback
 
 This is where the agreed animation and responsiveness work belongs. It follows correctness, testability, architecture, and balance; it is not a substitute for them.
 
