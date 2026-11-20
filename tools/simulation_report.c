@@ -580,7 +580,10 @@ int main(void) {
         print_conversion_comparison("defensive priority, no conversion",
                                     &baseline, &noConvertDefensiveStats,
                                     &noConvertDefensive);
-        printf("  callback diagnostics: balanced calls %d | eligible %d; defensive calls %d | eligible %d\\n",\n               noConvertBalanced.calls, noConvertBalanced.eligible,\n               noConvertDefensive.calls, noConvertDefensive.eligible);\n        puts("  No-conversion policies skip unaffordable perks and buy only from held marks; they never exchange chips for marks.");
+        printf("  callback diagnostics: balanced calls %d | eligible %d; defensive calls %d | eligible %d\n",
+               noConvertBalanced.calls, noConvertBalanced.eligible,
+               noConvertDefensive.calls, noConvertDefensive.eligible);
+        puts("  No-conversion policies skip unaffordable perks and buy only from held marks; they never exchange chips for marks.");
     }
     puts("\nSingle-perk purchases (delta versus no-purchase baseline)");
     {
