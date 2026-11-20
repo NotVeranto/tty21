@@ -143,15 +143,23 @@ static int counted_balanced_shop_policy(const Game *game,
 
 typedef struct {
     int strategy;
+    int calls;
     int actions;
     int purchases;
     int offers;
+    int eligible;
     int affordable;
 } ReportConversionContext;
 
 static int no_conversion_shop_policy(const Game *game,
                                      int currentMinBet,
                                      void *context) {
+    static const PerkId balancedPriority[] = {
+        PERK_SURVIVAL, PERK_EXTRA_LIFE, PERK_DEALERS_FAVOR, PERK_BANKROLL,
+        PERK_COMPOUNDING, PERK_DOUBLE_DIP, PERK_INSURANCE_PERK,
+        PERK_MARKED_CARD, PERK_PEEK, PERK_SECOND_WIND, PERK_SPLIT_MASTERY,
+        PERK_SIXTH_SENSE, PERK_ACE_HIGH
+    };
     static const PerkId defensivePriority[] = {
         PERK_SURVIVAL, PERK_INSURANCE_PERK, PERK_BANKROLL,
         PERK_EXTRA_LIFE, PERK_DEALERS_FAVOR, PERK_PEEK,
@@ -160,48 +168,52 @@ static int no_conversion_shop_policy(const Game *game,
         PERK_ACE_HIGH
     };
     ReportConversionContext *stats = (ReportConversionContext *)context;
-    char services[7];
-    int serviceCount;
-    int index;
+    const PerkId *priority;
+    int priorityCount;
+    int p;
 
     if (game == NULL || stats == NULL || game->state != STATE_SHOP) return 0;
+    stats->calls++;
+    priority = stats->strategy == 0 ? balancedPriority : defensivePriority;
+    priorityCount = stats->strategy == 0
+        ? (int)(sizeof(balancedPriority) / sizeof(balancedPriority[0]))
+        : (int)(sizeof(defensivePriority) / sizeof(defensivePriority[0]));
 
-    if (stats->strategy == 0) {
-        int action = simulationBalancedShopPolicy(game, currentMinBet, NULL);
-        if (action > 0) {
-            stats->offers++;
-            stats->affordable++;
-            stats->purchases++;
-            stats->actions++;
-            return action;
+    /*
+     * Unlike the production policy, deliberately skip an unaffordable perk
+     * instead of requesting chip-to-mark conversion. Continue through the
+     * priority list so a cheaper offered perk can still be purchased.
+     */
+    for (p = 0; p < priorityCount; p++) {
+        PerkId perk = priority[p];
+        int offer;
+        if (game->player.perkOwned[perk] || isPerkLockedThisFloor(game, perk)) {
+            continue;
         }
-        if (action == -(int)'v') return 0;
-    } else {
-        for (index = 0;
-             index < (int)(sizeof(defensivePriority) / sizeof(defensivePriority[0]));
-             index++) {
-            PerkId perk = defensivePriority[index];
-            int offer;
-            if (game->player.perkOwned[perk] || isPerkLockedThisFloor(game, perk)) continue;
-            for (offer = 0; offer < game->run.shopPerkCount; offer++) {
-                if (game->run.shopPerks[offer] != perk) continue;
-                stats->offers++;
-                if (game->run.marks >= perkCost(perk)) {
-                    stats->affordable++;
-                    stats->purchases++;
-                    stats->actions++;
-                    return (int)perk + 1;
-                }
+        for (offer = 0; offer < game->run.shopPerkCount; offer++) {
+            if (game->run.shopPerks[offer] != perk) continue;
+            stats->offers++;
+            stats->eligible++;
+            if (game->run.marks >= perkCost(perk)) {
+                stats->affordable++;
+                stats->purchases++;
+                stats->actions++;
+                return (int)perk + 1;
             }
         }
     }
 
-    serviceCount = getShopServiceOffers(game, services, 7);
-    for (index = 0; index < serviceCount; index++) {
-        if (services[index] == 'n' &&
-            game->player.chips < currentMinBet * 2 &&
-            canPurchaseShopService(game, 'n', currentMinBet)) {
-            return -(int)'n';
+    {
+        char services[7];
+        int serviceCount = getShopServiceOffers(game, services, 7);
+        int service;
+        for (service = 0; service < serviceCount; service++) {
+            if (services[service] == 'n' &&
+                game->player.chips < currentMinBet * 2 &&
+                canPurchaseShopService(game, 'n', currentMinBet)) {
+                stats->actions++;
+                return -(int)'n';
+            }
         }
     }
     return 0;
@@ -543,8 +555,8 @@ int main(void) {
     puts("  Capped policy buys at most one perk per floor; +0 is the matched capped-policy control.");
     puts("\nChip-conversion strategy comparison (same seeds; deltas versus no-purchase baseline)");
     {
-        ReportConversionContext noConvertBalanced = {0, 0, 0, 0, 0};
-        ReportConversionContext noConvertDefensive = {1, 0, 0, 0, 0};
+        ReportConversionContext noConvertBalanced = {0, 0, 0, 0, 0, 0, 0};
+        ReportConversionContext noConvertDefensive = {1, 0, 0, 0, 0, 0, 0};
         SimulationBatchStats noConvertBalancedStats;
         SimulationBatchStats noConvertDefensiveStats;
         if (!simulateRoguelikeBatch(
@@ -568,7 +580,7 @@ int main(void) {
         print_conversion_comparison("defensive priority, no conversion",
                                     &baseline, &noConvertDefensiveStats,
                                     &noConvertDefensive);
-        puts("  No-conversion policies buy only from held marks; they never exchange chips for marks.");
+        printf("  callback diagnostics: balanced calls %d | eligible %d; defensive calls %d | eligible %d\\n",\n               noConvertBalanced.calls, noConvertBalanced.eligible,\n               noConvertDefensive.calls, noConvertDefensive.eligible);\n        puts("  No-conversion policies skip unaffordable perks and buy only from held marks; they never exchange chips for marks.");
     }
     puts("\nSingle-perk purchases (delta versus no-purchase baseline)");
     {
