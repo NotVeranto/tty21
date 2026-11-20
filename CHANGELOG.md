@@ -9,10 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve a two-minimum-bet chip reserve when the balanced shop policy converts chips into marks to fund an offered perk; do not spend the bankroll on an upgrade that cannot be completed safely.
+- Treat an explicit policy quit during a simulated round as a normal run stop without counting an unfinished round as settled.
+
 - Keep converting chips into marks until an offered odd-cost perk is affordable; the balanced shop policy no longer stalls one mark short.
 
 ### Added
 
+- Run the 256-seed paired shop-policy report in CI under both GCC and Clang.
 - Compare baseline and mark-funded boss-preparation policies over the same deterministic seed set in the roguelike batch regression suite.
 - Add a `make simulate-report` tool that compares baseline and balanced shop policies across 256 shared seeds, visits the shop on every floor, reports actual shop and perk-purchase counts, and summarizes win/loss/push distribution, bankroll, progression, and stop reasons.
 - Expand the paired shop-policy simulation regression to 16 shared seeds and 32 rounds per run, checking bankroll spread and profit/bankruptcy classification for both strategies without assuming a winner.
