@@ -168,8 +168,8 @@ int main(void) {
                 minimum_bet_policy, NULL, progressing_policy, NULL,
                 visit_shop_then_advance_policy, &baselineFloor,
                 NULL, NULL, NULL, NULL, &probe)) {
-            fprintf(stderr, "error: baseline failed for seed %u (index %d)\n",
-                    seeds[index], index);
+            fprintf(stderr, "error: baseline failed for seed %u (index %d, reason %d)\n",
+                    seeds[index], index, probe.failureReason);
             return 1;
         }
         if (!simulateRoguelikeBatch(
