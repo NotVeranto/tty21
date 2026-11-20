@@ -212,8 +212,8 @@ int main(void) {
     unsigned int seeds[REPORT_RUNS];
     SimulationBatchStats baseline;
     SimulationBatchStats balanced;
-    ReportFloorContext baselineFloor = {0U, 0, 0};
-    ReportFloorContext balancedFloor = {0U, 0, 0};
+    ReportFloorContext baselineFloor = {0};
+    ReportFloorContext balancedFloor = {0};
     ReportShopContext balancedShop = {0, 0};
     int index;
 
@@ -248,8 +248,8 @@ int main(void) {
         }
     }
 
-    baselineFloor = (ReportFloorContext){0U, 0, 0};
-    balancedFloor = (ReportFloorContext){0U, 0, 0};
+    baselineFloor = (ReportFloorContext){0};
+    balancedFloor = (ReportFloorContext){0};
     balancedShop = (ReportShopContext){0, 0};
 
     if (!simulateRoguelikeBatch(
@@ -294,7 +294,7 @@ int main(void) {
         for (perkIndex = 0;
              perkIndex < (int)(sizeof(evaluatedPerks) / sizeof(evaluatedPerks[0]));
              perkIndex++) {
-            ReportFloorContext floorContext = {0U, 0, 0};
+            ReportFloorContext floorContext = {0};
             ReportSinglePerkContext perkContext = {evaluatedPerks[perkIndex], 0, 0, 0, 0LL, 0LL};
             SimulationBatchStats perkStats;
             const char *name = perkName(evaluatedPerks[perkIndex]);
