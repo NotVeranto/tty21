@@ -287,7 +287,7 @@ static void print_starting_mark_grant(const ReportGrantStats *stats,
                                       int runs) {
     double count = (double)runs;
     double baseRuns = (double)baseline->runsCompleted;
-    printf("  +%2d marks | chips %.2f (%+.2f) | floors %.2f (%+.2f) | bosses %.2f (%+.2f) | bankrupt %.1f%% (%+.1f pp) | purchases %d | shop marks:",
+    printf("  +%2d marks | chips %.2f (%+.2f) | floors %.2f (%+.2f) | bosses %.2f (%+.2f) | bankrupt %.1f%% (%+.1f pp) | shop actions %d | purchases %d | shop marks:",
            stats->startingMarks,
            stats->finalChips / count,
            stats->finalChips / count - baseline->totalFinalChips / baseRuns,
@@ -298,7 +298,7 @@ static void print_starting_mark_grant(const ReportGrantStats *stats,
            100.0 * stats->bankrupt / count,
            100.0 * ((double)stats->bankrupt / count -
                     (double)baseline->bankruptRuns / baseRuns),
-           stats->perkPurchases);
+           stats->shopActions, stats->perkPurchases);
     {
         int floor;
         for (floor = 1; floor <= 5; floor++) {
