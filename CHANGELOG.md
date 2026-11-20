@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Compare baseline and mark-funded boss-preparation policies over the same deterministic seed set in the roguelike batch regression suite.
-- Add a `make simulate-report` tool that compares baseline and balanced shop policies across 256 shared seeds and reports win/loss/push distribution, bankroll, progression, and stop reasons.
+- Add a `make simulate-report` tool that compares baseline and balanced shop policies across 256 shared seeds, visits the shop on every floor, reports actual shop and perk-purchase counts, and summarizes win/loss/push distribution, bankroll, progression, and stop reasons.
 - Expand the paired shop-policy simulation regression to 16 shared seeds and 32 rounds per run, checking bankroll spread and profit/bankruptcy classification for both strategies without assuming a winner.
 - Report minimum/maximum final bankroll and profitable/bankrupt run counts in roguelike batch statistics for more informative paired balance comparisons.
 
