@@ -80,7 +80,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
     make test
     make simulate-report
 
-`simulate-report` builds and runs the headless paired shop-policy report; it is separate from the test suite because it performs a larger strategy sample. `test-core` compiles a deliberately small set of game-state and rules modules without linking the renderer, input, menu, controller, or save system. `test-unit` runs the broader component and integration suite. `test-smoke` checks command-line startup and error paths. `make test` runs all three. `make test-sanitize` runs the unit and core suites with AddressSanitizer and UndefinedBehaviorSanitizer. CI runs the core regression target with both GCC and Clang, plus the unit, CLI smoke, and sanitizer suites.
+`simulate-report` builds and runs the headless paired shop-policy report; it is separate from the test suite because it performs a larger strategy sample. `test-core` compiles a deliberately small set of game-state and rules modules without linking the renderer, input, menu, controller, or save system. `test-unit` runs the broader component and integration suite. `test-smoke` checks command-line startup and error paths. `make test` runs all three. `make test-sanitize` runs the unit and core suites with AddressSanitizer and UndefinedBehaviorSanitizer. CI runs the 256-seed simulation report and the core regression target with both GCC and Clang, plus the unit, CLI smoke, and sanitizer suites.
 
 ## Run
 
