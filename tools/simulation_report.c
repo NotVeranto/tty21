@@ -223,6 +223,79 @@ static void print_perk_comparison(const char *name,
                     (double)baseline->bankruptRuns / baseRuns));
 }
 
+
+typedef struct {
+    int startingMarks;
+    long long finalChips;
+    long long floors;
+    long long bosses;
+    long long bankrupt;
+    long long marksAtShop[16];
+    int visitsByFloor[16];
+} ReportGrantStats;
+
+static int run_starting_mark_grant_batch(
+    const unsigned int *seeds, int seedCount, int startingMarks,
+    ReportGrantStats *grantStats) {
+    int index;
+    memset(grantStats, 0, sizeof(*grantStats));
+    grantStats->startingMarks = startingMarks;
+    for (index = 0; index < seedCount; index++) {
+        Game game;
+        SimulationRunStats runStats;
+        ReportFloorContext floorContext = {0};
+        rngInit(seeds[index], 1);
+        initGame(&game, MODE_ROGUELIKE);
+        game.fastMode = 1;
+        game.saveEnabled = 0;
+        game.run.marks += startingMarks;
+        game.totalMarksEarned += startingMarks;
+        if (!simulateRoguelikeRun(
+                &game, REPORT_ROUNDS_PER_RUN,
+                minimum_bet_policy, NULL, progressing_policy, NULL,
+                visit_shop_then_advance_policy, &floorContext,
+                NULL, NULL, NULL, NULL, &runStats)) {
+            fprintf(stderr, "error: starting-mark experiment failed for seed %u (grant %d)\n",
+                    seeds[index], startingMarks);
+            return 0;
+        }
+        grantStats->finalChips += runStats.finalChips;
+        grantStats->floors += runStats.floorsReached;
+        grantStats->bosses += runStats.bossesDefeated;
+        if (runStats.finalChips <= 0) grantStats->bankrupt++;
+        {
+            int floor;
+            for (floor = 1; floor <= 15; floor++) {
+                grantStats->marksAtShop[floor] += floorContext.marksAtShop[floor];
+                grantStats->visitsByFloor[floor] += floorContext.visitsByFloor[floor];
+            }
+        }
+    }
+    return 1;
+}
+
+static void print_starting_mark_grant(const ReportGrantStats *stats,
+                                      int runs) {
+    double count = (double)runs;
+    printf("  +%2d starting marks | chips %.2f | floors %.2f | bosses %.2f | bankrupt %.1f%% | shop marks:",
+           stats->startingMarks, stats->finalChips / count,
+           stats->floors / count, stats->bosses / count,
+           100.0 * stats->bankrupt / count);
+    {
+        int floor;
+        for (floor = 1; floor <= 5; floor++) {
+            if (stats->visitsByFloor[floor] > 0) {
+                printf(" F%d %.1f", floor,
+                       (double)stats->marksAtShop[floor] /
+                           stats->visitsByFloor[floor]);
+            } else {
+                printf(" F%d n/a", floor);
+            }
+        }
+    }
+    putchar('\n');
+}
+
 int main(void) {
     unsigned int seeds[REPORT_RUNS];
     SimulationBatchStats baseline;
@@ -231,6 +304,7 @@ int main(void) {
     ReportFloorContext balancedFloor = {0};
     ReportShopContext balancedShop = {0, 0};
     int index;
+    ReportGrantStats grant15, grant30, grant45;
 
     for (index = 0; index < REPORT_RUNS; index++) {
         seeds[index] = 1000U + (unsigned int)index * 7919U;
@@ -300,6 +374,16 @@ int main(void) {
     print_batch("Balanced shop policy", &balanced);
     printf("  shop actions: %d | perk purchases: %d\n",
            balancedShop.shopActions, balancedShop.perkPurchases);
+    puts("\nStarting-mark grant experiment (same seeds, no shop purchases)");
+    if (!run_starting_mark_grant_batch(seeds, REPORT_RUNS, 15, &grant15) ||
+        !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 30, &grant30) ||
+        !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 45, &grant45)) {
+        return 1;
+    }
+    print_starting_mark_grant(&grant15, REPORT_RUNS);
+    print_starting_mark_grant(&grant30, REPORT_RUNS);
+    print_starting_mark_grant(&grant45, REPORT_RUNS);
+    puts("  Starting marks are granted once before floor 1; all gameplay, bet, round, and floor policies remain unchanged.");
     puts("\nSingle-perk purchases (delta versus no-purchase baseline)");
     {
         static const PerkId evaluatedPerks[] = {
