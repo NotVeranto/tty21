@@ -183,12 +183,12 @@ static int single_perk_shop_policy(const Game *game, int currentMinBet,
 static void print_perk_comparison(const char *name,
                                   const SimulationBatchStats *baseline,
                                   const SimulationBatchStats *perk,
-                                  int purchases) {
+                                  int offers, int affordable, int purchases) {
     double runs = (double)perk->runsCompleted;
     double baseRuns = (double)baseline->runsCompleted;
-    printf("  %-16s purchases %3d | chips %+.2f | floors %+.2f | "
-           "bosses %+.2f | bankrupt %+.1f pp\\n",
-           name, purchases,
+    printf("  %-16s offered %3d | affordable %3d | bought %3d | "
+           "chips %+.2f | floors %+.2f | bosses %+.2f | bankrupt %+.1f pp\\n",
+           name, offers, affordable, purchases,
            perk->totalFinalChips / runs - baseline->totalFinalChips / baseRuns,
            perk->totalFloorsReached / runs - baseline->totalFloorsReached / baseRuns,
            perk->totalBossesDefeated / runs - baseline->totalBossesDefeated / baseRuns,
