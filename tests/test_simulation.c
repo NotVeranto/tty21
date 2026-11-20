@@ -35,6 +35,9 @@ static ActionId progressing_policy(const Game *game,
     for (index = 0; index < actionCount; index++) {
         if (standBlocked && actions[index] == ACTION_HIT) return ACTION_HIT;
         if (!standBlocked && actions[index] == ACTION_STAND) return ACTION_STAND;
+        if (standBlocked && actions[index] == ACTION_STAND &&
+            game->player.hands[game->player.activeHand].count >=
+                MAX_HAND_SIZE) return ACTION_STAND;
     }
     return ACTION_COUNT;
 }
@@ -419,6 +422,20 @@ TEST(roguelike_batch_aggregates_reproducible_seeded_runs) {
     ASSERT_TRUE(first.deepestFloorReached >= first.shallowestFloorReached);
 }
 
+TEST(roguelike_batch_stops_when_bet_cap_is_below_minimum) {
+    const unsigned int seed = 88109U;
+    SimulationBatchStats stats;
+
+    ASSERT_EQ_INT(1, simulateRoguelikeBatch(
+        &seed, 1, 100, minimum_bet_policy, NULL,
+        progressing_policy, NULL, advance_floor_policy, NULL,
+        NULL, NULL, NULL, NULL, &stats));
+    ASSERT_EQ_INT(1, stats.runsCompleted);
+    ASSERT_EQ_INT(1,
+        stats.stopReasonCounts[SIMULATION_STOP_INSUFFICIENT_BANKROLL]);
+    ASSERT_TRUE(stats.deepestFloorReached >= 8);
+}
+
 TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set) {
     static const unsigned int seeds[] = {
         3,  7,  11, 19, 23, 31, 37, 43,
@@ -479,5 +496,6 @@ void run_simulation_tests(void) {
     RUN_TEST(balanced_shop_policy_prioritizes_survival_and_funds_it);
     RUN_TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds);
     RUN_TEST(roguelike_batch_aggregates_reproducible_seeded_runs);
+    RUN_TEST(roguelike_batch_stops_when_bet_cap_is_below_minimum);
     RUN_TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set);
 }
