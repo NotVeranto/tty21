@@ -109,6 +109,48 @@ TEST(full_hand_can_stand_through_low_total_restrictions) {
     ASSERT_EQ_INT(STATE_DEALER_TURN, game.state);
 }
 
+
+static ActionId quit_policy(const Game *game,
+                            const ActionId *actions,
+                            int actionCount,
+                            void *context) {
+    int index;
+    (void)game;
+    (void)context;
+    for (index = 0; index < actionCount; index++) {
+        if (actions[index] == ACTION_QUIT) return ACTION_QUIT;
+    }
+    return ACTION_COUNT;
+}
+
+TEST(policy_runner_reports_quit_without_failing_or_settling_round) {
+    Game game;
+    SimulationRunStats stats;
+    MessageStyle style;
+
+    rngInit(20261120U, 1);
+    initGame(&game, MODE_CLASSIC);
+    game.fastMode = 1;
+    game.saveEnabled = 0;
+
+    ASSERT_EQ_INT(2, simulateRound(&game, 10, 0, 0,
+                                   quit_policy, NULL, &style));
+    ASSERT_EQ_INT(STATE_QUIT, game.state);
+    ASSERT_EQ_INT(1, game.roundNumber);
+    ASSERT_EQ_INT(1, game.roundInProgress);
+
+    rngInit(20261120U, 1);
+    initGame(&game, MODE_CLASSIC);
+    game.fastMode = 1;
+    game.saveEnabled = 0;
+    ASSERT_EQ_INT(1, simulateClassicRun(
+        &game, 10, minimum_bet_policy, NULL,
+        quit_policy, NULL, &stats));
+    ASSERT_EQ_INT(0, stats.rounds);
+    ASSERT_EQ_INT(SIMULATION_STOP_GAME_QUIT, stats.stopReason);
+    ASSERT_EQ_INT(STATE_QUIT, game.state);
+}
+
 TEST(policy_runner_rejects_unavailable_policy_action) {
     Game game;
     MessageStyle style;
@@ -525,6 +567,7 @@ void run_simulation_tests(void) {
     RUN_TEST(policy_runner_completes_and_repeats_seeded_round);
     RUN_TEST(full_hand_can_stand_through_low_total_restrictions);
     RUN_TEST(policy_runner_rejects_unavailable_policy_action);
+    RUN_TEST(policy_runner_reports_quit_without_failing_or_settling_round);
     RUN_TEST(classic_session_collects_reproducible_run_statistics);
     RUN_TEST(roguelike_runner_advances_floors_and_tracks_progression);
     RUN_TEST(roguelike_runner_executes_policy_shop_purchase);
