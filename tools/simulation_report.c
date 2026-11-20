@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define REPORT_RUNS 256
+#define REPORT_RUNS 2048
 #define REPORT_ROUNDS_PER_RUN 100
 
 static int minimum_bet_policy(const Game *game, void *context) {
@@ -149,6 +149,9 @@ typedef struct {
     int offers;
     int eligible;
     int affordable;
+    int purchasesByPerk[PERK_COUNT];
+    int purchasesByFloor[16];
+    long long marksSpentByFloor[16];
 } ReportConversionContext;
 
 static int no_conversion_shop_policy(const Game *game,
@@ -197,6 +200,11 @@ static int no_conversion_shop_policy(const Game *game,
             if (game->run.marks >= perkCost(perk)) {
                 stats->affordable++;
                 stats->purchases++;
+                stats->purchasesByPerk[perk]++;
+                if (game->run.floor >= 1 && game->run.floor <= 15) {
+                    stats->purchasesByFloor[game->run.floor]++;
+                    stats->marksSpentByFloor[game->run.floor] += perkCost(perk);
+                }
                 stats->actions++;
                 return (int)perk + 1;
             }
@@ -233,6 +241,30 @@ static void print_conversion_comparison(
            100.0 * ((double)candidate->bankruptRuns / runs -
                     (double)baseline->bankruptRuns / baseRuns),
            context->offers, context->affordable, context->purchases);
+}
+
+static void print_conversion_breakdown(const char *label,
+                                       const ReportConversionContext *context) {
+    int floor;
+    int perk;
+    printf("%s\\n", label);
+    printf("  purchases by floor:");
+    for (floor = 1; floor <= 15; floor++) {
+        if (context->purchasesByFloor[floor] > 0) {
+            printf(" F%d %d (%lld marks)", floor,
+                   context->purchasesByFloor[floor],
+                   context->marksSpentByFloor[floor]);
+        }
+    }
+    putchar('\\n');
+    printf("  purchases by perk:");
+    for (perk = 0; perk < PERK_COUNT; perk++) {
+        if (context->purchasesByPerk[perk] > 0) {
+            printf(" %s %d", perkName((PerkId)perk),
+                   context->purchasesByPerk[perk]);
+        }
+    }
+    putchar('\\n');
 }
 
 static void print_floor_marks(const char *label,
@@ -555,8 +587,9 @@ int main(void) {
     puts("  Capped policy buys at most one perk per floor; +0 is the matched capped-policy control.");
     puts("\nChip-conversion strategy comparison (same seeds; deltas versus no-purchase baseline)");
     {
-        ReportConversionContext noConvertBalanced = {0, 0, 0, 0, 0, 0, 0};
-        ReportConversionContext noConvertDefensive = {1, 0, 0, 0, 0, 0, 0};
+        ReportConversionContext noConvertBalanced = {0};
+        ReportConversionContext noConvertDefensive = {0};
+        noConvertDefensive.strategy = 1;
         ReportFloorContext noConvertBalancedFloor = {0};
         ReportFloorContext noConvertDefensiveFloor = {0};
         SimulationBatchStats noConvertBalancedStats;
@@ -587,6 +620,8 @@ int main(void) {
                noConvertBalanced.eligible, noConvertDefensiveFloor.shopsVisited,
                noConvertDefensive.calls, noConvertDefensive.eligible);
         puts("  No-conversion policies skip unaffordable perks and buy only from held marks; they never exchange chips for marks.");
+        print_conversion_breakdown("  Balanced purchase distribution:", &noConvertBalanced);
+        print_conversion_breakdown("  Defensive purchase distribution:", &noConvertDefensive);
     }
     puts("\nSingle-perk purchases (delta versus no-purchase baseline)");
     {
