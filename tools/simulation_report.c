@@ -155,6 +155,43 @@ static void print_batch(const char *label, const SimulationBatchStats *stats) {
            stats->stopReasonCounts[SIMULATION_STOP_GAME_QUIT]);
 }
 
+
+typedef struct { PerkId target; int purchases; } ReportSinglePerkContext;
+
+static int single_perk_shop_policy(const Game *game, int currentMinBet,
+                                   void *context) {
+    ReportSinglePerkContext *report = (ReportSinglePerkContext *)context;
+    int index;
+    (void)currentMinBet;
+    if (game == NULL || report == NULL || game->state != STATE_SHOP ||
+        game->player.perkOwned[report->target] ||
+        isPerkLockedThisFloor(game, report->target) ||
+        game->run.marks < perkCost(report->target)) return 0;
+    for (index = 0; index < game->run.shopPerkCount; index++) {
+        if (game->run.shopPerks[index] == report->target) {
+            report->purchases++;
+            return (int)report->target + 1;
+        }
+    }
+    return 0;
+}
+
+static void print_perk_comparison(const char *name,
+                                  const SimulationBatchStats *baseline,
+                                  const SimulationBatchStats *perk,
+                                  int purchases) {
+    double runs = (double)perk->runsCompleted;
+    double baseRuns = (double)baseline->runsCompleted;
+    printf("  %-16s purchases %3d | chips %+.2f | floors %+.2f | "
+           "bosses %+.2f | bankrupt %+.1f pp\\n",
+           name, purchases,
+           perk->totalFinalChips / runs - baseline->totalFinalChips / baseRuns,
+           perk->totalFloorsReached / runs - baseline->totalFloorsReached / baseRuns,
+           perk->totalBossesDefeated / runs - baseline->totalBossesDefeated / baseRuns,
+           100.0 * ((double)perk->bankruptRuns / runs -
+                    (double)baseline->bankruptRuns / baseRuns));
+}
+
 int main(void) {
     unsigned int seeds[REPORT_RUNS];
     SimulationBatchStats baseline;
@@ -229,6 +266,36 @@ int main(void) {
     print_batch("Balanced shop policy", &balanced);
     printf("  shop actions: %d | perk purchases: %d\n",
            balancedShop.shopActions, balancedShop.perkPurchases);
-    puts("\nNote: this is a deterministic strategy sample, not a balance verdict.");
+    puts("\\nSingle-perk purchases (delta versus no-purchase baseline)");
+    {
+        static const PerkId evaluatedPerks[] = {
+            PERK_SECOND_WIND, PERK_PEEK, PERK_SURVIVAL, PERK_ACE_HIGH,
+            PERK_SIXTH_SENSE, PERK_DEALERS_FAVOR, PERK_SPLIT_MASTERY,
+            PERK_DOUBLE_DIP, PERK_COMPOUNDING, PERK_INSURANCE_PERK,
+            PERK_MARKED_CARD, PERK_BANKROLL, PERK_EXTRA_LIFE
+        };
+        int perkIndex;
+        for (perkIndex = 0;
+             perkIndex < (int)(sizeof(evaluatedPerks) / sizeof(evaluatedPerks[0]));
+             perkIndex++) {
+            ReportFloorContext floorContext = {0U, 0, 0};
+            ReportSinglePerkContext perkContext = {evaluatedPerks[perkIndex], 0};
+            SimulationBatchStats perkStats;
+            const char *name = perkName(evaluatedPerks[perkIndex]);
+            if (!simulateRoguelikeBatch(
+                    seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
+                    minimum_bet_policy, NULL, progressing_policy, NULL,
+                    visit_shop_then_advance_policy, &floorContext,
+                    NULL, NULL, single_perk_shop_policy, &perkContext,
+                    &perkStats)) {
+                fprintf(stderr, "error: single-perk simulation failed for %s\\n", name);
+                return 1;
+            }
+            print_perk_comparison(name, &baseline, &perkStats, perkContext.purchases);
+        }
+    }
+    puts("\\nNote: same seeds and baseline policies are used for each perk. "
+         "Only affordable offers are purchased; this remains a strategy sample, "
+         "not a balance verdict.");
     return 0;
 }
