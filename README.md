@@ -130,3 +130,4 @@ During betting, enter a numeric bet and press Enter. Answer yes/no prompts for i
 ## License
 
 MIT
+The seeded simulation report additionally compares balanced and defensive perk priorities without chip-to-mark conversion. Both variants use the same 256 seeds and buy only from marks already held, helping isolate the conversion opportunity cost without changing production gameplay.
