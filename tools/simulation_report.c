@@ -187,7 +187,7 @@ static void print_perk_comparison(const char *name,
     double runs = (double)perk->runsCompleted;
     double baseRuns = (double)baseline->runsCompleted;
     printf("  %-16s offered %3d | affordable %3d | bought %3d | "
-           "chips %+.2f | floors %+.2f | bosses %+.2f | bankrupt %+.1f pp\\n",
+           "chips %+.2f | floors %+.2f | bosses %+.2f | bankrupt %+.1f pp\n",
            name, offers, affordable, purchases,
            perk->totalFinalChips / runs - baseline->totalFinalChips / baseRuns,
            perk->totalFloorsReached / runs - baseline->totalFloorsReached / baseRuns,
@@ -270,7 +270,7 @@ int main(void) {
     print_batch("Balanced shop policy", &balanced);
     printf("  shop actions: %d | perk purchases: %d\n",
            balancedShop.shopActions, balancedShop.perkPurchases);
-    puts("\\nSingle-perk purchases (delta versus no-purchase baseline)");
+    puts("\nSingle-perk purchases (delta versus no-purchase baseline)");
     {
         static const PerkId evaluatedPerks[] = {
             PERK_SECOND_WIND, PERK_PEEK, PERK_SURVIVAL, PERK_ACE_HIGH,
@@ -292,7 +292,7 @@ int main(void) {
                     visit_shop_then_advance_policy, &floorContext,
                     NULL, NULL, single_perk_shop_policy, &perkContext,
                     &perkStats)) {
-                fprintf(stderr, "error: single-perk simulation failed for %s\\n", name);
+                fprintf(stderr, "error: single-perk simulation failed for %s\n", name);
                 return 1;
             }
             print_perk_comparison(name, &baseline, &perkStats,
@@ -300,7 +300,7 @@ int main(void) {
                                   perkContext.purchases);
         }
     }
-    puts("\\nNote: same seeds and baseline policies are used for each perk. "
+    puts("\nNote: same seeds and baseline policies are used for each perk. "
          "Only affordable offers are purchased; this remains a strategy sample, "
          "not a balance verdict.");
     return 0;
