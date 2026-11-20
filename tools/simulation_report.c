@@ -101,7 +101,7 @@ int main(void) {
                 minimum_bet_policy, NULL, progressing_policy, NULL,
                 advance_floor_policy, NULL, NULL, NULL, NULL, NULL,
                 &probe)) {
-            fprintf(stderr, "error: baseline failed for seed %u (index %d)\\n",
+            fprintf(stderr, "error: baseline failed for seed %u (index %d)\n",
                     seeds[index], index);
             return 1;
         }
@@ -110,7 +110,7 @@ int main(void) {
                 minimum_bet_policy, NULL, progressing_policy, NULL,
                 advance_floor_policy, NULL, NULL, NULL,
                 simulationBalancedShopPolicy, NULL, &probe)) {
-            fprintf(stderr, "error: balanced shop policy failed for seed %u (index %d)\\n",
+            fprintf(stderr, "error: balanced shop policy failed for seed %u (index %d)\n",
                     seeds[index], index);
             return 1;
         }
