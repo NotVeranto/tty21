@@ -152,12 +152,6 @@ typedef struct {
 static int no_conversion_shop_policy(const Game *game,
                                      int currentMinBet,
                                      void *context) {
-    static const PerkId balancedPriority[] = {
-        PERK_SURVIVAL, PERK_EXTRA_LIFE, PERK_DEALERS_FAVOR, PERK_BANKROLL,
-        PERK_COMPOUNDING, PERK_DOUBLE_DIP, PERK_INSURANCE_PERK,
-        PERK_MARKED_CARD, PERK_PEEK, PERK_SECOND_WIND, PERK_SPLIT_MASTERY,
-        PERK_SIXTH_SENSE, PERK_ACE_HIGH
-    };
     static const PerkId defensivePriority[] = {
         PERK_SURVIVAL, PERK_INSURANCE_PERK, PERK_BANKROLL,
         PERK_EXTRA_LIFE, PERK_DEALERS_FAVOR, PERK_PEEK,
@@ -166,37 +160,48 @@ static int no_conversion_shop_policy(const Game *game,
         PERK_ACE_HIGH
     };
     ReportConversionContext *stats = (ReportConversionContext *)context;
-    const PerkId *priority;
-    int priorityCount, p, offer;
-    (void)currentMinBet;
+    char services[7];
+    int serviceCount;
+    int index;
+
     if (game == NULL || stats == NULL || game->state != STATE_SHOP) return 0;
-    priority = stats->strategy == 0 ? balancedPriority : defensivePriority;
-    priorityCount = stats->strategy == 0
-        ? (int)(sizeof(balancedPriority) / sizeof(balancedPriority[0]))
-        : (int)(sizeof(defensivePriority) / sizeof(defensivePriority[0]));
-    for (p = 0; p < priorityCount; p++) {
-        PerkId perk = priority[p];
-        if (game->player.perkOwned[perk] || isPerkLockedThisFloor(game, perk)) continue;
-        for (offer = 0; offer < game->run.shopPerkCount; offer++) {
-            if (game->run.shopPerks[offer] != perk) continue;
+
+    if (stats->strategy == 0) {
+        int action = simulationBalancedShopPolicy(game, currentMinBet, NULL);
+        if (action > 0) {
             stats->offers++;
-            if (game->run.marks >= perkCost(perk)) {
-                stats->affordable++;
-                stats->purchases++;
-                stats->actions++;
-                return (int)perk + 1;
+            stats->affordable++;
+            stats->purchases++;
+            stats->actions++;
+            return action;
+        }
+        if (action == -(int)'v') return 0;
+    } else {
+        for (index = 0;
+             index < (int)(sizeof(defensivePriority) / sizeof(defensivePriority[0]));
+             index++) {
+            PerkId perk = defensivePriority[index];
+            int offer;
+            if (game->player.perkOwned[perk] || isPerkLockedThisFloor(game, perk)) continue;
+            for (offer = 0; offer < game->run.shopPerkCount; offer++) {
+                if (game->run.shopPerks[offer] != perk) continue;
+                stats->offers++;
+                if (game->run.marks >= perkCost(perk)) {
+                    stats->affordable++;
+                    stats->purchases++;
+                    stats->actions++;
+                    return (int)perk + 1;
+                }
             }
         }
     }
-    {
-        char services[7];
-        int serviceCount = getShopServiceOffers(game, services, 7);
-        for (offer = 0; offer < serviceCount; offer++) {
-            if (services[offer] == 'n' &&
-                game->player.chips < currentMinBet * 2 &&
-                canPurchaseShopService(game, 'n', currentMinBet)) {
-                return -(int)'n';
-            }
+
+    serviceCount = getShopServiceOffers(game, services, 7);
+    for (index = 0; index < serviceCount; index++) {
+        if (services[index] == 'n' &&
+            game->player.chips < currentMinBet * 2 &&
+            canPurchaseShopService(game, 'n', currentMinBet)) {
+            return -(int)'n';
         }
     }
     return 0;
