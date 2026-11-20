@@ -111,7 +111,7 @@ int simulateRound(Game *game,
     for (step = 0; step < SIMULATION_ACTION_LIMIT; step++) {
         if (game->state == STATE_PLAYER_TURN) {
             actionCount = getPlayerActions(game, actions);
-            if (actionCount <= 0) return 0;
+            if (actionCount <= 0) return -1;
 
             action = policy(game, actions, actionCount, policyContext);
             actionAvailable = 0;
@@ -131,11 +131,11 @@ int simulateRound(Game *game,
             if (resultStyle != NULL) *resultStyle = style;
             return 1;
         } else {
-            return 0;
+            return -2;
         }
     }
 
-    return 0;
+    return -3;
 }
 
 int simulateClassicRun(Game *game,
@@ -326,7 +326,10 @@ int simulateRoguelikeRun(Game *game,
             int roundResult = simulateRound(
                 game, betAmount, 0, 0, roundPolicy, roundContext,
                 &resultStyle);
-            if (roundResult == 0) return failSimulationRun(stats, &result, 3);
+            if (roundResult <= 0) {
+                return failSimulationRun(
+                    stats, &result, roundResult == 0 ? 3 : 30 - roundResult);
+            }
             if (roundResult == 2) {
                 result.stopReason = SIMULATION_STOP_GAME_QUIT;
                 break;
