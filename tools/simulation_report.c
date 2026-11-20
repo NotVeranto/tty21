@@ -418,14 +418,14 @@ int main(void) {
     print_starting_mark_grant(&grant30, &balanced, REPORT_RUNS);
     print_starting_mark_grant(&grant45, &balanced, REPORT_RUNS);
     puts("  Starting marks are granted once before floor 1; the balanced shop policy buys only current offers it can afford.");
-    puts("\\nOne-per-floor purchase cap (same seeds; deltas versus capped +0 baseline)");
+    puts("\nOne-per-floor purchase cap (same seeds; deltas versus capped +0 baseline)");
     if (!run_starting_mark_grant_batch(seeds, REPORT_RUNS, 0, &capped0, 1) ||
         !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 15, &capped15, 1) ||
         !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 30, &capped30, 1) ||
         !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 45, &capped45, 1)) {
         return 1;
     }
-    print_starting_mark_grant(&capped0, &balanced, REPORT_RUNS);
+    print_starting_mark_grant(&capped0, &capped0, REPORT_RUNS);
     print_starting_mark_grant(&capped15, &capped0, REPORT_RUNS);
     print_starting_mark_grant(&capped30, &capped0, REPORT_RUNS);
     print_starting_mark_grant(&capped45, &capped0, REPORT_RUNS);
