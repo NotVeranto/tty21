@@ -43,6 +43,13 @@ typedef struct {
     int bossesDefeated;
     int marksEarned;
     int failureReason;
+    int failureState;
+    int failureFloor;
+    int failureDeckTop;
+    int failureHandValue;
+    int failureHandCount;
+    int failureTwist;
+    int failureDealer;
 } SimulationRunStats;
 
 typedef struct {
@@ -67,6 +74,13 @@ typedef struct {
     int failedSeedIndex;
     unsigned int failedSeed;
     int failureReason;
+    int failureState;
+    int failureFloor;
+    int failureDeckTop;
+    int failureHandValue;
+    int failureHandCount;
+    int failureTwist;
+    int failureDealer;
 } SimulationBatchStats;
 
 /* Returns 0 on failure, 1 on settlement, or 2 when the policy quits. */
