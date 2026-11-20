@@ -168,8 +168,8 @@ int main(void) {
                 minimum_bet_policy, NULL, progressing_policy, NULL,
                 visit_shop_then_advance_policy, &baselineFloor,
                 NULL, NULL, NULL, NULL, &probe)) {
-            fprintf(stderr, "error: baseline failed for seed %u (index %d, reason %d, state %d, floor %d, deck %d, hand %d/%d, twist %d, dealer %d)\n",
-                    seeds[index], index, probe.failureReason, probe.failureState, probe.failureFloor, probe.failureDeckTop, probe.failureHandValue, probe.failureHandCount, probe.failureTwist, probe.failureDealer);
+            fprintf(stderr, "error: baseline failed for seed %u (index %d, reason %d, state %d, floor %d, deck %d, hand %d/%d (active %d, hands %d), twist %d, dealer %d)\n",
+                    seeds[index], index, probe.failureReason, probe.failureState, probe.failureFloor, probe.failureDeckTop, probe.failureHandValue, probe.failureHandCount, probe.failureActiveHand, probe.failurePlayerHandCount, probe.failureTwist, probe.failureDealer);
             return 1;
         }
         if (!simulateRoguelikeBatch(
