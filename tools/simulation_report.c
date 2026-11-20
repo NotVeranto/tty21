@@ -27,6 +27,18 @@ static ActionId progressing_policy(const Game *game,
          game->run.dealerId == DEALER_BUTCHER && handValue < 15);
     (void)context;
 
+    /*
+     * No-Reshuffle can exhaust the drawable deck while a low hand is still
+     * forbidden from standing. Hitting then cannot change the hand, so end
+     * this strategy sample cleanly instead of exhausting the action limit.
+     */
+    if (standBlocked &&
+        game->deck.top >= DECK_SIZE - DECK_BURN_SIZE) {
+        for (index = 0; index < actionCount; index++) {
+            if (actions[index] == ACTION_QUIT) return ACTION_QUIT;
+        }
+    }
+
     for (index = 0; index < actionCount; index++) {
         if (standBlocked && actions[index] == ACTION_HIT) return ACTION_HIT;
         if (!standBlocked && actions[index] == ACTION_STAND) return ACTION_STAND;
