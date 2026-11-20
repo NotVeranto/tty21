@@ -38,10 +38,44 @@ static ActionId progressing_policy(const Game *game,
     return ACTION_COUNT;
 }
 
-static char advance_floor_policy(const Game *game, void *context) {
-    (void)game;
-    (void)context;
+typedef struct {
+    unsigned int lastSeed;
+    int lastFloor;
+    int shopsVisited;
+} ReportFloorContext;
+
+typedef struct {
+    int shopActions;
+    int perkPurchases;
+} ReportShopContext;
+
+static char visit_shop_then_advance_policy(const Game *game, void *context) {
+    ReportFloorContext *report = (ReportFloorContext *)context;
+
+    if (report == NULL) return 'a';
+    if (report->lastSeed != game->rngSeed) {
+        report->lastSeed = game->rngSeed;
+        report->lastFloor = 0;
+    }
+    if (report->lastFloor != game->run.floor) {
+        report->lastFloor = game->run.floor;
+        report->shopsVisited++;
+        return 's';
+    }
     return 'a';
+}
+
+static int counted_balanced_shop_policy(const Game *game,
+                                        int currentMinBet,
+                                        void *context) {
+    ReportShopContext *report = (ReportShopContext *)context;
+    int action = simulationBalancedShopPolicy(game, currentMinBet, NULL);
+
+    if (report != NULL && action != 0) {
+        report->shopActions++;
+        if (action > 0) report->perkPurchases++;
+    }
+    return action;
 }
 
 static void print_batch(const char *label, const SimulationBatchStats *stats) {
@@ -84,6 +118,9 @@ int main(void) {
     unsigned int seeds[REPORT_RUNS];
     SimulationBatchStats baseline;
     SimulationBatchStats balanced;
+    ReportFloorContext baselineFloor = {0U, 0, 0};
+    ReportFloorContext balancedFloor = {0U, 0, 0};
+    ReportShopContext balancedShop = {0, 0};
     int index;
 
     for (index = 0; index < REPORT_RUNS; index++) {
@@ -99,8 +136,8 @@ int main(void) {
         if (!simulateRoguelikeBatch(
                 &seeds[index], 1, REPORT_ROUNDS_PER_RUN,
                 minimum_bet_policy, NULL, progressing_policy, NULL,
-                advance_floor_policy, NULL, NULL, NULL, NULL, NULL,
-                &probe)) {
+                visit_shop_then_advance_policy, &baselineFloor,
+                NULL, NULL, NULL, NULL, &probe)) {
             fprintf(stderr, "error: baseline failed for seed %u (index %d)\n",
                     seeds[index], index);
             return 1;
@@ -119,13 +156,14 @@ int main(void) {
     if (!simulateRoguelikeBatch(
             seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
             minimum_bet_policy, NULL, progressing_policy, NULL,
-            advance_floor_policy, NULL, NULL, NULL, NULL, NULL,
-            &baseline) ||
+            visit_shop_then_advance_policy, &baselineFloor,
+            NULL, NULL, NULL, NULL, &baseline) ||
         !simulateRoguelikeBatch(
             seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
             minimum_bet_policy, NULL, progressing_policy, NULL,
-            advance_floor_policy, NULL, NULL, NULL,
-            simulationBalancedShopPolicy, NULL, &balanced)) {
+            visit_shop_then_advance_policy, &balancedFloor,
+            NULL, NULL, NULL,
+            counted_balanced_shop_policy, &balancedShop, &balanced)) {
         fprintf(stderr, "error: simulation batch failed\n");
         return 1;
     }
