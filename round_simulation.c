@@ -290,7 +290,7 @@ int simulateRoguelikeRun(Game *game,
                         ? SIMULATION_STOP_GAME_QUIT : SIMULATION_STOP_POLICY;
                     break;
                 }
-                return 0;
+                return failSimulationRun(stats, &result, 4);
             }
             if (game->state == STATE_QUIT) {
                 result.stopReason = SIMULATION_STOP_GAME_QUIT;
@@ -391,6 +391,10 @@ int simulateRoguelikeBatch(const unsigned int *seeds,
                 roundPolicy, roundContext, floorPolicy, floorContext,
                 bossPrepPolicy, bossPrepContext,
                 shopPolicy, shopContext, &runStats)) {
+            result.failedSeedIndex = index;
+            result.failedSeed = seeds[index];
+            result.failureReason = runStats.failureReason;
+            *stats = result;
             return 0;
         }
 
