@@ -290,7 +290,8 @@ int simulateRoguelikeRun(Game *game,
             break;
         }
         minimumBet = getMinBet(game, game->run.floor, game->mode);
-        if (game->player.chips < minimumBet) {
+        if (game->player.chips < minimumBet ||
+            getMaxBet(game) < minimumBet) {
             result.stopReason = SIMULATION_STOP_INSUFFICIENT_BANKROLL;
             break;
         }
