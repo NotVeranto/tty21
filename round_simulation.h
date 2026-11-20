@@ -48,6 +48,8 @@ typedef struct {
     int failureDeckTop;
     int failureHandValue;
     int failureHandCount;
+    int failurePlayerHandCount;
+    int failureActiveHand;
     int failureTwist;
     int failureDealer;
 } SimulationRunStats;
@@ -79,6 +81,8 @@ typedef struct {
     int failureDeckTop;
     int failureHandValue;
     int failureHandCount;
+    int failurePlayerHandCount;
+    int failureActiveHand;
     int failureTwist;
     int failureDealer;
 } SimulationBatchStats;
