@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Stop roguelike simulations cleanly when a floor's maximum-bet cap is below its minimum wager, classifying the run as insufficient bankroll.
 - Allow a full player hand to stand below Sticky Hands and Butcher thresholds, preventing an unplayable hand from becoming stuck when no further hit is legal.
 - Round odd-chip surrender losses up to the next whole chip instead of allowing a one-chip bet to surrender for free.
 
