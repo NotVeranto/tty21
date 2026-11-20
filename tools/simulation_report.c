@@ -234,6 +234,8 @@ typedef struct {
     long long bankrupt;
     long long marksAtShop[16];
     int visitsByFloor[16];
+    int shopActions;
+    int perkPurchases;
 } ReportGrantStats;
 
 static int run_starting_mark_grant_batch(
@@ -246,6 +248,7 @@ static int run_starting_mark_grant_batch(
         Game game;
         SimulationRunStats runStats;
         ReportFloorContext floorContext = {0};
+        ReportShopContext shopContext = {0, 0};
         rngInit(seeds[index], 1);
         initGame(&game, MODE_ROGUELIKE);
         game.fastMode = 1;
@@ -256,7 +259,8 @@ static int run_starting_mark_grant_batch(
                 &game, REPORT_ROUNDS_PER_RUN,
                 minimum_bet_policy, NULL, progressing_policy, NULL,
                 visit_shop_then_advance_policy, &floorContext,
-                NULL, NULL, NULL, NULL, &runStats)) {
+                NULL, NULL, counted_balanced_shop_policy, &shopContext,
+                &runStats)) {
             fprintf(stderr, "error: starting-mark experiment failed for seed %u (grant %d)\n",
                     seeds[index], startingMarks);
             return 0;
@@ -265,6 +269,8 @@ static int run_starting_mark_grant_batch(
         grantStats->floors += runStats.floorsReached;
         grantStats->bosses += runStats.bossesDefeated;
         if (runStats.finalChips <= 0) grantStats->bankrupt++;
+        grantStats->shopActions += shopContext.shopActions;
+        grantStats->perkPurchases += shopContext.perkPurchases;
         {
             int floor;
             for (floor = 1; floor <= 15; floor++) {
@@ -277,12 +283,22 @@ static int run_starting_mark_grant_batch(
 }
 
 static void print_starting_mark_grant(const ReportGrantStats *stats,
+                                      const SimulationBatchStats *baseline,
                                       int runs) {
     double count = (double)runs;
-    printf("  +%2d starting marks | chips %.2f | floors %.2f | bosses %.2f | bankrupt %.1f%% | shop marks:",
-           stats->startingMarks, stats->finalChips / count,
-           stats->floors / count, stats->bosses / count,
-           100.0 * stats->bankrupt / count);
+    double baseRuns = (double)baseline->runsCompleted;
+    printf("  +%2d marks | chips %.2f (%+.2f) | floors %.2f (%+.2f) | bosses %.2f (%+.2f) | bankrupt %.1f%% (%+.1f pp) | purchases %d | shop marks:",
+           stats->startingMarks,
+           stats->finalChips / count,
+           stats->finalChips / count - baseline->totalFinalChips / baseRuns,
+           stats->floors / count,
+           stats->floors / count - baseline->totalFloorsReached / baseRuns,
+           stats->bosses / count,
+           stats->bosses / count - baseline->totalBossesDefeated / baseRuns,
+           100.0 * stats->bankrupt / count,
+           100.0 * ((double)stats->bankrupt / count -
+                    (double)baseline->bankruptRuns / baseRuns),
+           stats->perkPurchases);
     {
         int floor;
         for (floor = 1; floor <= 5; floor++) {
@@ -376,16 +392,16 @@ int main(void) {
     print_batch("Balanced shop policy", &balanced);
     printf("  shop actions: %d | perk purchases: %d\n",
            balancedShop.shopActions, balancedShop.perkPurchases);
-    puts("\nStarting-mark grant experiment (same seeds, no shop purchases)");
+    puts("\nStarting-mark grant experiment (same seeds, balanced shop purchases)");
     if (!run_starting_mark_grant_batch(seeds, REPORT_RUNS, 15, &grant15) ||
         !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 30, &grant30) ||
         !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 45, &grant45)) {
         return 1;
     }
-    print_starting_mark_grant(&grant15, REPORT_RUNS);
-    print_starting_mark_grant(&grant30, REPORT_RUNS);
-    print_starting_mark_grant(&grant45, REPORT_RUNS);
-    puts("  Starting marks are granted once before floor 1; all gameplay, bet, round, and floor policies remain unchanged.");
+    print_starting_mark_grant(&grant15, &balanced, REPORT_RUNS);
+    print_starting_mark_grant(&grant30, &balanced, REPORT_RUNS);
+    print_starting_mark_grant(&grant45, &balanced, REPORT_RUNS);
+    puts("  Starting marks are granted once before floor 1; the balanced shop policy buys only current offers it can afford.");
     puts("\nSingle-perk purchases (delta versus no-purchase baseline)");
     {
         static const PerkId evaluatedPerks[] = {
