@@ -132,3 +132,4 @@ This is where the agreed animation and responsiveness work belongs. It follows c
 ## Working order
 
 Proceed in stage order. Within a stage, take the highest-risk verified issue first. Do not start the next stage merely because a checklist item was attempted: meet the exit criteria, run the relevant tests, and then move on. Reprioritize only when a newly discovered critical defect justifies it.
+**Progress note (20 Nov 2026):** Added same-seed no-conversion shop comparisons. One variant retains the balanced perk priority; the other prioritizes Survival, Insurance, and Bankroll. Both buy only with existing marks, allowing the report to isolate chip conversion from purchase priority before any production economy changes.
