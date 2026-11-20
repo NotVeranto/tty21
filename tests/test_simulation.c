@@ -530,6 +530,7 @@ void run_simulation_tests(void) {
     RUN_TEST(roguelike_runner_executes_policy_shop_purchase);
     RUN_TEST(roguelike_runner_uses_boss_preparation_policy);
     RUN_TEST(balanced_shop_policy_prioritizes_survival_and_funds_it);
+    RUN_TEST(balanced_shop_policy_skips_unfundable_high_priority_perk);
     RUN_TEST(roguelike_batch_compares_boss_preparation_policies_on_same_seeds);
     RUN_TEST(roguelike_batch_aggregates_reproducible_seeded_runs);
     RUN_TEST(roguelike_runner_stops_when_bet_cap_is_below_minimum);
