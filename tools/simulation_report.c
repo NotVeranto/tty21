@@ -248,7 +248,7 @@ static void print_conversion_breakdown(const char *label,
                                        const ReportConversionContext *context) {
     int floor;
     int perk;
-    printf("%s\\n", label);
+    printf("%s\n", label);
     printf("  purchases by floor:");
     for (floor = 1; floor <= 15; floor++) {
         if (context->purchasesByFloor[floor] > 0) {
@@ -257,7 +257,7 @@ static void print_conversion_breakdown(const char *label,
                    context->marksSpentByFloor[floor]);
         }
     }
-    putchar('\\n');
+    putchar('\n');
     printf("  purchases by perk:");
     for (perk = 0; perk < PERK_COUNT; perk++) {
         if (context->purchasesByPerk[perk] > 0) {
@@ -265,7 +265,7 @@ static void print_conversion_breakdown(const char *label,
                    context->purchasesByPerk[perk]);
         }
     }
-    putchar('\\n');
+    putchar('\n');
 }
 
 static void print_floor_marks(const char *label,
@@ -607,7 +607,7 @@ int main(void) {
                 visit_shop_then_advance_policy, &noConvertDefensiveFloor,
                 NULL, NULL, no_conversion_shop_policy, &noConvertDefensive,
                 &noConvertDefensiveStats)) {
-            fprintf(stderr, "error: chip-conversion strategy comparison failed\\n");
+            fprintf(stderr, "error: chip-conversion strategy comparison failed\n");
             return 1;
         }
         print_conversion_comparison("balanced priority, no conversion",
