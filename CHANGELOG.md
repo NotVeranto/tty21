@@ -77,3 +77,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Prevented deck reshuffles during an active round from reintroducing cards already dealt, avoiding duplicate cards.
 - Corrected several round-resolution paths, including multi-hand dealer resolution and interrupted-round handling.
 - Capped round payouts and corrected insurance availability when dealer blackjack is impossible.
+- Compare balanced and defensive shop priorities without chip-to-mark conversion across the shared seeded simulation sample.
