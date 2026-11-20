@@ -125,6 +125,21 @@ static int counted_balanced_shop_policy(const Game *game,
     return action;
 }
 
+static void print_floor_marks(const char *label,
+                              const ReportFloorContext *report) {
+    int floor;
+
+    printf("%s\\n", label);
+    for (floor = 1; floor <= 15; floor++) {
+        if (report->visitsByFloor[floor] > 0) {
+            printf("  floor %2d: runs %3d | avg marks %.1f\\n",
+                   floor, report->visitsByFloor[floor],
+                   (double)report->marksAtShop[floor] /
+                       report->visitsByFloor[floor]);
+        }
+    }
+}
+
 static void print_batch(const char *label, const SimulationBatchStats *stats) {
     double runs = (double)stats->runsCompleted;
     double outcomes = (double)(stats->totalWins + stats->totalLosses +
@@ -277,6 +292,9 @@ int main(void) {
            REPORT_RUNS, REPORT_ROUNDS_PER_RUN);
     printf("shop visits: baseline %d | balanced %d\n\n",
            baselineFloor.shopsVisited, balancedFloor.shopsVisited);
+    print_floor_marks("Baseline marks at first shop visit by floor (after at least 3 rounds):",
+                      &baselineFloor);
+    putchar('\n');
     print_batch("Baseline (no shop purchases)", &baseline);
     putchar('\n');
     print_batch("Balanced shop policy", &balanced);
