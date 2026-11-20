@@ -16,12 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Expand the seeded shop strategy report from 256 to 2048 shared runs and report no-conversion purchases by floor, marks spent per floor, and perk; this improves exposure and purchase-mix diagnostics without changing production balance.
 - Compare one-time starting-mark grants of 15, 30, and 45 marks over the same 256 seeds while using the balanced shop-purchase policy; report purchase counts and bankroll, floor, boss, and bankruptcy deltas against the no-grant balanced baseline without altering production rewards. Add a matched one-per-floor purchase-cap comparison for all four grant levels to test whether over-purchasing explains the weaker progression.
-- Run the 256-seed paired shop-policy report in CI under both GCC and Clang.
+- Run the 2048-seed paired shop-policy report in CI under both GCC and Clang.
 - Report per-perk offer and affordability counts, average marks at offer, and average unaffordable shortfall alongside purchases and same-seed outcome deltas, making the marks bottleneck measurable.
 - Report baseline marks held at the first shop visit on each floor after at least three rounds, making floor-by-floor progression income visible before economy tuning.
 - Compare baseline and mark-funded boss-preparation policies over the same deterministic seed set in the roguelike batch regression suite.
-- Add a `make simulate-report` tool that compares baseline and balanced shop policies across 256 shared seeds, visits the shop on every floor, reports actual shop and perk-purchase counts, and summarizes win/loss/push distribution, bankroll, progression, and stop reasons.
+- Add a `make simulate-report` tool that compares baseline and balanced shop policies across 2048 shared seeds, visits the shop on every floor, reports actual shop and perk-purchase counts, and summarizes win/loss/push distribution, bankroll, progression, and stop reasons.
 - Expand the paired shop-policy simulation regression to 16 shared seeds and 32 rounds per run, checking bankroll spread and profit/bankruptcy classification for both strategies without assuming a winner.
 - Report minimum/maximum final bankroll and profitable/bankrupt run counts in roguelike batch statistics for more informative paired balance comparisons.
 
