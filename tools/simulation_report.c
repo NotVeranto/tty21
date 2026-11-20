@@ -145,13 +145,18 @@ int main(void) {
         if (!simulateRoguelikeBatch(
                 &seeds[index], 1, REPORT_ROUNDS_PER_RUN,
                 minimum_bet_policy, NULL, progressing_policy, NULL,
-                advance_floor_policy, NULL, NULL, NULL,
-                simulationBalancedShopPolicy, NULL, &probe)) {
+                visit_shop_then_advance_policy, &balancedFloor,
+                NULL, NULL, NULL,
+                counted_balanced_shop_policy, &balancedShop, &probe)) {
             fprintf(stderr, "error: balanced shop policy failed for seed %u (index %d)\n",
                     seeds[index], index);
             return 1;
         }
     }
+
+    baselineFloor = (ReportFloorContext){0U, 0, 0};
+    balancedFloor = (ReportFloorContext){0U, 0, 0};
+    balancedShop = (ReportShopContext){0, 0};
 
     if (!simulateRoguelikeBatch(
             seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
@@ -168,12 +173,21 @@ int main(void) {
         return 1;
     }
 
+    if (balancedShop.perkPurchases == 0) {
+        fprintf(stderr, "error: balanced policy made no perk purchases\n");
+        return 1;
+    }
+
     printf("tty21 seeded shop-policy comparison\n");
-    printf("shared seeds: %d | maximum rounds per run: %d\n\n",
+    printf("shared seeds: %d | maximum rounds per run: %d\n",
            REPORT_RUNS, REPORT_ROUNDS_PER_RUN);
+    printf("shop visits: baseline %d | balanced %d\n\n",
+           baselineFloor.shopsVisited, balancedFloor.shopsVisited);
     print_batch("Baseline (no shop purchases)", &baseline);
     putchar('\n');
     print_batch("Balanced shop policy", &balanced);
+    printf("  shop actions: %d | perk purchases: %d\n",
+           balancedShop.shopActions, balancedShop.perkPurchases);
     puts("\nNote: this is a deterministic strategy sample, not a balance verdict.");
     return 0;
 }
