@@ -1,4 +1,5 @@
 #include "game.h"
+#include "perks.h"
 #include "round_cards.h"
 #include "round_economy.h"
 #include "round_rules.h"
