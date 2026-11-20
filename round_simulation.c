@@ -13,6 +13,14 @@
 
 #define SIMULATION_ACTION_LIMIT 256
 
+static int failSimulationRun(SimulationRunStats *stats,
+                             SimulationRunStats *result,
+                             int reason) {
+    result->failureReason = reason;
+    *stats = *result;
+    return 0;
+}
+
 int simulationBalancedShopPolicy(const Game *game,
                                  int currentMinBet,
                                  void *context) {
@@ -291,7 +299,7 @@ int simulateRoguelikeRun(Game *game,
             continue;
         }
 
-        if (game->state != STATE_BET) return 0;
+        if (game->state != STATE_BET) return failSimulationRun(stats, &result, 1);
         if (result.rounds >= maxRounds) {
             result.stopReason = SIMULATION_STOP_MAX_ROUNDS;
             break;
@@ -311,14 +319,14 @@ int simulateRoguelikeRun(Game *game,
         if (betAmount < minimumBet ||
             betAmount > getMaxBet(game) ||
             betAmount > game->player.chips) {
-            return 0;
+            return failSimulationRun(stats, &result, 2);
         }
 
         {
             int roundResult = simulateRound(
                 game, betAmount, 0, 0, roundPolicy, roundContext,
                 &resultStyle);
-            if (roundResult == 0) return 0;
+            if (roundResult == 0) return failSimulationRun(stats, &result, 3);
             if (roundResult == 2) {
                 result.stopReason = SIMULATION_STOP_GAME_QUIT;
                 break;
