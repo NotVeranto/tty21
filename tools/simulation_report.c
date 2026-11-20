@@ -156,7 +156,7 @@ static void print_batch(const char *label, const SimulationBatchStats *stats) {
 }
 
 
-typedef struct { PerkId target; int offers; int affordable; int purchases; } ReportSinglePerkContext;
+typedef struct { PerkId target; int offers; int affordable; int purchases; long long marksAtOffer; long long marksShort; } ReportSinglePerkContext;
 
 static int single_perk_shop_policy(const Game *game, int currentMinBet,
                                    void *context) {
@@ -169,11 +169,13 @@ static int single_perk_shop_policy(const Game *game, int currentMinBet,
     for (index = 0; index < game->run.shopPerkCount; index++) {
         if (game->run.shopPerks[index] == report->target) {
             report->offers++;
+            report->marksAtOffer += game->run.marks;
             if (game->run.marks >= perkCost(report->target)) {
                 report->affordable++;
                 report->purchases++;
                 return (int)report->target + 1;
             }
+            report->marksShort += perkCost(report->target) - game->run.marks;
             return 0;
         }
     }
@@ -183,12 +185,16 @@ static int single_perk_shop_policy(const Game *game, int currentMinBet,
 static void print_perk_comparison(const char *name,
                                   const SimulationBatchStats *baseline,
                                   const SimulationBatchStats *perk,
-                                  int offers, int affordable, int purchases) {
+                                  int offers, int affordable, int purchases,
+                                  long long marksAtOffer, long long marksShort) {
     double runs = (double)perk->runsCompleted;
     double baseRuns = (double)baseline->runsCompleted;
     printf("  %-16s offered %3d | affordable %3d | bought %3d | "
-           "chips %+.2f | floors %+.2f | bosses %+.2f | bankrupt %+.1f pp\n",
+           "marks %.1f | shortfall %.1f | chips %+.2f | floors %+.2f | "
+           "bosses %+.2f | bankrupt %+.1f pp\n",
            name, offers, affordable, purchases,
+           offers > 0 ? (double)marksAtOffer / offers : 0.0,
+           offers > affordable ? (double)marksShort / (offers - affordable) : 0.0,
            perk->totalFinalChips / runs - baseline->totalFinalChips / baseRuns,
            perk->totalFloorsReached / runs - baseline->totalFloorsReached / baseRuns,
            perk->totalBossesDefeated / runs - baseline->totalBossesDefeated / baseRuns,
@@ -283,7 +289,7 @@ int main(void) {
              perkIndex < (int)(sizeof(evaluatedPerks) / sizeof(evaluatedPerks[0]));
              perkIndex++) {
             ReportFloorContext floorContext = {0U, 0, 0};
-            ReportSinglePerkContext perkContext = {evaluatedPerks[perkIndex], 0, 0, 0};
+            ReportSinglePerkContext perkContext = {evaluatedPerks[perkIndex], 0, 0, 0, 0LL, 0LL};
             SimulationBatchStats perkStats;
             const char *name = perkName(evaluatedPerks[perkIndex]);
             if (!simulateRoguelikeBatch(
@@ -297,7 +303,8 @@ int main(void) {
             }
             print_perk_comparison(name, &baseline, &perkStats,
                                   perkContext.offers, perkContext.affordable,
-                                  perkContext.purchases);
+                                  perkContext.purchases, perkContext.marksAtOffer,
+                                  perkContext.marksShort);
         }
     }
     puts("\nNote: same seeds and baseline policies are used for each perk. "
