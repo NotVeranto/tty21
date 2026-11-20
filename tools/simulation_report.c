@@ -297,20 +297,24 @@ static int run_starting_mark_grant_batch(
     return 1;
 }
 
-static void print_starting_mark_grant(const ReportGrantStats *stats,
-                                      const ReportGrantStats *baseline,
-                                      int runs) {
+static void print_starting_mark_grant_values(
+    const ReportGrantStats *stats,
+    double baselineChips,
+    double baselineFloors,
+    double baselineBosses,
+    double baselineBankrupt,
+    int runs) {
     double count = (double)runs;
     printf("  +%2d marks | chips %.2f (%+.2f) | floors %.2f (%+.2f) | bosses %.2f (%+.2f) | bankrupt %.1f%% (%+.1f pp) | shop actions %d | purchases %d | shop marks:",
            stats->startingMarks,
            stats->finalChips / count,
-           (stats->finalChips - baseline->finalChips) / count,
+           stats->finalChips / count - baselineChips,
            stats->floors / count,
-           (double)(stats->floors - baseline->floors) / count,
+           stats->floors / count - baselineFloors,
            stats->bosses / count,
-           (double)(stats->bosses - baseline->bosses) / count,
+           stats->bosses / count - baselineBosses,
            100.0 * stats->bankrupt / count,
-           100.0 * (stats->bankrupt - baseline->bankrupt) / count,
+           100.0 * (stats->bankrupt / count - baselineBankrupt),
            stats->shopActions, stats->perkPurchases);
     {
         int floor;
@@ -324,7 +328,34 @@ static void print_starting_mark_grant(const ReportGrantStats *stats,
             }
         }
     }
-    putchar('\n');
+    putchar('\\n');
+}
+
+static void print_starting_mark_grant(const ReportGrantStats *stats,
+                                      const SimulationBatchStats *baseline,
+                                      int runs) {
+    double baseRuns = (double)baseline->runsCompleted;
+    print_starting_mark_grant_values(
+        stats,
+        baseline->totalFinalChips / baseRuns,
+        baseline->totalFloorsReached / baseRuns,
+        baseline->totalBossesDefeated / baseRuns,
+        (double)baseline->bankruptRuns / baseRuns,
+        runs);
+}
+
+static void print_starting_mark_grant_vs_grant(
+    const ReportGrantStats *stats,
+    const ReportGrantStats *baseline,
+    int runs) {
+    double baseRuns = (double)runs;
+    print_starting_mark_grant_values(
+        stats,
+        baseline->finalChips / baseRuns,
+        baseline->floors / baseRuns,
+        baseline->bosses / baseRuns,
+        (double)baseline->bankrupt / baseRuns,
+        runs);
 }
 
 int main(void) {
@@ -423,10 +454,10 @@ int main(void) {
         !run_starting_mark_grant_batch(seeds, REPORT_RUNS, 45, &capped45, 1)) {
         return 1;
     }
-    print_starting_mark_grant(&capped0, &capped0, REPORT_RUNS);
-    print_starting_mark_grant(&capped15, &capped0, REPORT_RUNS);
-    print_starting_mark_grant(&capped30, &capped0, REPORT_RUNS);
-    print_starting_mark_grant(&capped45, &capped0, REPORT_RUNS);
+    print_starting_mark_grant_vs_grant(&capped0, &capped0, REPORT_RUNS);
+    print_starting_mark_grant_vs_grant(&capped15, &capped0, REPORT_RUNS);
+    print_starting_mark_grant_vs_grant(&capped30, &capped0, REPORT_RUNS);
+    print_starting_mark_grant_vs_grant(&capped45, &capped0, REPORT_RUNS);
     puts("  Capped policy buys at most one perk per floor; +0 is the matched capped-policy control.");
     puts("\nSingle-perk purchases (delta versus no-purchase baseline)");
     {
