@@ -208,6 +208,7 @@ TEST(balanced_shop_policy_prioritizes_survival_and_funds_it) {
                   simulationBalancedShopPolicy(&game, 10, NULL));
 
     game.run.marks = 0;
+    game.run.shopPerkCount = 1;
     game.run.shopPerks[0] = PERK_DOUBLE_DIP;
     ASSERT_EQ_INT(-(int)'v',
                   simulationBalancedShopPolicy(&game, 10, NULL));
