@@ -57,6 +57,13 @@ static char visit_shop_then_advance_policy(const Game *game, void *context) {
         report->lastSeed = game->rngSeed;
         report->lastFloor = 0;
     }
+    /*
+     * Give each floor a few rounds to generate its normal rewards before
+     * visiting the shop. Entering the shop after the first round of every
+     * floor produced a mostly empty comparison: the policy had no marks to
+     * spend yet, and advancing immediately starved the run of progression.
+     */
+    if (game->run.roundsOnFloor < 3) return 'c';
     if (report->lastFloor != game->run.floor) {
         report->lastFloor = game->run.floor;
         report->shopsVisited++;
