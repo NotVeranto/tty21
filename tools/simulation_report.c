@@ -227,10 +227,10 @@ static int no_conversion_shop_policy(const Game *game,
                         (long long)game->player.chips - conversionCost >=
                             (long long)currentMinBet *
                                 stats->reserveBetMultiple) {
-                        stats->conversionTrades += conversionCost / 10;
-                        stats->chipsConverted += conversionCost;
-                        stats->marksFromConversion +=
-                            (conversionCost / 10) * 2;
+                        /* The runner executes exactly one 10-chip/2-mark trade. */
+                        stats->conversionTrades++;
+                        stats->chipsConverted += 10;
+                        stats->marksFromConversion += 2;
                         stats->actions++;
                         return -(int)'v';
                     }
