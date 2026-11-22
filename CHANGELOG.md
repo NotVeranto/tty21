@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Cross exchange prices of 5, 10, and 15 chips per 2 marks with balanced and defensive perk priorities over the same 2048 seeds; distinguish purchases funded by held marks from purchases funded by conversion, and retain production shop behavior unchanged.
+
 - Compare report-only chip-to-mark exchange prices of 5, 10, and 15 chips per 2 marks over the shared 2048 seeds; accurately count each executed exchange transaction and retain production shop behavior unchanged.
 
 - Add a paired 2048-seed chip-conversion reserve experiment for one-, two-, and three-minimum-bet bankroll reserves, recording conversion volume and checking that the two-bet variant matches the built-in balanced policy; production exchange values remain unchanged.
