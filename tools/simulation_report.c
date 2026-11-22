@@ -634,6 +634,8 @@ int main(void) {
     unsigned int seeds[REPORT_RUNS];
     SimulationBatchStats baseline;
     SimulationBatchStats balanced;
+    SimulationBatchStats noConvertBalancedStats;
+    SimulationBatchStats noConvertDefensiveStats;
     ReportFloorContext baselineFloor = {0};
     ReportFloorContext balancedFloor = {0};
     ReportShopContext balancedShop = {0, 0, 0, -1};
@@ -738,8 +740,6 @@ int main(void) {
         noConvertDefensive.strategy = 1;
         ReportFloorContext noConvertBalancedFloor = {0};
         ReportFloorContext noConvertDefensiveFloor = {0};
-        SimulationBatchStats noConvertBalancedStats;
-        SimulationBatchStats noConvertDefensiveStats;
         if (!simulateRoguelikeBatch(
                 seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
                 minimum_bet_policy, NULL, progressing_policy, NULL,
@@ -852,6 +852,13 @@ int main(void) {
                         }
                         print_conversion_comparison(
                             label, &baseline, &conversionStats, &conversion);
+                        print_conversion_comparison(
+                            strategyIndex == 0
+                                ? "  vs held-marks-only balanced"
+                                : "  vs held-marks-only defensive",
+                            strategyIndex == 0 ? &noConvertBalancedStats
+                                               : &noConvertDefensiveStats,
+                            &conversionStats, &conversion);
                     }
                     printf("    exchanges %d | chips spent %d | marks created %d\n",
                            conversion.conversionTrades, conversion.chipsConverted,
