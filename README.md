@@ -131,3 +131,5 @@ During betting, enter a numeric bet and press Enter. Answer yes/no prompts for i
 
 MIT
 The seeded simulation report additionally compares balanced and defensive perk priorities without chip-to-mark conversion. Both variants use the same 2048 seeds and buy only from marks already held, helping isolate the conversion opportunity cost without changing production gameplay. It also breaks purchases down by floor (including marks spent) and by perk, so aggregate results can be interpreted alongside the actual purchase mix.
+
+The same report now runs a paired chip-conversion reserve experiment over those seeds. It compares one-, two-, and three-minimum-bet post-conversion reserves using the real 10-chip/2-mark shop service and the same balanced perk priority, and reports conversion trades, chips spent, marks created, and outcome deltas. The two-bet case is cross-checked against the built-in balanced policy so the report also validates that its experiment adapter reproduces production behavior. No production economy values are changed by this experiment.
