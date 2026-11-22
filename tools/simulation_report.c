@@ -154,7 +154,7 @@ typedef struct {
     int purchasesByFloor[16];
     long long marksSpentByFloor[16];
     int reserveBetMultiple;
-    int conversions;
+    int conversionTrades;
     int chipsConverted;
     int marksFromConversion;
 } ReportConversionContext;
@@ -188,9 +188,9 @@ static int no_conversion_shop_policy(const Game *game,
         : (int)(sizeof(defensivePriority) / sizeof(defensivePriority[0]));
 
     /*
-     * Unlike the production policy, deliberately skip an unaffordable perk
-     * instead of requesting chip-to-mark conversion. Continue through the
-     * priority list so a cheaper offered perk can still be purchased.
+     * With reserveBetMultiple == 0, skip unaffordable perks and buy only
+     * from held marks. Positive values enable the production 10-chip/2-mark
+     * exchange, varying only the minimum post-exchange chip reserve.
      */
     for (p = 0; p < priorityCount; p++) {
         PerkId perk = priority[p];
@@ -228,7 +228,7 @@ static int no_conversion_shop_policy(const Game *game,
                     (long long)game->player.chips - conversionCost >=
                         (long long)currentMinBet *
                             stats->reserveBetMultiple) {
-                    stats->conversions += conversionCost / 10;
+                    stats->conversionTrades += conversionCost / 10;
                     stats->chipsConverted += conversionCost;
                     stats->marksFromConversion +=
                         (conversionCost / 10) * 2;
@@ -651,7 +651,7 @@ int main(void) {
         print_conversion_breakdown("  Balanced purchase distribution:", &noConvertBalanced);
         print_conversion_breakdown("  Defensive purchase distribution:", &noConvertDefensive);
 
-        puts("\\nChip-conversion reserve experiment (same seeds; balanced priority)");
+        puts("\nChip-conversion reserve experiment (same seeds; balanced priority)");
         {
             const int reserveMultiples[] = {1, 2, 3};
             const char *reserveLabels[] = {
@@ -671,15 +671,15 @@ int main(void) {
                         visit_shop_then_advance_policy, &conversionFloor,
                         NULL, NULL, no_conversion_shop_policy, &conversion,
                         &conversionStats)) {
-                    fprintf(stderr, "error: conversion reserve experiment failed (%dx)\\n",
+                    fprintf(stderr, "error: conversion reserve experiment failed (%dx)\n",
                             reserveMultiples[reserveIndex]);
                     return 1;
                 }
                 print_conversion_comparison(
                     reserveLabels[reserveIndex], &baseline,
                     &conversionStats, &conversion);
-                printf("    converted %d times | chips spent %d | marks created %d\\n",
-                       conversion.conversions, conversion.chipsConverted,
+                printf("    converted %d times | chips spent %d | marks created %d\n",
+                       conversion.conversionTrades, conversion.chipsConverted,
                        conversion.marksFromConversion);
                 if (reserveMultiples[reserveIndex] == 2) {
                     double chipDelta =
@@ -690,7 +690,7 @@ int main(void) {
                         conversionStats.totalFloorsReached /
                             (double)conversionStats.runsCompleted -
                         balanced.totalFloorsReached / (double)balanced.runsCompleted;
-                    printf("    production-policy cross-check: chips %+.2f | floors %+.2f vs built-in balanced\\n",
+                    printf("    production-policy cross-check: chips %+.2f | floors %+.2f vs built-in balanced\n",
                            chipDelta, floorDelta);
                 }
             }
