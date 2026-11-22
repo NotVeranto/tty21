@@ -133,8 +133,8 @@ The same report now runs a paired chip-conversion reserve experiment over those 
 
 The reserve experiment's CI sample found that converting chips into marks remains worse than buying from held marks alone: against the no-purchase baseline, one-, two-, and three-minimum-bet reserves changed average final chips by -2.29, -1.96, and -1.53 per run, and floor depth by -0.35, -0.26, and -0.20. The two-bet experiment exactly matched the built-in balanced policy. These are strategy-sample results, not a production balance change; no exchange rate, perk price, or reward was altered.
 
+A report-only exchange-price experiment also compares 5, 10, and 15 chips per 2 marks on the same seeds. The cheaper 5-chip exchange triggers many more purchases and substantially worse progression; the 15-chip exchange reduces the damage but still trails the held-marks-only strategy. The experiment changes only isolated simulation state, not the game's shop service or economy.
+
 ## License
 
 MIT
-
-A report-only exchange-price experiment also compares 5, 10, and 15 chips per 2 marks on the same seeds. The cheaper 5-chip exchange triggers many more purchases and substantially worse progression; the 15-chip exchange reduces the damage but still trails the held-marks-only strategy. The experiment changes only isolated simulation state, not the game's shop service or economy.
