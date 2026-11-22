@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Add a paired 2048-seed chip-conversion reserve experiment for one-, two-, and three-minimum-bet bankroll reserves, recording conversion volume and checking that the two-bet variant matches the built-in balanced policy; production exchange values remain unchanged.
+
 - Expand the seeded shop strategy report from 256 to 2048 shared runs and report no-conversion purchases by floor, marks spent per floor, and perk; this improves exposure and purchase-mix diagnostics without changing production balance.
 - Compare one-time starting-mark grants of 15, 30, and 45 marks over the same 256 seeds while using the balanced shop-purchase policy; report purchase counts and bankroll, floor, boss, and bankruptcy deltas against the no-grant balanced baseline without altering production rewards. Add a matched one-per-floor purchase-cap comparison for all four grant levels to test whether over-purchasing explains the weaker progression.
 - Run the 2048-seed paired shop-policy report in CI under both GCC and Clang.
