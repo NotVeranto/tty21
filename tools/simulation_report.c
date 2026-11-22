@@ -153,6 +153,10 @@ typedef struct {
     int purchasesByPerk[PERK_COUNT];
     int purchasesByFloor[16];
     long long marksSpentByFloor[16];
+    int reserveBetMultiple;
+    int conversions;
+    int chipsConverted;
+    int marksFromConversion;
 } ReportConversionContext;
 
 static int no_conversion_shop_policy(const Game *game,
@@ -208,6 +212,29 @@ static int no_conversion_shop_policy(const Game *game,
                 }
                 stats->actions++;
                 return (int)perk + 1;
+            }
+        }
+    }
+
+        if (stats->reserveBetMultiple > 0) {
+            int requiredMarks = perkCost(perk) - game->run.marks;
+            int conversionCost = ((requiredMarks + 1) / 2) * 10;
+            char services[7];
+            int serviceCount = getShopServiceOffers(game, services, 7);
+            int service;
+            for (service = 0; service < serviceCount; service++) {
+                if (services[service] == 'v' && requiredMarks > 0 &&
+                    canPurchaseShopService(game, 'v', currentMinBet) &&
+                    (long long)game->player.chips - conversionCost >=
+                        (long long)currentMinBet *
+                            stats->reserveBetMultiple) {
+                    stats->conversions += conversionCost / 10;
+                    stats->chipsConverted += conversionCost;
+                    stats->marksFromConversion +=
+                        (conversionCost / 10) * 2;
+                    stats->actions++;
+                    return -(int)'v';
+                }
             }
         }
     }
@@ -623,6 +650,51 @@ int main(void) {
         puts("  No-conversion policies skip unaffordable perks and buy only from held marks; they never exchange chips for marks.");
         print_conversion_breakdown("  Balanced purchase distribution:", &noConvertBalanced);
         print_conversion_breakdown("  Defensive purchase distribution:", &noConvertDefensive);
+
+        puts("\\nChip-conversion reserve experiment (same seeds; balanced priority)");
+        {
+            const int reserveMultiples[] = {1, 2, 3};
+            const char *reserveLabels[] = {
+                "one minimum-bet reserve",
+                "two minimum-bet reserve (production)",
+                "three minimum-bet reserve"
+            };
+            int reserveIndex;
+            for (reserveIndex = 0; reserveIndex < 3; reserveIndex++) {
+                ReportConversionContext conversion = {0};
+                ReportFloorContext conversionFloor = {0};
+                SimulationBatchStats conversionStats;
+                conversion.reserveBetMultiple = reserveMultiples[reserveIndex];
+                if (!simulateRoguelikeBatch(
+                        seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
+                        minimum_bet_policy, NULL, progressing_policy, NULL,
+                        visit_shop_then_advance_policy, &conversionFloor,
+                        NULL, NULL, no_conversion_shop_policy, &conversion,
+                        &conversionStats)) {
+                    fprintf(stderr, "error: conversion reserve experiment failed (%dx)\\n",
+                            reserveMultiples[reserveIndex]);
+                    return 1;
+                }
+                print_conversion_comparison(
+                    reserveLabels[reserveIndex], &baseline,
+                    &conversionStats, &conversion);
+                printf("    converted %d times | chips spent %d | marks created %d\\n",
+                       conversion.conversions, conversion.chipsConverted,
+                       conversion.marksFromConversion);
+                if (reserveMultiples[reserveIndex] == 2) {
+                    double chipDelta =
+                        conversionStats.totalFinalChips /
+                            (double)conversionStats.runsCompleted -
+                        balanced.totalFinalChips / (double)balanced.runsCompleted;
+                    double floorDelta =
+                        conversionStats.totalFloorsReached /
+                            (double)conversionStats.runsCompleted -
+                        balanced.totalFloorsReached / (double)balanced.runsCompleted;
+                    printf("    production-policy cross-check: chips %+.2f | floors %+.2f vs built-in balanced\\n",
+                           chipDelta, floorDelta);
+                }
+            }
+        }
     }
     puts("\nSingle-perk purchases (delta versus no-purchase baseline)");
     {
