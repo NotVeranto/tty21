@@ -150,6 +150,8 @@ typedef struct {
     int offers;
     int eligible;
     int affordable;
+    int purchasesFromHeldMarks;
+    int purchasesFundedByConversion;
     int purchasesByPerk[PERK_COUNT];
     int purchasesByFloor[16];
     long long marksSpentByFloor[16];
@@ -205,6 +207,7 @@ static int no_conversion_shop_policy(const Game *game,
             stats->eligible++;
             if (game->run.marks >= perkCost(perk)) {
                 stats->affordable++;
+                stats->purchasesFromHeldMarks++;
                 stats->purchases++;
                 stats->purchasesByPerk[perk]++;
                 if (game->run.floor >= 1 && game->run.floor <= 15) {
@@ -264,18 +267,30 @@ static int no_conversion_shop_policy(const Game *game,
 static int conversion_rate_shop_policy(const Game *game,
                                        int currentMinBet,
                                        void *context) {
-    static const PerkId priority[] = {
+    static const PerkId balancedPriority[] = {
         PERK_SURVIVAL, PERK_EXTRA_LIFE, PERK_DEALERS_FAVOR, PERK_BANKROLL,
         PERK_COMPOUNDING, PERK_DOUBLE_DIP, PERK_INSURANCE_PERK,
         PERK_MARKED_CARD, PERK_PEEK, PERK_SECOND_WIND, PERK_SPLIT_MASTERY,
         PERK_SIXTH_SENSE, PERK_ACE_HIGH
     };
+    static const PerkId defensivePriority[] = {
+        PERK_SURVIVAL, PERK_INSURANCE_PERK, PERK_BANKROLL,
+        PERK_EXTRA_LIFE, PERK_DEALERS_FAVOR, PERK_PEEK,
+        PERK_SECOND_WIND, PERK_COMPOUNDING, PERK_DOUBLE_DIP,
+        PERK_MARKED_CARD, PERK_SPLIT_MASTERY, PERK_SIXTH_SENSE,
+        PERK_ACE_HIGH
+    };
     ReportConversionContext *stats = (ReportConversionContext *)context;
+    const PerkId *priority = stats != NULL && stats->strategy == 1
+        ? defensivePriority : balancedPriority;
+    int priorityCount = stats != NULL && stats->strategy == 1
+        ? (int)(sizeof(defensivePriority) / sizeof(defensivePriority[0]))
+        : (int)(sizeof(balancedPriority) / sizeof(balancedPriority[0]));
     int p;
 
     if (game == NULL || stats == NULL || game->state != STATE_SHOP) return 0;
     stats->calls++;
-    for (p = 0; p < (int)(sizeof(priority) / sizeof(priority[0])); p++) {
+    for (p = 0; p < priorityCount; p++) {
         PerkId perk = priority[p];
         int offer;
         if (game->player.perkOwned[perk] || isPerkLockedThisFloor(game, perk)) {
@@ -295,6 +310,7 @@ static int conversion_rate_shop_policy(const Game *game,
             stats->eligible++;
             if (game->run.marks >= perkCost(perk)) {
                 stats->affordable++;
+                stats->purchasesFromHeldMarks++;
             } else {
                 requiredMarks = perkCost(perk) - game->run.marks;
                 trades = (requiredMarks + stats->marksPerTrade - 1) /
@@ -323,6 +339,7 @@ static int conversion_rate_shop_policy(const Game *game,
                     stats->conversionTrades += trades;
                     stats->chipsConverted += chipCost;
                     stats->marksFromConversion += marksAdded;
+                    stats->purchasesFundedByConversion++;
                 }
             }
 
@@ -360,14 +377,16 @@ static void print_conversion_comparison(
     const ReportConversionContext *context) {
     double runs = (double)candidate->runsCompleted;
     double baseRuns = (double)baseline->runsCompleted;
-    printf("  %-27s chips %+.2f | floors %+.2f | bosses %+.2f | bankrupt %+.1f pp | offers %d | affordable %d | purchases %d\n",
+    printf("  %-27s chips %+.2f | floors %+.2f | bosses %+.2f | bankrupt %+.1f pp | offers %d | held-marks-ready %d | bought %d (held %d, converted %d)\n",
            label,
            candidate->totalFinalChips / runs - baseline->totalFinalChips / baseRuns,
            candidate->totalFloorsReached / runs - baseline->totalFloorsReached / baseRuns,
            candidate->totalBossesDefeated / runs - baseline->totalBossesDefeated / baseRuns,
            100.0 * ((double)candidate->bankruptRuns / runs -
                     (double)baseline->bankruptRuns / baseRuns),
-           context->offers, context->affordable, context->purchases);
+           context->offers, context->affordable, context->purchases,
+           context->purchasesFromHeldMarks,
+           context->purchasesFundedByConversion);
 }
 
 static void print_conversion_breakdown(const char *label,
@@ -795,48 +814,59 @@ int main(void) {
             }
         }
     }
-        puts("\nChip-conversion price experiment (same seeds; 2-mark transactions)");
+        puts("\nChip-conversion price and priority experiment (same seeds; 2-mark transactions)");
         {
             const int chipCosts[] = {5, 10, 15};
             const char *priceLabels[] = {
-                "5 chips for 2 marks",
-                "10 chips for 2 marks (current)",
-                "15 chips for 2 marks"
+                "5 chips / 2 marks",
+                "10 chips / 2 marks",
+                "15 chips / 2 marks"
             };
+            const char *priorityLabels[] = {"balanced", "defensive"};
             int priceIndex;
+            int strategyIndex;
             for (priceIndex = 0; priceIndex < 3; priceIndex++) {
-                ReportConversionContext conversion = {0};
-                ReportFloorContext conversionFloor = {0};
-                SimulationBatchStats conversionStats;
-                conversion.reserveBetMultiple = 2;
-                conversion.chipCostPerTrade = chipCosts[priceIndex];
-                conversion.marksPerTrade = 2;
-                if (!simulateRoguelikeBatch(
-                        seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
-                        minimum_bet_policy, NULL, progressing_policy, NULL,
-                        visit_shop_then_advance_policy, &conversionFloor,
-                        NULL, NULL, conversion_rate_shop_policy, &conversion,
-                        &conversionStats)) {
-                    fprintf(stderr, "error: conversion price experiment failed (%d chips)\n",
-                            chipCosts[priceIndex]);
-                    return 1;
-                }
-                print_conversion_comparison(
-                    priceLabels[priceIndex], &baseline,
-                    &conversionStats, &conversion);
-                printf("    converted %d times | chips spent %d | marks created %d\n",
-                       conversion.conversionTrades, conversion.chipsConverted,
-                       conversion.marksFromConversion);
-                if (chipCosts[priceIndex] == 10) {
-                    printf("    production-policy cross-check: chips %+.2f | floors %+.2f vs built-in balanced\n",
-                           conversionStats.totalFinalChips /
-                               (double)conversionStats.runsCompleted -
-                               balanced.totalFinalChips /
-                               (double)balanced.runsCompleted,
-                           conversionStats.totalFloorsReached /
-                               (double)conversionStats.runsCompleted -
-                               balanced.totalFloorsReached /
-                               (double)balanced.runsCompleted);
+                for (strategyIndex = 0; strategyIndex < 2; strategyIndex++) {
+                    ReportConversionContext conversion = {0};
+                    ReportFloorContext conversionFloor = {0};
+                    SimulationBatchStats conversionStats;
+                    conversion.reserveBetMultiple = 2;
+                    conversion.chipCostPerTrade = chipCosts[priceIndex];
+                    conversion.marksPerTrade = 2;
+                    conversion.strategy = strategyIndex;
+                    {
+                        char label[64];
+                        snprintf(label, sizeof(label), "%s, %s",
+                                 priceLabels[priceIndex],
+                                 priorityLabels[strategyIndex]);
+                        if (!simulateRoguelikeBatch(
+                                seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
+                                minimum_bet_policy, NULL, progressing_policy, NULL,
+                                visit_shop_then_advance_policy, &conversionFloor,
+                                NULL, NULL, conversion_rate_shop_policy, &conversion,
+                                &conversionStats)) {
+                            fprintf(stderr,
+                                    "error: conversion price/priority experiment failed (%d chips, strategy %d)\n",
+                                    chipCosts[priceIndex], strategyIndex);
+                            return 1;
+                        }
+                        print_conversion_comparison(
+                            label, &baseline, &conversionStats, &conversion);
+                    }
+                    printf("    exchanges %d | chips spent %d | marks created %d\n",
+                           conversion.conversionTrades, conversion.chipsConverted,
+                           conversion.marksFromConversion);
+                    if (chipCosts[priceIndex] == 10 && strategyIndex == 0) {
+                        printf("    production-policy cross-check: chips %+.2f | floors %+.2f vs built-in balanced\n",
+                               conversionStats.totalFinalChips /
+                                   (double)conversionStats.runsCompleted -
+                                   balanced.totalFinalChips /
+                                   (double)balanced.runsCompleted,
+                               conversionStats.totalFloorsReached /
+                                   (double)conversionStats.runsCompleted -
+                                   balanced.totalFloorsReached /
+                                   (double)balanced.runsCompleted);
+                    }
                 }
             }
         }
