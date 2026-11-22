@@ -152,6 +152,7 @@ typedef struct {
     int affordable;
     int purchasesFromHeldMarks;
     int purchasesFundedByConversion;
+    int conversionPurchasePending;
     int purchasesByPerk[PERK_COUNT];
     int purchasesByFloor[16];
     long long marksSpentByFloor[16];
@@ -207,7 +208,12 @@ static int no_conversion_shop_policy(const Game *game,
             stats->eligible++;
             if (game->run.marks >= perkCost(perk)) {
                 stats->affordable++;
-                stats->purchasesFromHeldMarks++;
+                if (stats->conversionPurchasePending) {
+                    stats->purchasesFundedByConversion++;
+                    stats->conversionPurchasePending = 0;
+                } else {
+                    stats->purchasesFromHeldMarks++;
+                }
                 stats->purchases++;
                 stats->purchasesByPerk[perk]++;
                 if (game->run.floor >= 1 && game->run.floor <= 15) {
@@ -231,6 +237,7 @@ static int no_conversion_shop_policy(const Game *game,
                             (long long)currentMinBet *
                                 stats->reserveBetMultiple) {
                         /* The runner executes exactly one 10-chip/2-mark trade. */
+                        stats->conversionPurchasePending = 1;
                         stats->conversionTrades++;
                         stats->chipsConverted += 10;
                         stats->marksFromConversion += 2;
@@ -796,9 +803,19 @@ int main(void) {
                 print_conversion_comparison(
                     reserveLabels[reserveIndex], &baseline,
                     &conversionStats, &conversion);
-                printf("    converted %d times | chips spent %d | marks created %d\n",
+                printf("    exchanges %d | chips spent %d | marks created %d\n",
                        conversion.conversionTrades, conversion.chipsConverted,
                        conversion.marksFromConversion);
+                if (conversion.purchases !=
+                    conversion.purchasesFromHeldMarks +
+                    conversion.purchasesFundedByConversion) {
+                    fprintf(stderr,
+                            "error: reserve experiment purchase funding does not reconcile (%d total, %d held, %d converted)\\n",
+                            conversion.purchases,
+                            conversion.purchasesFromHeldMarks,
+                            conversion.purchasesFundedByConversion);
+                    return 1;
+                }
                 if (reserveMultiples[reserveIndex] == 2) {
                     double chipDelta =
                         conversionStats.totalFinalChips /
