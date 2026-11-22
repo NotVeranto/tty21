@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Correct reserve-experiment funding diagnostics across the exchange and subsequent perk-purchase callbacks; assert that held-mark-funded plus conversion-funded purchases reconcile with total purchases.
+
 - Preserve a two-minimum-bet chip reserve when the balanced shop policy converts chips into marks to fund an offered perk; do not spend the bankroll on an upgrade that cannot be completed safely.
 - Treat an explicit policy quit during a simulated round as a normal run stop without counting an unfinished round as settled.
 
