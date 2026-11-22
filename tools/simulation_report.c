@@ -157,6 +157,8 @@ typedef struct {
     int conversionTrades;
     int chipsConverted;
     int marksFromConversion;
+    int chipCostPerTrade;
+    int marksPerTrade;
 } ReportConversionContext;
 
 static int no_conversion_shop_policy(const Game *game,
@@ -247,6 +249,105 @@ static int no_conversion_shop_policy(const Game *game,
                 canPurchaseShopService(game, 'n', currentMinBet)) {
                 stats->actions++;
                 return -(int)'n';
+            }
+        }
+    }
+    return 0;
+}
+
+
+/*
+ * Report-only exchange-rate variant. It applies the configured transaction
+ * directly to the isolated simulation Game, then uses the normal perk
+ * purchase API. Production shop prices and service behavior are untouched.
+ */
+static int conversion_rate_shop_policy(const Game *game,
+                                       int currentMinBet,
+                                       void *context) {
+    static const PerkId priority[] = {
+        PERK_SURVIVAL, PERK_EXTRA_LIFE, PERK_DEALERS_FAVOR, PERK_BANKROLL,
+        PERK_COMPOUNDING, PERK_DOUBLE_DIP, PERK_INSURANCE_PERK,
+        PERK_MARKED_CARD, PERK_PEEK, PERK_SECOND_WIND, PERK_SPLIT_MASTERY,
+        PERK_SIXTH_SENSE, PERK_ACE_HIGH
+    };
+    ReportConversionContext *stats = (ReportConversionContext *)context;
+    int p;
+
+    if (game == NULL || stats == NULL || game->state != STATE_SHOP) return 0;
+    stats->calls++;
+    for (p = 0; p < (int)(sizeof(priority) / sizeof(priority[0])); p++) {
+        PerkId perk = priority[p];
+        int offer;
+        if (game->player.perkOwned[perk] || isPerkLockedThisFloor(game, perk)) {
+            continue;
+        }
+        for (offer = 0; offer < game->run.shopPerkCount; offer++) {
+            int requiredMarks;
+            int trades;
+            int chipCost;
+            int serviceIndex;
+            int serviceCount;
+            char services[7];
+            int serviceOffered = 0;
+            if (game->run.shopPerks[offer] != perk) continue;
+
+            stats->offers++;
+            stats->eligible++;
+            if (game->run.marks >= perkCost(perk)) {
+                stats->affordable++;
+            } else {
+                requiredMarks = perkCost(perk) - game->run.marks;
+                trades = (requiredMarks + stats->marksPerTrade - 1) /
+                         stats->marksPerTrade;
+                chipCost = trades * stats->chipCostPerTrade;
+                serviceCount = getShopServiceOffers(game, services, 7);
+                for (serviceIndex = 0; serviceIndex < serviceCount;
+                     serviceIndex++) {
+                    if (services[serviceIndex] == 'v') {
+                        serviceOffered = 1;
+                        break;
+                    }
+                }
+                if (!serviceOffered || chipCost <= 0 ||
+                    (long long)game->player.chips - chipCost <
+                        (long long)currentMinBet * stats->reserveBetMultiple) {
+                    continue;
+                }
+
+                {
+                    Game *mutableGame = (Game *)game;
+                    int marksAdded = trades * stats->marksPerTrade;
+                    mutableGame->player.chips -= chipCost;
+                    mutableGame->run.marks += marksAdded;
+                    mutableGame->totalMarksEarned += marksAdded;
+                    stats->conversionTrades += trades;
+                    stats->chipsConverted += chipCost;
+                    stats->marksFromConversion += marksAdded;
+                }
+            }
+
+            stats->purchases++;
+            stats->purchasesByPerk[perk]++;
+            if (game->run.floor >= 1 && game->run.floor <= 15) {
+                stats->purchasesByFloor[game->run.floor]++;
+                stats->marksSpentByFloor[game->run.floor] += perkCost(perk);
+            }
+            stats->actions++;
+            return (int)perk + 1;
+        }
+    }
+
+    {
+        char services[7];
+        int serviceCount = getShopServiceOffers(game, services, 7);
+        int service;
+        if (game->player.chips < currentMinBet * 2 &&
+            canPurchaseShopService(game, 'n', currentMinBet)) {
+            for (service = 0; service < serviceCount; service++) {
+                if (services[service] == 'n') {
+                    stats->actions++;
+                    return -(int)'n';
+                }
             }
         }
     }
@@ -694,6 +795,52 @@ int main(void) {
             }
         }
     }
+        puts("\nChip-conversion price experiment (same seeds; 2-mark transactions)");
+        {
+            const int chipCosts[] = {5, 10, 15};
+            const char *priceLabels[] = {
+                "5 chips for 2 marks",
+                "10 chips for 2 marks (current)",
+                "15 chips for 2 marks"
+            };
+            int priceIndex;
+            for (priceIndex = 0; priceIndex < 3; priceIndex++) {
+                ReportConversionContext conversion = {0};
+                ReportFloorContext conversionFloor = {0};
+                SimulationBatchStats conversionStats;
+                conversion.reserveBetMultiple = 2;
+                conversion.chipCostPerTrade = chipCosts[priceIndex];
+                conversion.marksPerTrade = 2;
+                if (!simulateRoguelikeBatch(
+                        seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
+                        minimum_bet_policy, NULL, progressing_policy, NULL,
+                        visit_shop_then_advance_policy, &conversionFloor,
+                        NULL, NULL, conversion_rate_shop_policy, &conversion,
+                        &conversionStats)) {
+                    fprintf(stderr, "error: conversion price experiment failed (%d chips)\n",
+                            chipCosts[priceIndex]);
+                    return 1;
+                }
+                print_conversion_comparison(
+                    priceLabels[priceIndex], &baseline,
+                    &conversionStats, &conversion);
+                printf("    converted %d times | chips spent %d | marks created %d\n",
+                       conversion.conversionTrades, conversion.chipsConverted,
+                       conversion.marksFromConversion);
+                if (chipCosts[priceIndex] == 10) {
+                    printf("    production-policy cross-check: chips %+.2f | floors %+.2f vs built-in balanced\n",
+                           conversionStats.totalFinalChips /
+                               (double)conversionStats.runsCompleted -
+                               balanced.totalFinalChips /
+                               (double)balanced.runsCompleted,
+                           conversionStats.totalFloorsReached /
+                               (double)conversionStats.runsCompleted -
+                               balanced.totalFloorsReached /
+                               (double)balanced.runsCompleted);
+                }
+            }
+        }
+
     puts("\nSingle-perk purchases (delta versus no-purchase baseline)");
     {
         static const PerkId evaluatedPerks[] = {
