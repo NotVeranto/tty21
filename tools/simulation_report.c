@@ -188,9 +188,8 @@ static int no_conversion_shop_policy(const Game *game,
         : (int)(sizeof(defensivePriority) / sizeof(defensivePriority[0]));
 
     /*
-     * With reserveBetMultiple == 0, skip unaffordable perks and buy only
-     * from held marks. Positive values enable the production 10-chip/2-mark
-     * exchange, varying only the minimum post-exchange chip reserve.
+     * A zero reserve disables conversion. Positive values enable the real
+     * 10-chip/2-mark service and vary only the required post-exchange reserve.
      */
     for (p = 0; p < priorityCount; p++) {
         PerkId perk = priority[p];
@@ -213,27 +212,26 @@ static int no_conversion_shop_policy(const Game *game,
                 stats->actions++;
                 return (int)perk + 1;
             }
-        }
-    }
 
-        if (stats->reserveBetMultiple > 0) {
-            int requiredMarks = perkCost(perk) - game->run.marks;
-            int conversionCost = ((requiredMarks + 1) / 2) * 10;
-            char services[7];
-            int serviceCount = getShopServiceOffers(game, services, 7);
-            int service;
-            for (service = 0; service < serviceCount; service++) {
-                if (services[service] == 'v' && requiredMarks > 0 &&
-                    canPurchaseShopService(game, 'v', currentMinBet) &&
-                    (long long)game->player.chips - conversionCost >=
-                        (long long)currentMinBet *
-                            stats->reserveBetMultiple) {
-                    stats->conversionTrades += conversionCost / 10;
-                    stats->chipsConverted += conversionCost;
-                    stats->marksFromConversion +=
-                        (conversionCost / 10) * 2;
-                    stats->actions++;
-                    return -(int)'v';
+            if (stats->reserveBetMultiple > 0) {
+                int requiredMarks = perkCost(perk) - game->run.marks;
+                int conversionCost = ((requiredMarks + 1) / 2) * 10;
+                char services[7];
+                int serviceCount = getShopServiceOffers(game, services, 7);
+                int service;
+                for (service = 0; service < serviceCount; service++) {
+                    if (services[service] == 'v' && requiredMarks > 0 &&
+                        canPurchaseShopService(game, 'v', currentMinBet) &&
+                        (long long)game->player.chips - conversionCost >=
+                            (long long)currentMinBet *
+                                stats->reserveBetMultiple) {
+                        stats->conversionTrades += conversionCost / 10;
+                        stats->chipsConverted += conversionCost;
+                        stats->marksFromConversion +=
+                            (conversionCost / 10) * 2;
+                        stats->actions++;
+                        return -(int)'v';
+                    }
                 }
             }
         }
