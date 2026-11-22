@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Compare report-only chip-to-mark exchange prices of 5, 10, and 15 chips per 2 marks over the shared 2048 seeds; accurately count each executed exchange transaction and retain production shop behavior unchanged.
+
 - Add a paired 2048-seed chip-conversion reserve experiment for one-, two-, and three-minimum-bet bankroll reserves, recording conversion volume and checking that the two-bet variant matches the built-in balanced policy; production exchange values remain unchanged.
 
 - Expand the seeded shop strategy report from 256 to 2048 shared runs and report no-conversion purchases by floor, marks spent per floor, and perk; this improves exposure and purchase-mix diagnostics without changing production balance.
