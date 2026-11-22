@@ -135,6 +135,9 @@ The reserve experiment's CI sample found that converting chips into marks remain
 
 A report-only exchange-price experiment compares 5, 10, and 15 chips per 2 marks across both balanced and defensive perk priorities on the same seeds. Its output distinguishes offers with enough marks already held from purchases funded by conversion; these are different counts, so total purchases can exceed held-marks-ready offers. Exchange volume is reported separately. The experiment changes only isolated simulation state, not the game's shop service or economy.
 
+
+The latest 2048-seed matrix also compares every exchange variant against its matching held-marks-only priority. Relative to that control, balanced/defensive exchange variants changed final chips by -9.92/-9.91 (5 chips), -2.62/-2.49 (10 chips), and -1.47/-1.48 (15 chips); floor depth changed by -1.38/-1.36, -0.28/-0.25, and -0.17/-0.15. Defensive ordering only modestly changes the result; exchange itself is the dominant cost. Even 15 chips per 2 marks remains worse for bankroll and progression than not converting. These results support keeping the exchange out of perk-funding decisions; production behavior is still unchanged pending an explicit balance change.
+
 ## License
 
 MIT
