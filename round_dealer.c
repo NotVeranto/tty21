@@ -6,6 +6,7 @@
 #include "round_rules.h"
 #include "dealers.h"
 #include "round_presentation.h"
+#include "input.h"
 
 #include <stdio.h>
 #include <unistd.h>
