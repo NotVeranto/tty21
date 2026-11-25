@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Clarify the scope of the 2048-seed conversion experiments: they compare perk-buying policies and do not evaluate shop/twist services or paid boss preparation; their results must not be generalized to all marks spending.
+
 ### Fixed
 
 - Correct reserve-experiment funding diagnostics across the exchange and subsequent perk-purchase callbacks; assert that held-mark-funded plus conversion-funded purchases reconcile with total purchases.
