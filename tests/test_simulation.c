@@ -649,6 +649,8 @@ TEST(roguelike_batch_compares_shop_policies_on_the_same_seed_set) {
 
 void run_simulation_tests(void) {
     RUN_TEST(policy_runner_completes_and_repeats_seeded_round);
+    RUN_TEST(no_reshuffle_ends_before_an_incomplete_initial_deal);
+    RUN_TEST(no_reshuffle_twin_requires_six_initial_cards);
     RUN_TEST(full_hand_can_stand_through_low_total_restrictions);
     RUN_TEST(policy_runner_rejects_unavailable_policy_action);
     RUN_TEST(policy_runner_reports_quit_without_failing_or_settling_round);
