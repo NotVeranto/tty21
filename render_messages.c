@@ -39,10 +39,8 @@ void renderResultFlash(const Game *game,
         color = "";
     }
 
-    column = (terminalWidth - (int)strlen(message)) / 2 + 1;
-    if (column < 1) {
-        column = 1;
-    }
+    column = getCenteredColumnForWidth(terminalWidth,
+                                       (int)strlen(message));
 
     printf(SCR_CURSOR, ROW_RESULT, column);
     printf(SCR_ERASE_EOL);

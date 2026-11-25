@@ -59,11 +59,8 @@ void renderMenu(const char *title,
 
         fflush(stdout);
     } else {
-        titlePadding = (terminalWidth - (int)strlen(title)) / 2;
-
-        if (titlePadding < 0) {
-            titlePadding = 0;
-        }
+        titlePadding = getCenteredColumnForWidth(
+                           terminalWidth, (int)strlen(title)) - 1;
 
         printf("%*s%s\n", titlePadding, "", title);
 

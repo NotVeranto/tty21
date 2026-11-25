@@ -6,20 +6,20 @@
 #include <stdio.h>
 #include <string.h>
 
+int getCenteredColumnForWidth(int terminalWidth, int contentWidth) {
+    int column = (terminalWidth - contentWidth) / 2 + 1;
+
+    return column < 1 ? 1 : column;
+}
+
 int getCenteredColumn(int contentWidth) {
     int terminalWidth;
     int terminalHeight;
-    int column;
 
     terminalGetSize(&terminalWidth, &terminalHeight);
     (void)terminalHeight;
 
-    column = (terminalWidth - contentWidth) / 2 + 1;
-    if (column < 1) {
-        column = 1;
-    }
-
-    return column;
+    return getCenteredColumnForWidth(terminalWidth, contentWidth);
 }
 
 void printBoxBorder(int row, int column, int width) {

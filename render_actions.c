@@ -3,6 +3,7 @@
 #include "render_terminal.h"
 #include "terminal.h"
 #include "render_style.h"
+#include "render_layout.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -62,8 +63,7 @@ void renderActionBar(const ActionId *actions,
         visibleWidth += (actionIndex > 0 ? 3 : 0) +
                         6 + (int)strlen(actionName);
     }
-    startColumn = (terminalWidth - visibleWidth) / 2 + 1;
-    if (startColumn < 1) startColumn = 1;
+    startColumn = getCenteredColumnForWidth(terminalWidth, visibleWidth);
 
     printf(SCR_CURSOR, row, startColumn);
     printf(SCR_ERASE_EOL);

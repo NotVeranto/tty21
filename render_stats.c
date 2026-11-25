@@ -1,6 +1,7 @@
 #include "render_stats.h"
 #include "render_control.h"
 #include "render_style.h"
+#include "render_layout.h"
 #include "terminal.h"
 
 #include <stdio.h>
@@ -38,7 +39,7 @@ void renderStatsScreen(const Game *game) {
         startRow = 1;
     }
     boxWidth = (int)strlen(lines[0]);
-    padding = width > boxWidth ? (width - boxWidth) / 2 : 0;
+    padding = getCenteredColumnForWidth(width, boxWidth) - 1;
 
     for (i = 0; i < 9; i++) {
         if (isatty(STDOUT_FILENO)) {

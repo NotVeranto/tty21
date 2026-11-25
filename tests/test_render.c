@@ -23,6 +23,18 @@ TEST(render_terminal_accepts_larger_dimensions) {
     ASSERT_TRUE(terminalDimensionsOk(160, 60));
 }
 
+TEST(render_layout_centers_odd_width_content) {
+    ASSERT_EQ_INT(31, getCenteredColumnForWidth(80, 20));
+}
+
+TEST(render_layout_centers_even_width_content) {
+    ASSERT_EQ_INT(31, getCenteredColumnForWidth(80, 19));
+}
+
+TEST(render_layout_left_aligns_content_wider_than_terminal) {
+    ASSERT_EQ_INT(1, getCenteredColumnForWidth(40, 60));
+}
+
 TEST(render_plain_menu_item_formats_selection) {
     char line[64];
 
@@ -49,6 +61,9 @@ void run_render_tests(void) {
     RUN_TEST(render_terminal_rejects_insufficient_width);
     RUN_TEST(render_terminal_rejects_insufficient_height);
     RUN_TEST(render_terminal_accepts_larger_dimensions);
+    RUN_TEST(render_layout_centers_odd_width_content);
+    RUN_TEST(render_layout_centers_even_width_content);
+    RUN_TEST(render_layout_left_aligns_content_wider_than_terminal);
     RUN_TEST(render_plain_menu_item_formats_selection);
     RUN_TEST(render_plain_menu_item_formats_disabled_entries);
     RUN_TEST(render_plain_menu_item_formats_selected_disabled_entries);
