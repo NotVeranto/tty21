@@ -26,7 +26,7 @@ void printBoxBorder(int row, int column, int width) {
     int index;
 
     printf(SCR_CURSOR, row, column);
-    printf("%s+", scrDim());
+    printf("%s+", scrMuted());
     for (index = 0; index < width - 2; index++) {
         putchar('-');
     }
@@ -35,9 +35,9 @@ void printBoxBorder(int row, int column, int width) {
 
 void printBoxSides(int row, int column, int width) {
     printf(SCR_CURSOR, row, column);
-    printf("%s|%s", scrDim(), scrReset());
+    printf("%s|%s", scrMuted(), scrReset());
     printf(SCR_CURSOR, row, column + width - 1);
-    printf("%s|%s", scrDim(), scrReset());
+    printf("%s|%s", scrMuted(), scrReset());
 }
 
 void renderScreenHeader(const char *title,
@@ -53,11 +53,11 @@ void renderScreenHeader(const char *title,
 
     titleColumn = getCenteredColumn((int)strlen(title));
     printf(SCR_CURSOR, row, titleColumn);
-    printf("%s%s%s", scrBold(), title, scrReset());
+    printf("%s%s%s", scrEmphasis(), title, scrReset());
 
     if (subtitle != NULL) {
         printf(SCR_CURSOR, row + 1, getCenteredColumn((int)strlen(subtitle)));
-        printf("%s%s%s", scrDim(), subtitle, scrReset());
+        printf("%s%s%s", scrMuted(), subtitle, scrReset());
     }
 
     separatorWidth = terminalWidth < 60 ? terminalWidth : 60;
@@ -68,7 +68,7 @@ void renderScreenHeader(const char *title,
     printf(SCR_CURSOR,
            row + (subtitle != NULL ? 2 : 1),
            getCenteredColumn(separatorWidth));
-    printf("%s", scrDim());
+    printf("%s", scrMuted());
     while (separatorWidth-- > 0) {
         putchar('-');
     }
@@ -88,19 +88,19 @@ void renderMenuItemRow(int row,
 
     if (disabled) {
         printf("  %s[%c]%s  %s%s%s",
-               scrDim(), hotkey, scrReset(),
-               scrDim(), label, scrReset());
+               scrMuted(), hotkey, scrReset(),
+               scrMuted(), label, scrReset());
     } else if (completed) {
         printf("  %s[%c]%s  %s%s%s",
-               scrDim(), hotkey, scrReset(),
-               scrGreen(), label, scrReset());
+               scrMuted(), hotkey, scrReset(),
+               scrSuccess(), label, scrReset());
     } else if (selected) {
         printf("%s> %s[%c]%s  %s%s%s",
-               scrBold(), scrCyan(), hotkey, scrReset(),
-               scrBold(), label, scrReset());
+               scrEmphasis(), scrAccent(), hotkey, scrReset(),
+               scrEmphasis(), label, scrReset());
     } else {
         printf("  %s[%c]%s  %s",
-               scrDim(), hotkey, scrReset(), label);
+               scrMuted(), hotkey, scrReset(), label);
     }
 }
 

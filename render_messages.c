@@ -30,11 +30,11 @@ void renderResultFlash(const Game *game,
     }
 
     if (style == MSG_WIN) {
-        color = scrGreen();
+        color = scrSuccess();
     } else if (style == MSG_LOSS) {
-        color = scrRed();
+        color = scrDanger();
     } else if (style == MSG_PUSH) {
-        color = scrYellow();
+        color = scrWarning();
     } else {
         color = "";
     }
@@ -44,7 +44,7 @@ void renderResultFlash(const Game *game,
 
     printf(SCR_CURSOR, ROW_RESULT, column);
     printf(SCR_ERASE_EOL);
-    printf("%s%s%s%s", scrBold(), color, message, scrReset());
+    printf("%s%s%s%s", scrEmphasis(), color, message, scrReset());
     fflush(stdout);
 }
 
@@ -66,22 +66,22 @@ void renderMessage(const char *msg,
     suffix = "";
 
     if (style == MSG_WIN) {
-        prefix = scrGreen();
+        prefix = scrSuccess();
         suffix = scrReset();
     } else if (style == MSG_LOSS) {
-        prefix = scrRed();
+        prefix = scrDanger();
         suffix = scrReset();
     } else if (style == MSG_PUSH) {
-        prefix = scrYellow();
+        prefix = scrWarning();
         suffix = scrReset();
     } else if (style == MSG_INFO) {
-        prefix = scrDim();
+        prefix = scrMuted();
         suffix = scrReset();
     } else if (style == MSG_ACTION) {
-        prefix = scrCyan();
+        prefix = scrAccent();
         suffix = scrReset();
     } else if (style == MSG_DEALER) {
-        prefix = scrMagenta();
+        prefix = scrAccent();
         suffix = scrReset();
     }
 

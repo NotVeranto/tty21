@@ -24,19 +24,19 @@ static const char *twistBannerColor(const Game *game) {
         !game->run.twistBlocked) {
         TwistCategory cat =
             getTwistInfo(game->run.twistId)->category;
-        if (cat == TWIST_CAT_HOSTILE) return scrRed();
+        if (cat == TWIST_CAT_HOSTILE) return scrDanger();
         if (cat == TWIST_CAT_NEUTRAL) worst = TWIST_CAT_NEUTRAL;
     }
 
     for (i = 0; i < game->run.extraTwistCount; i++) {
         TwistCategory cat =
             getTwistInfo(game->run.extraTwists[i])->category;
-        if (cat == TWIST_CAT_HOSTILE) return scrRed();
+        if (cat == TWIST_CAT_HOSTILE) return scrDanger();
         if (cat == TWIST_CAT_NEUTRAL) worst = TWIST_CAT_NEUTRAL;
     }
 
-    if (worst == TWIST_CAT_NEUTRAL) return scrDim();
-    return scrGreen();
+    if (worst == TWIST_CAT_NEUTRAL) return scrMuted();
+    return scrSuccess();
 }
 
 void renderTableInfo(const Game *game,
@@ -66,7 +66,7 @@ void renderTableInfo(const Game *game,
         printf(SCR_ERASE_EOL);
 
         if (hintText[0] != '\0') {
-            printf("%s%s%s", scrDim(), hintText, scrReset());
+            printf("%s%s%s", scrMuted(), hintText, scrReset());
         }
 
         moveToTableRow(ROW_RULE, tablePadding);
@@ -88,7 +88,7 @@ void renderTableInfo(const Game *game,
             } else {
                 snprintf(rulesText, sizeof(rulesText), "Rules: %s | %s", rule1, rule2);
             }
-            printf("%s%s%s", scrDim(), rulesText, scrReset());
+            printf("%s%s%s", scrMuted(), rulesText, scrReset());
             }
         }
 
@@ -121,7 +121,7 @@ void renderTableInfo(const Game *game,
                 !showExtras) {
                 if (game->safetyNetArmed) {
                     printf("%sSAFETY NET%s",
-                           scrDim(),
+                           scrMuted(),
                            scrReset());
                 } else {
                     printf(SCR_ERASE_EOL);
@@ -187,7 +187,7 @@ void renderTableInfo(const Game *game,
                            scrReset());
                 } else if (game->safetyNetArmed) {
                     printf("%sSAFETY NET%s",
-                           scrDim(),
+                           scrMuted(),
                            scrReset());
                 } else {
                     printf(SCR_ERASE_EOL);

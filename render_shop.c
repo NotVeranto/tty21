@@ -89,7 +89,7 @@ void renderShop(const Game *game,
                     printf(SCR_CURSOR, currentRow, blockPadding + 1);
                     printf(SCR_ERASE_EOL);
                     printf("%s%s%s",
-                           scrDim(),
+                           scrMuted(),
                            GROUP_TITLES[groupIndex],
                            scrReset());
                     currentRow++;
@@ -115,14 +115,14 @@ void renderShop(const Game *game,
         if (selectedIndex >= 0 && selectedIndex < itemCount &&
             descriptions[selectedIndex] != NULL) {
             printf(SCR_ERASE_EOL);
-            printf("%s%s%s", scrDim(), descriptions[selectedIndex], scrReset());
+            printf("%s%s%s", scrMuted(), descriptions[selectedIndex], scrReset());
         } else {
             printf(SCR_ERASE_EOL);
         }
         moveToTableRow(SHOP_HINT_ROW, shopPadding);
         printf(SCR_ERASE_EOL);
         printf("%sKeys: 1-9/A-C perks; V convert; N net; T tip; L loan; R/B twists; P slot; Q close%s",
-               scrDim(), scrReset());
+               scrMuted(), scrReset());
         renderEventLog(game, shopPadding, terminalWidth);
         fflush(stdout);
     } else {

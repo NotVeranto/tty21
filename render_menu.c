@@ -42,7 +42,7 @@ void renderMenu(const char *title,
 
         printf(SCR_CURSOR, startRow - 1, titlePadding + 1);
         printf(SCR_ERASE_EOL);
-        printf("%s%s%s", scrBold(), title, scrReset());
+        printf("%s%s%s", scrEmphasis(), title, scrReset());
 
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;

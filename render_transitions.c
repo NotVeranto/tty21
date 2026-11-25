@@ -36,7 +36,7 @@ static void printFloorTransitionLine(int row,
 
     printf(SCR_CURSOR, row, column);
     printf("%s|%s%s%s|%s",
-           scrDim(), scrReset(), content, scrDim(), scrReset());
+           scrMuted(), scrReset(), content, scrMuted(), scrReset());
 }
 
 void renderFloorTransition(const Game *game) {
@@ -71,14 +71,14 @@ void renderFloorTransition(const Game *game) {
 
     printf("%s%s", scrReset(), SCR_CLEAR);
     printf(SCR_CURSOR, boxTop, boxLeft);
-    printf("%s+----------------------------------+%s", scrDim(), scrReset());
+    printf("%s+----------------------------------+%s", scrMuted(), scrReset());
     printFloorTransitionLine(boxTop + 1, boxLeft, floorText, 1);
     printFloorTransitionLine(boxTop + 2, boxLeft, "THE STAKES RISE", 1);
     printFloorTransitionLine(boxTop + 3, boxLeft, "", 1);
     printFloorTransitionLine(boxTop + 4, boxLeft, dealerText, 0);
     printFloorTransitionLine(boxTop + 5, boxLeft, minBetText, 0);
     printf(SCR_CURSOR, boxTop + 6, boxLeft);
-    printf("%s+----------------------------------+%s", scrDim(), scrReset());
+    printf("%s+----------------------------------+%s", scrMuted(), scrReset());
     fflush(stdout);
 }
 
@@ -87,7 +87,7 @@ static void printBossPrepBoxLine(int row,
                                  const char *text) {
     printf(SCR_CURSOR, row, column);
     printf("%s|%s  %-58.58s  %s|%s",
-           scrDim(), scrReset(), text, scrDim(), scrReset());
+           scrMuted(), scrReset(), text, scrMuted(), scrReset());
 }
 
 void renderBossPrep(const Game *game) {
