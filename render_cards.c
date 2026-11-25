@@ -67,11 +67,11 @@ static const char *curseColor(CurseId id) {
 
 static void printFaceDownLine(int lineIndex) {
     static const char *PATTERN_LINES[] = {
-        "  . . .  ",
-        " .#####. ",
-        " .#####. ",
-        " .#####. ",
-        "  . . .  "
+        " . . . . . ",
+        "  #######  ",
+        "  ## # ##  ",
+        "  #######  ",
+        " . . . . . "
     };
 
     if (lineIndex < 0 ||
@@ -79,10 +79,7 @@ static void printFaceDownLine(int lineIndex) {
         return;
     }
 
-    printf("%s%s%s%s|%s%s%s",
-           scrCardBorder(), "|", scrCardBack(), scrCardBackInk(),
-           PATTERN_LINES[lineIndex], scrReset(), scrCardBorder());
-    printf("|%s", scrReset());
+    printf("|%s|", PATTERN_LINES[lineIndex]);
 }
 
 static void printVisibleCardLine(const Card *card, int lineIndex) {
@@ -91,30 +88,23 @@ static void printVisibleCardLine(const Card *card, int lineIndex) {
 
     rankName = CARD_RANKS[card->rank];
     ink = card->suit == HEARTS || card->suit == DIAMONDS
-              ? scrCardRedInk() : scrCardBlackInk();
-
-    printf("%s|%s", scrCardBorder(), scrCardFace());
+              ? scrRed() : scrDim();
 
     if (lineIndex == 0) {
-        printf("%s%-2s%s", ink, rankName, scrReset());
-        printf("%s%s", scrCardFace(), card->cursed != CURSED_NONE
-                   ? "      " : "       ");
-        if (card->cursed != CURSED_NONE) {
-            printf("%s%s*%s%s", curseColor((CurseId)card->cursed),
-                   scrBold(), scrReset(), scrCardFace());
-        }
+        printf("|%s%-2s%s       |", ink, rankName, scrReset());
     } else if (lineIndex == 1 || lineIndex == 3) {
-        printf("         ");
+        printf("|         |");
     } else if (lineIndex == 2) {
-        printf("%s    %s%s    ", ink, CARD_SUITS[card->suit],
+        printf("|    %s%s%s    |", ink, CARD_SUITS[card->suit],
                scrReset());
     } else {
-        printf("       %s%2s", ink, rankName);
+        printf("|       %s%2s%s|", ink, rankName, scrReset());
     }
 
-    printf("%s|%s", scrCardBorder(), scrReset());
+    if (card->cursed != CURSED_NONE && lineIndex == 0) {
+        printf("%s", scrReset());
+    }
 }
-
 static void drawCards(const Hand *hand,
                       int startRow,
                       int padding,

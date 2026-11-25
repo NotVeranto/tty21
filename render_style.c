@@ -89,26 +89,3 @@ const char *scrDanger(void) { return scrRed(); }
 const char *scrMuted(void) { return scrDim(); }
 const char *scrEmphasis(void) { return scrBold(); }
 
-const char *scrCardBorder(void) {
-    return renderAnsiEnabled() ? "\033[38;5;250m" : "";
-}
-
-const char *scrCardFace(void) {
-    return renderAnsiEnabled() ? "\033[48;5;255m" : "";
-}
-
-const char *scrCardRedInk(void) {
-    return renderAnsiEnabled() ? "\033[38;5;160m" : "";
-}
-
-const char *scrCardBlackInk(void) {
-    return renderAnsiEnabled() ? "\033[38;5;235m" : "";
-}
-
-const char *scrCardBack(void) {
-    return renderAnsiEnabled() ? "\033[48;5;24m" : "";
-}
-
-const char *scrCardBackInk(void) {
-    return renderAnsiEnabled() ? "\033[38;5;117m" : "";
-}
