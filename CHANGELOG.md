@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Record the isolated 2048-seed service-policy results and their limitations in the balance roadmap.
 - Split the marks-utility simulation into isolated same-seed strategies and cap each shop-service strategy at one action per shop visit, preventing repeated shop-reroll loops from distorting the comparison.
 
 ### Added
