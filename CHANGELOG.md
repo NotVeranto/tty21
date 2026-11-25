@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Track roguelike boss victories against the exact encounter and preparation choice; report rule-disabled and rule-active defeat rates separately and reject inconsistent per-boss counts.
+
 ### Changed
 
 - Record the isolated 2048-seed service-policy results and their limitations in the balance roadmap.

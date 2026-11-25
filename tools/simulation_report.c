@@ -1076,12 +1076,28 @@ int main(void) {
                      bossIndex++) {
                     DealerId bossId = bossIds[bossIndex];
                     const DealerInfo *info = getDealerInfo(bossId);
-                    printf("      %-20s prep %d | disabled %d | defeated %d | defeated after disable %d | unaffordable %d | marks %lld\n",
+                    int prep = utilityStats.bossPrepEncountersByDealer[bossId];
+                    int disabled = utilityStats.bossRuleDisabledByDealer[bossId];
+                    int defeated = utilityStats.bossDefeatsByDealer[bossId];
+                    int disabledDefeats =
+                        utilityStats.bossDefeatsWithRuleDisabledByDealer[bossId];
+                    int enabledPrep = prep - disabled;
+                    int enabledDefeats = defeated - disabledDefeats;
+                    if (disabled > prep || defeated > prep ||
+                        disabledDefeats > disabled ||
+                        enabledDefeats > enabledPrep) {
+                        fprintf(stderr, "error: boss outcome accounting does not reconcile for %s\\n",
+                                info->name);
+                        return 1;
+                    }
+                    printf("      %-20s defeated %d/%d (%.1f%%) | rule-off %d/%d (%.1f%%) | rule-on %d/%d (%.1f%%) | unaffordable %d | marks %lld\\n",
                            info->name,
-                           utilityStats.bossPrepEncountersByDealer[bossId],
-                           utilityStats.bossRuleDisabledByDealer[bossId],
-                           utilityStats.bossDefeatsByDealer[bossId],
-                           utilityStats.bossDefeatsWithRuleDisabledByDealer[bossId],
+                           defeated, prep,
+                           prep > 0 ? 100.0 * defeated / prep : 0.0,
+                           disabledDefeats, disabled,
+                           disabled > 0 ? 100.0 * disabledDefeats / disabled : 0.0,
+                           enabledDefeats, enabledPrep,
+                           enabledPrep > 0 ? 100.0 * enabledDefeats / enabledPrep : 0.0,
                            utility.bossPrepUnaffordableByDealer[bossId],
                            utility.bossMarksSpentByDealer[bossId]);
                 }

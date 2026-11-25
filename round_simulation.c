@@ -346,6 +346,9 @@ int simulateRoguelikeRun(Game *game,
         }
 
         {
+            int bossWasRewarded = game->run.bossRewarded;
+            DealerId roundDealer = game->run.dealerId;
+            int ruleWasDisabled = game->bossRuleDisabled;
             int roundResult = simulateRound(
                 game, betAmount, 0, 0, roundPolicy, roundContext,
                 &resultStyle);
@@ -365,6 +368,13 @@ int simulateRoguelikeRun(Game *game,
                 result.failureDealer = game->run.dealerId;
                 return failSimulationRun(
                     stats, &result, roundResult == 0 ? 3 : 30 - roundResult);
+            }
+            if (!bossWasRewarded && game->run.bossRewarded &&
+                dealerIsBoss(roundDealer)) {
+                result.bossDefeatsByDealer[roundDealer]++;
+                if (ruleWasDisabled) {
+                    result.bossDefeatsWithRuleDisabledByDealer[roundDealer]++;
+                }
             }
             if (roundResult == 2) {
                 result.stopReason = SIMULATION_STOP_GAME_QUIT;
