@@ -379,7 +379,15 @@ static int conversion_rate_shop_policy(const Game *game,
 }
 
 
+typedef enum {
+    REPORT_UTILITY_SHOP_REROLL = 0,
+    REPORT_UTILITY_TWIST_TOOLS,
+    REPORT_UTILITY_PERK_ONLY,
+    REPORT_UTILITY_BOSS_PREP_ONLY
+} ReportUtilityMode;
+
 typedef struct {
+    ReportUtilityMode mode;
     int bossPrepOffers;
     int bossRulesDisabled;
     long long bossMarksSpent;
@@ -388,6 +396,7 @@ typedef struct {
     int twistBlocks;
     long long serviceMarksSpent;
     int perkPurchases;
+    int lastServiceFloor;
 } ReportUtilityContext;
 
 static int report_boss_prep_policy(const Game *game, void *context) {
@@ -405,77 +414,75 @@ static int report_boss_prep_policy(const Game *game, void *context) {
 
 static int report_utility_shop_policy(const Game *game, int currentMinBet,
                                       void *context) {
-    static const PerkId priority[] = {
-        PERK_SURVIVAL, PERK_EXTRA_LIFE, PERK_DEALERS_FAVOR, PERK_BANKROLL,
-        PERK_COMPOUNDING, PERK_DOUBLE_DIP, PERK_INSURANCE_PERK,
-        PERK_MARKED_CARD, PERK_PEEK, PERK_SECOND_WIND, PERK_SPLIT_MASTERY,
-        PERK_SIXTH_SENSE, PERK_ACE_HIGH
-    };
     ReportUtilityContext *stats = (ReportUtilityContext *)context;
     char services[7];
     int serviceCount;
     int index;
 
     if (game == NULL || stats == NULL || game->state != STATE_SHOP) return 0;
+    if (stats->mode == REPORT_UTILITY_BOSS_PREP_ONLY) return 0;
 
-    for (index = 0; index < (int)(sizeof(priority) / sizeof(priority[0])); index++) {
-        PerkId perk = priority[index];
-        int offer;
-        if (game->player.perkOwned[perk] || isPerkLockedThisFloor(game, perk)) continue;
-        for (offer = 0; offer < game->run.shopPerkCount; offer++) {
-            if (game->run.shopPerks[offer] == perk &&
-                game->run.marks >= perkCost(perk)) {
-                stats->perkPurchases++;
-                return (int)perk + 1;
+    if (stats->mode == REPORT_UTILITY_PERK_ONLY) {
+        static const PerkId priority[] = {
+            PERK_SURVIVAL, PERK_EXTRA_LIFE, PERK_DEALERS_FAVOR, PERK_BANKROLL,
+            PERK_COMPOUNDING, PERK_DOUBLE_DIP, PERK_INSURANCE_PERK,
+            PERK_MARKED_CARD, PERK_PEEK, PERK_SECOND_WIND, PERK_SPLIT_MASTERY,
+            PERK_SIXTH_SENSE, PERK_ACE_HIGH
+        };
+        for (index = 0; index < (int)(sizeof(priority) / sizeof(priority[0])); index++) {
+            PerkId perk = priority[index];
+            int offer;
+            if (game->player.perkOwned[perk] || isPerkLockedThisFloor(game, perk)) continue;
+            for (offer = 0; offer < game->run.shopPerkCount; offer++) {
+                if (game->run.shopPerks[offer] == perk &&
+                    game->run.marks >= perkCost(perk)) {
+                    stats->perkPurchases++;
+                    return (int)perk + 1;
+                }
             }
         }
+        return 0;
     }
 
+    /* One utility-service action per actual shop visit; no repeated reroll loop. */
+    if (stats->lastServiceFloor == game->run.floor) return 0;
     serviceCount = getShopServiceOffers(game, services, 7);
 
-    if (!game->run.shopPerksRerolled && game->run.marks >= 10) {
-        int affordableOffer = 0;
-        for (index = 0; index < game->run.shopPerkCount; index++) {
-            PerkId perk = game->run.shopPerks[index];
-            if (!game->player.perkOwned[perk] &&
-                !isPerkLockedThisFloor(game, perk) &&
-                game->run.marks >= perkCost(perk)) {
-                affordableOffer = 1;
-                break;
+    if (stats->mode == REPORT_UTILITY_SHOP_REROLL) {
+        if (game->run.marks < 10 || game->run.shopPerksRerolled ||
+            !canPurchaseShopService(game, 'z', currentMinBet)) return 0;
+        for (index = 0; index < serviceCount; index++) {
+            if (services[index] == 'z') {
+                stats->lastServiceFloor = game->run.floor;
+                stats->shopRerolls++;
+                stats->serviceMarksSpent += 10;
+                return -(int)'z';
             }
         }
-        if (!affordableOffer && canPurchaseShopService(game, 'z', currentMinBet)) {
-            for (index = 0; index < serviceCount; index++) {
-                if (services[index] == 'z') {
-                    stats->shopRerolls++;
-                    stats->serviceMarksSpent += 10;
-                    return -(int)'z';
-                }
-            }
-        }
-    }
-
-    if (game->run.twistId != TWIST_NONE) {
+    } else if (stats->mode == REPORT_UTILITY_TWIST_TOOLS &&
+               game->run.twistId != TWIST_NONE) {
         const TwistInfo *twist = getTwistInfo(game->run.twistId);
-        if (twist != NULL && twist->category == TWIST_CAT_HOSTILE) {
-            if (game->run.marks >= 40 &&
-                canPurchaseShopService(game, 'b', currentMinBet)) {
-                for (index = 0; index < serviceCount; index++) {
-                    if (services[index] == 'b') {
-                        stats->twistBlocks++;
-                        stats->serviceMarksSpent += 40;
-                        return -(int)'b';
-                    }
+        if (twist == NULL || twist->category != TWIST_CAT_HOSTILE) return 0;
+        /* Prefer the stronger permanent block; otherwise reroll once. */
+        if (game->run.marks >= 40 &&
+            canPurchaseShopService(game, 'b', currentMinBet)) {
+            for (index = 0; index < serviceCount; index++) {
+                if (services[index] == 'b') {
+                    stats->lastServiceFloor = game->run.floor;
+                    stats->twistBlocks++;
+                    stats->serviceMarksSpent += 40;
+                    return -(int)'b';
                 }
             }
-            if (game->run.marks >= 30 &&
-                canPurchaseShopService(game, 'r', currentMinBet)) {
-                for (index = 0; index < serviceCount; index++) {
-                    if (services[index] == 'r') {
-                        stats->twistRerolls++;
-                        stats->serviceMarksSpent += 30;
-                        return -(int)'r';
-                    }
+        }
+        if (game->run.marks >= 30 &&
+            canPurchaseShopService(game, 'r', currentMinBet)) {
+            for (index = 0; index < serviceCount; index++) {
+                if (services[index] == 'r') {
+                    stats->lastServiceFloor = game->run.floor;
+                    stats->twistRerolls++;
+                    stats->serviceMarksSpent += 30;
+                    return -(int)'r';
                 }
             }
         }
@@ -1000,42 +1007,60 @@ int main(void) {
             }
         }
 
-    puts("\nMarks utility experiment (same seeds; real shop and boss-prep services)");
+    puts("\nIsolated marks utility experiments (same seeds; one service action per shop visit)");
     {
-        ReportUtilityContext utility = {0};
-        ReportFloorContext utilityFloor = {0};
-        SimulationBatchStats utilityStats;
-        if (!simulateRoguelikeBatch(
-                seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
-                minimum_bet_policy, NULL, progressing_policy, NULL,
-                visit_shop_then_advance_policy, &utilityFloor,
-                report_boss_prep_policy, &utility,
-                report_utility_shop_policy, &utility, &utilityStats)) {
-            fprintf(stderr, "error: marks utility experiment failed\n");
-            return 1;
-        }
-        printf("  outcomes vs no-purchase baseline: chips %+.2f | floors %+.2f | bosses %+.2f | bankrupt %+.1f pp\n",
-               utilityStats.totalFinalChips / (double)utilityStats.runsCompleted -
-                   baseline.totalFinalChips / (double)baseline.runsCompleted,
-               utilityStats.totalFloorsReached / (double)utilityStats.runsCompleted -
-                   baseline.totalFloorsReached / (double)baseline.runsCompleted,
-               utilityStats.totalBossesDefeated / (double)utilityStats.runsCompleted -
-                   baseline.totalBossesDefeated / (double)baseline.runsCompleted,
-               100.0 * ((double)utilityStats.bankruptRuns / utilityStats.runsCompleted -
-                        (double)baseline.bankruptRuns / (double)baseline.runsCompleted));
-        printf("  boss prep: eligible encounters %d | rules disabled %d | marks spent %lld\n",
-               utility.bossPrepOffers, utility.bossRulesDisabled,
-               utility.bossMarksSpent);
-        printf("  shop services: perk purchases %d | shop rerolls %d (10 marks each) | twist rerolls %d (30 marks each) | twist blocks %d (40 marks each) | service marks spent %lld\n",
-               utility.perkPurchases, utility.shopRerolls,
-               utility.twistRerolls, utility.twistBlocks,
-               utility.serviceMarksSpent);
-        if (utility.serviceMarksSpent !=
-            utility.shopRerolls * 10LL +
-            utility.twistRerolls * 30LL +
-            utility.twistBlocks * 40LL) {
-            fprintf(stderr, "error: service mark-spend accounting does not reconcile\n");
-            return 1;
+        const ReportUtilityMode modes[] = {
+            REPORT_UTILITY_SHOP_REROLL,
+            REPORT_UTILITY_TWIST_TOOLS,
+            REPORT_UTILITY_PERK_ONLY,
+            REPORT_UTILITY_BOSS_PREP_ONLY
+        };
+        const char *labels[] = {
+            "shop-pool reroll only",
+            "hostile-twist tools only",
+            "held-mark perks only",
+            "boss-rule disable only"
+        };
+        int modeIndex;
+        for (modeIndex = 0; modeIndex < 4; modeIndex++) {
+            ReportUtilityContext utility = {0};
+            ReportFloorContext utilityFloor = {0};
+            SimulationBatchStats utilityStats;
+            utility.mode = modes[modeIndex];
+            utility.lastServiceFloor = -1;
+            if (!simulateRoguelikeBatch(
+                    seeds, REPORT_RUNS, REPORT_ROUNDS_PER_RUN,
+                    minimum_bet_policy, NULL, progressing_policy, NULL,
+                    visit_shop_then_advance_policy, &utilityFloor,
+                    report_boss_prep_policy, &utility,
+                    report_utility_shop_policy, &utility, &utilityStats)) {
+                fprintf(stderr, "error: isolated marks utility experiment failed (%s)\n",
+                        labels[modeIndex]);
+                return 1;
+            }
+            printf("  %-25s chips %+.2f | floors %+.2f | bosses %+.2f | bankrupt %+.1f pp\n",
+                   labels[modeIndex],
+                   utilityStats.totalFinalChips / (double)utilityStats.runsCompleted -
+                       baseline.totalFinalChips / (double)baseline.runsCompleted,
+                   utilityStats.totalFloorsReached / (double)utilityStats.runsCompleted -
+                       baseline.totalFloorsReached / (double)baseline.runsCompleted,
+                   utilityStats.totalBossesDefeated / (double)utilityStats.runsCompleted -
+                       baseline.totalBossesDefeated / (double)baseline.runsCompleted,
+                   100.0 * ((double)utilityStats.bankruptRuns / utilityStats.runsCompleted -
+                            (double)baseline.bankruptRuns / (double)baseline.runsCompleted));
+            printf("    boss prep: eligible %d | disabled %d | marks %lld; shop rerolls %d | twist rerolls %d | blocks %d | service marks %lld | perks %d\n",
+                   utility.bossPrepOffers, utility.bossRulesDisabled,
+                   utility.bossMarksSpent, utility.shopRerolls,
+                   utility.twistRerolls, utility.twistBlocks,
+                   utility.serviceMarksSpent, utility.perkPurchases);
+            if (utility.serviceMarksSpent !=
+                utility.shopRerolls * 10LL +
+                utility.twistRerolls * 30LL +
+                utility.twistBlocks * 40LL) {
+                fprintf(stderr, "error: service mark-spend accounting does not reconcile (%s)\n",
+                        labels[modeIndex]);
+                return 1;
+            }
         }
     }
 
