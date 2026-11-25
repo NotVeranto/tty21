@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Split the marks-utility simulation into isolated same-seed strategies and cap each shop-service strategy at one action per shop visit, preventing repeated shop-reroll loops from distorting the comparison.
+
 ### Added
 
 - Record the 2048-seed marks-utility result and clarify that its combined policy outcome cannot isolate the effect of individual services.

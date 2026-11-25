@@ -392,7 +392,8 @@ typedef struct {
 
 static int report_boss_prep_policy(const Game *game, void *context) {
     ReportUtilityContext *stats = (ReportUtilityContext *)context;
-    if (game == NULL || stats == NULL || game->state != STATE_BOSS_PREP) return 0;
+    if (game == NULL || stats == NULL || game->state != STATE_BOSS_PREP ||
+        stats->mode != REPORT_UTILITY_BOSS_PREP_ONLY) return 0;
     stats->bossPrepOffers++;
     if (game->run.marks >= game->bossRulePaid) {
         stats->bossRulesDisabled++;
