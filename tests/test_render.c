@@ -104,7 +104,9 @@ void run_render_tests(void) {
     RUN_TEST(render_layout_centers_odd_width_content);
     RUN_TEST(render_layout_centers_even_width_content);
     RUN_TEST(render_layout_left_aligns_content_wider_than_terminal);
-    RUN_TEST(render_plain_screen_header_centers_title);\n    RUN_TEST(render_plain_screen_header_left_aligns_when_title_is_wide);\n    RUN_TEST(render_plain_menu_item_formats_selection);
+    RUN_TEST(render_plain_screen_header_centers_title);
+    RUN_TEST(render_plain_screen_header_left_aligns_when_title_is_wide);
+    RUN_TEST(render_plain_menu_item_formats_selection);
     RUN_TEST(render_plain_menu_item_formats_disabled_entries);
     RUN_TEST(render_plain_menu_item_formats_selected_disabled_entries);
 }

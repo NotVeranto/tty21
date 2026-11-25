@@ -3,7 +3,9 @@
 
 #include <stddef.h>
 
-int getCenteredColumn(int contentWidth);\nint formatPlainScreenHeader(char *buffer, size_t bufferSize,\n                            int terminalWidth, const char *title);
+int getCenteredColumn(int contentWidth);
+int formatPlainScreenHeader(char *buffer, size_t bufferSize,
+                            int terminalWidth, const char *title);
 int getCenteredColumnForWidth(int terminalWidth, int contentWidth);
 int formatPlainMenuItem(char *buffer, size_t bufferSize, char hotkey,
                         const char *label, int selected, int disabled);
