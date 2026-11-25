@@ -107,9 +107,11 @@ Refactor only where it reduces real coupling or makes future work safer.
 
 ## Stage 5 — Visual presentation and interaction feedback
 
-**Status:** active. Work order: first establish consistent presentation conventions across existing screens; only after that foundation is stable, begin the visual redesign and animation work. The dealer reveal already uses a brief automatic transition with a consistent 300 ms pause; fast and non-TTY modes remain immediate. Current completion estimate: 12%.
+**Status:** active. Work order: first establish consistent presentation conventions across existing screens; only after that foundation is stable, begin the visual redesign and animation work. The dealer reveal already uses a brief automatic transition with a consistent 300 ms pause; fast and non-TTY modes remain immediate. Current completion estimate: 14%.
 
 ### Consistency foundation (first)
+
+**Progress note (25 Nov 2026, plain-screen header consistency):** redirected/non-ANSI menu and shop headings now use one tested width-aware formatter. Both modes center headings consistently when they fit and left-align titles wider than the available terminal width. This closes a visible mismatch between the two primary plain-output entry screens.
 
 **Progress note (25 Nov 2026, interface consistency):** shared screen renderers now use semantic style names for accent, success, warning, danger, muted text, and emphasis. ANSI capability detection is centralized and rejects redirected output, `TERM=dumb`, missing terminal types, and `NO_COLOR`; the same decision controls cursor visibility. Five regression tests cover these capability cases. The common menu, shop, message, table-information, and transition renderers now use the semantic palette.
 

@@ -6,6 +6,20 @@
 #include <stdio.h>
 #include <string.h>
 
+int formatPlainScreenHeader(char *buffer,
+                            size_t bufferSize,
+                            int terminalWidth,
+                            const char *title) {
+    int column;
+
+    if (buffer == NULL || bufferSize == 0 || title == NULL) {
+        return -1;
+    }
+
+    column = getCenteredColumnForWidth(terminalWidth, (int)strlen(title));
+    return snprintf(buffer, bufferSize, "%*s%s", column - 1, "", title);
+}
+
 int getCenteredColumnForWidth(int terminalWidth, int contentWidth) {
     int column = (terminalWidth - contentWidth) / 2 + 1;
 

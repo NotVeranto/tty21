@@ -56,6 +56,20 @@ TEST(render_layout_left_aligns_content_wider_than_terminal) {
     ASSERT_EQ_INT(1, getCenteredColumnForWidth(40, 60));
 }
 
+TEST(render_plain_screen_header_centers_title) {
+    char line[64];
+
+    formatPlainScreenHeader(line, sizeof(line), 40, "TTY21 - SHOP");
+    ASSERT_TRUE(strcmp(line, "             TTY21 - SHOP") == 0);
+}
+
+TEST(render_plain_screen_header_left_aligns_when_title_is_wide) {
+    char line[64];
+
+    formatPlainScreenHeader(line, sizeof(line), 8, "LONG TITLE");
+    ASSERT_TRUE(strcmp(line, "LONG TITLE") == 0);
+}
+
 TEST(render_plain_menu_item_formats_selection) {
     char line[64];
 
@@ -90,7 +104,7 @@ void run_render_tests(void) {
     RUN_TEST(render_layout_centers_odd_width_content);
     RUN_TEST(render_layout_centers_even_width_content);
     RUN_TEST(render_layout_left_aligns_content_wider_than_terminal);
-    RUN_TEST(render_plain_menu_item_formats_selection);
+    RUN_TEST(render_plain_screen_header_centers_title);\n    RUN_TEST(render_plain_screen_header_left_aligns_when_title_is_wide);\n    RUN_TEST(render_plain_menu_item_formats_selection);
     RUN_TEST(render_plain_menu_item_formats_disabled_entries);
     RUN_TEST(render_plain_menu_item_formats_selected_disabled_entries);
 }
