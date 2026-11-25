@@ -29,6 +29,7 @@ int effectiveDealerMirrorsOnHit(const Game *game) {
 }
 
 int effectiveDealerAcesCountAsOne(const Game *game, DealerId id) {
+    (void)game;
     return dealerAcesCountAsOne(id);
 }
 
