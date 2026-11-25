@@ -934,7 +934,7 @@ int main(void) {
                     conversion.purchasesFromHeldMarks +
                     conversion.purchasesFundedByConversion) {
                     fprintf(stderr,
-                            "error: reserve experiment purchase funding does not reconcile (%d total, %d held, %d converted)\\n",
+                            "error: reserve experiment purchase funding does not reconcile (%d total, %d held, %d converted)\n",
                             conversion.purchases,
                             conversion.purchasesFromHeldMarks,
                             conversion.purchasesFundedByConversion);
@@ -1086,11 +1086,11 @@ int main(void) {
                     if (disabled > prep || defeated > prep ||
                         disabledDefeats > disabled ||
                         enabledDefeats > enabledPrep) {
-                        fprintf(stderr, "error: boss outcome accounting does not reconcile for %s\\n",
+                        fprintf(stderr, "error: boss outcome accounting does not reconcile for %s\n",
                                 info->name);
                         return 1;
                     }
-                    printf("      %-20s defeated %d/%d (%.1f%%) | rule-off %d/%d (%.1f%%) | rule-on %d/%d (%.1f%%) | unaffordable %d | marks %lld\\n",
+                    printf("      %-20s defeated %d/%d (%.1f%%) | rule-off %d/%d (%.1f%%) | rule-on %d/%d (%.1f%%) | unaffordable %d | marks %lld\n",
                            info->name,
                            defeated, prep,
                            prep > 0 ? 100.0 * defeated / prep : 0.0,
