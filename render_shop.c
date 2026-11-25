@@ -102,33 +102,12 @@ void renderShop(const Game *game,
                                   "[ PURCHASED ]",
                                   sizeof("[ PURCHASED ]") - 1) == 0;
 
-            printf(SCR_CURSOR, itemRow, blockPadding + 1);
-            printf(SCR_ERASE_EOL);
-            if (isPurchased) {
-                if (itemIndex == selectedIndex) {
-                    printf("%s> %s[%c]%s %s%s%s",
-                           scrBold(), scrDim(), items[itemIndex].hotkey,
-                           scrReset(), scrGreen(), items[itemIndex].label,
-                           scrReset());
-                } else {
-                    printf("  %s[%c]%s %s%s%s",
-                           scrDim(), items[itemIndex].hotkey, scrReset(),
-                           scrGreen(), items[itemIndex].label, scrReset());
-                }
-            } else if (isDisabled) {
-                printf("  %s[%c]%s %s%s%s",
-                       scrDim(), items[itemIndex].hotkey, scrReset(),
-                       scrDim(), items[itemIndex].label, scrReset());
-            } else if (itemIndex == selectedIndex) {
-                printf("%s> %s[%c]%s %s%s%s",
-                       scrBold(), scrDim(), items[itemIndex].hotkey,
-                       scrReset(), scrBold(), items[itemIndex].label,
-                       scrReset());
-            } else {
-                printf("  %s[%c]%s %s",
-                       scrDim(), items[itemIndex].hotkey, scrReset(),
-                       items[itemIndex].label);
-            }
+            renderMenuItemRow(itemRow,
+                              items[itemIndex].hotkey,
+                              items[itemIndex].label,
+                              itemIndex == selectedIndex,
+                              isDisabled,
+                              isPurchased);
         }
 
         moveToTableRow(SHOP_DESCRIPTION_ROW, blockPadding);

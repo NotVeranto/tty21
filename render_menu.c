@@ -21,8 +21,6 @@ void renderMenu(const char *title,
     int titlePadding;
     int itemIndex;
     int isDisabled;
-    int rowWidth;
-    int rowPadding;
 
     renderInitColors();
     terminalGetSize(&terminalWidth, &terminalHeight);
@@ -46,39 +44,12 @@ void renderMenu(const char *title,
 
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
-            rowWidth = 2 + 3 + 2 +
-                       (int)strlen(items[itemIndex].label);
-
-            rowPadding = getCenteredColumn(rowWidth) - 1;
-
-            printf(SCR_CURSOR, startRow + itemIndex, rowPadding + 1);
-            printf(SCR_ERASE_EOL);
-
-            if (isDisabled) {
-                printf("%s%s  %s[%c]%s  %s%s",
-                       scrRed(), scrDim(), scrDim(),
-                       items[itemIndex].hotkey, scrReset(),
-                       items[itemIndex].label, scrReset());
-            } else {
-                if (itemIndex == selectedIndex) {
-                    printf("%s%s> %s", scrBold(), scrCyan(), scrReset());
-                } else {
-                    printf("  ");
-                }
-
-                printf("%s[%c]%s  ",
-                       scrDim(),
-                       items[itemIndex].hotkey,
-                       scrReset());
-
-                if (itemIndex == selectedIndex) {
-                    printf("%s%s%s%s",
-                           scrBold(), scrCyan(),
-                           items[itemIndex].label, scrReset());
-                } else {
-                    printf("%s", items[itemIndex].label);
-                }
-            }
+            renderMenuItemRow(startRow + itemIndex,
+                              items[itemIndex].hotkey,
+                              items[itemIndex].label,
+                              itemIndex == selectedIndex,
+                              isDisabled,
+                              0);
         }
 
         fflush(stdout);

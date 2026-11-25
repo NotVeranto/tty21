@@ -74,3 +74,31 @@ void renderScreenHeader(const char *title,
     }
     printf("%s", scrReset());
 }
+
+/* Draws a menu entry with shared selection and availability styling. */
+void renderMenuItemRow(int row,
+                       char hotkey,
+                       const char *label,
+                       int selected,
+                       int disabled,
+                       int completed) {
+    printf(SCR_CURSOR, row, 1);
+    printf(SCR_ERASE_EOL);
+
+    if (disabled) {
+        printf("  %s[%c]%s  %s%s%s",
+               scrDim(), hotkey, scrReset(),
+               scrDim(), label, scrReset());
+    } else if (completed) {
+        printf("  %s[%c]%s  %s%s%s",
+               scrDim(), hotkey, scrReset(),
+               scrGreen(), label, scrReset());
+    } else if (selected) {
+        printf("%s> %s[%c]%s  %s%s%s",
+               scrBold(), scrCyan(), hotkey, scrReset(),
+               scrBold(), label, scrReset());
+    } else {
+        printf("  %s[%c]%s  %s",
+               scrDim(), hotkey, scrReset(), label);
+    }
+}
