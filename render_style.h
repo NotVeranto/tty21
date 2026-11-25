@@ -13,5 +13,14 @@ void renderInitColors(void);
 void renderHideCursor(void);
 void renderShowCursor(void);
 int renderAnsiEnabled(void);
+int renderTerminalSupportsAnsi(int stdoutIsTerminal,
+                               const char *term,
+                               const char *noColor);
+const char *scrAccent(void);
+const char *scrSuccess(void);
+const char *scrWarning(void);
+const char *scrDanger(void);
+const char *scrMuted(void);
+const char *scrEmphasis(void);
 
 #endif

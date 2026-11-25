@@ -1,6 +1,7 @@
 #include "test.h"
 #include "terminal.h"
 #include "render_layout.h"
+#include "render_style.h"
 
 #include <string.h>
 
@@ -21,6 +22,26 @@ TEST(render_terminal_rejects_insufficient_height) {
 
 TEST(render_terminal_accepts_larger_dimensions) {
     ASSERT_TRUE(terminalDimensionsOk(160, 60));
+}
+
+TEST(render_style_disables_ansi_for_redirected_output) {
+    ASSERT_EQ_INT(0, renderTerminalSupportsAnsi(0, "xterm-256color", NULL));
+}
+
+TEST(render_style_disables_ansi_for_dumb_terminal) {
+    ASSERT_EQ_INT(0, renderTerminalSupportsAnsi(1, "dumb", NULL));
+}
+
+TEST(render_style_disables_ansi_when_no_color_is_set) {
+    ASSERT_EQ_INT(0, renderTerminalSupportsAnsi(1, "xterm-256color", ""));
+}
+
+TEST(render_style_enables_ansi_for_supported_terminal) {
+    ASSERT_EQ_INT(1, renderTerminalSupportsAnsi(1, "xterm-256color", NULL));
+}
+
+TEST(render_style_rejects_missing_terminal_type) {
+    ASSERT_EQ_INT(0, renderTerminalSupportsAnsi(1, NULL, NULL));
 }
 
 TEST(render_layout_centers_odd_width_content) {
@@ -61,6 +82,11 @@ void run_render_tests(void) {
     RUN_TEST(render_terminal_rejects_insufficient_width);
     RUN_TEST(render_terminal_rejects_insufficient_height);
     RUN_TEST(render_terminal_accepts_larger_dimensions);
+    RUN_TEST(render_style_disables_ansi_for_redirected_output);
+    RUN_TEST(render_style_disables_ansi_for_dumb_terminal);
+    RUN_TEST(render_style_disables_ansi_when_no_color_is_set);
+    RUN_TEST(render_style_enables_ansi_for_supported_terminal);
+    RUN_TEST(render_style_rejects_missing_terminal_type);
     RUN_TEST(render_layout_centers_odd_width_content);
     RUN_TEST(render_layout_centers_even_width_content);
     RUN_TEST(render_layout_left_aligns_content_wider_than_terminal);
