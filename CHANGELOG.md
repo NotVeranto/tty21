@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Make dealer card reveals advance automatically with a short, consistent pause in raw and line-oriented terminal modes instead of blocking on a key between cards.
+
+
 ### Fixed
 
 - End No-Reshuffle runs before a deal when the remaining deck cannot supply every initial player and dealer card, including Twin's extra dealer hand; no wager or round is started.

@@ -6,7 +6,6 @@
 #include "round_rules.h"
 #include "dealers.h"
 #include "round_presentation.h"
-#include "input.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -67,8 +66,6 @@ void dealerTurn(Game *game) {
                 game->run.dealerId);
 
             while (dealerValue < targetValue) {
-                KeyEvent event;
-
                 int prevCount = game->dealer.hands[dealerHandIndex].count;
 
                 drawCard(game,
@@ -82,19 +79,7 @@ void dealerTurn(Game *game) {
                     game->run.dealerId);
                 if (!game->fastMode && isatty(STDOUT_FILENO)) {
                     roundPresentTable(game, 0);
-                }
-
-                if (!game->fastMode &&
-                    isatty(STDOUT_FILENO) &&
-                    inputIsRaw()) {
-                    roundPresentMessage("Press any key for next card...",
-                                  ROUND_MESSAGE_PROMPT,
-                                  MSG_INFO);
-                    event = readKey();
-
-                    if (event.type == KEY_EOF) {
-                        break;
-                    }
+                    roundPause(game, 300);
                 }
             }
         }
