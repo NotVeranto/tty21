@@ -107,10 +107,12 @@ Refactor only where it reduces real coupling or makes future work safer.
 
 ## Stage 5 — Visual presentation and interaction feedback
 
-**Status:** active. Work order: first establish consistent presentation conventions across existing screens; only after that foundation is stable, begin the visual redesign and animation work. The dealer reveal already uses a brief automatic transition with a consistent 300 ms pause; fast and non-TTY modes remain immediate. Current completion estimate: 10%.
+**Status:** active. Work order: first establish consistent presentation conventions across existing screens; only after that foundation is stable, begin the visual redesign and animation work. The dealer reveal already uses a brief automatic transition with a consistent 300 ms pause; fast and non-TTY modes remain immediate. Current completion estimate: 12%.
 
 ### Consistency foundation (first)
-- Use one shared menu-entry treatment for selection, disabled entries, and completed/purchased entries across menus and the shop.
+
+**Progress note (25 Nov 2026):** Plain-output main menus and the shop now share one tested menu-entry formatter. Selection markers, spacing, hotkeys, and disabled labels no longer diverge between the two paths. Full-screen ANSI rendering continues to use the existing shared `renderMenuItemRow()` treatment.
+- [x] Use one shared menu-entry treatment for selection and disabled entries across plain-output menus and the shop; retain the existing ANSI treatment for full-screen mode.
 - Align shared screen headers, framing, spacing, status labels, and terminal capability behavior where current implementations genuinely diverge.
 - Preserve each screen's information hierarchy; do not merge modules or add abstractions solely to reduce file count.
 - Keep fallback output readable and equivalent in meaning, without requiring ANSI control sequences.

@@ -103,3 +103,23 @@ void renderMenuItemRow(int row,
                scrDim(), hotkey, scrReset(), label);
     }
 }
+
+/* Formats a menu entry consistently for redirected and non-ANSI output. */
+int formatPlainMenuItem(char *buffer,
+                        size_t bufferSize,
+                        char hotkey,
+                        const char *label,
+                        int selected,
+                        int disabled) {
+    if (buffer == NULL || bufferSize == 0 || label == NULL) {
+        return -1;
+    }
+
+    return snprintf(buffer,
+                    bufferSize,
+                    "%s[%c]  %s%s",
+                    selected ? "> " : "  ",
+                    hotkey,
+                    label,
+                    disabled ? " (disabled)" : "");
+}

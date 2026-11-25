@@ -138,11 +138,17 @@ void renderShop(const Game *game,
                 prevGroup = groups[itemIndex];
             }
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
-            printf("%s[%c] %s%s\n",
-                   itemIndex == selectedIndex ? "> " : "  ",
-                   items[itemIndex].hotkey,
-                   items[itemIndex].label,
-                   isDisabled ? " (disabled)" : "");
+            {
+                char line[512];
+
+                formatPlainMenuItem(line,
+                                    sizeof(line),
+                                    items[itemIndex].hotkey,
+                                    items[itemIndex].label,
+                                    itemIndex == selectedIndex,
+                                    isDisabled);
+                printf("%s\n", line);
+            }
             if (itemIndex == selectedIndex && descriptions[itemIndex] != NULL) {
                 printf("    %s\n", descriptions[itemIndex]);
             }

@@ -1,5 +1,8 @@
 #include "test.h"
 #include "terminal.h"
+#include "render_layout.h"
+
+#include <string.h>
 
 TEST(render_terminal_accepts_minimum_dimensions) {
     ASSERT_TRUE(terminalDimensionsOk(MIN_TERMINAL_WIDTH,
@@ -20,9 +23,33 @@ TEST(render_terminal_accepts_larger_dimensions) {
     ASSERT_TRUE(terminalDimensionsOk(160, 60));
 }
 
+TEST(render_plain_menu_item_formats_selection) {
+    char line[64];
+
+    formatPlainMenuItem(line, sizeof(line), 'H', "Hit", 1, 0);
+    ASSERT_TRUE(strcmp(line, "> [H]  Hit") == 0);
+}
+
+TEST(render_plain_menu_item_formats_disabled_entries) {
+    char line[64];
+
+    formatPlainMenuItem(line, sizeof(line), 'S', "Split", 0, 1);
+    ASSERT_TRUE(strcmp(line, "  [S]  Split (disabled)") == 0);
+}
+
+TEST(render_plain_menu_item_formats_selected_disabled_entries) {
+    char line[64];
+
+    formatPlainMenuItem(line, sizeof(line), 'D', "Double", 1, 1);
+    ASSERT_TRUE(strcmp(line, "> [D]  Double (disabled)") == 0);
+}
+
 void run_render_tests(void) {
     RUN_TEST(render_terminal_accepts_minimum_dimensions);
     RUN_TEST(render_terminal_rejects_insufficient_width);
     RUN_TEST(render_terminal_rejects_insufficient_height);
     RUN_TEST(render_terminal_accepts_larger_dimensions);
+    RUN_TEST(render_plain_menu_item_formats_selection);
+    RUN_TEST(render_plain_menu_item_formats_disabled_entries);
+    RUN_TEST(render_plain_menu_item_formats_selected_disabled_entries);
 }

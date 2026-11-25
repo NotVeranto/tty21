@@ -68,9 +68,16 @@ void renderMenu(const char *title,
         printf("%*s%s\n", titlePadding, "", title);
 
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
-            printf("  [%c]  %s\n",
-                   items[itemIndex].hotkey,
-                   items[itemIndex].label);
+            char line[512];
+
+            isDisabled = (disabledMask & (1 << itemIndex)) != 0;
+            formatPlainMenuItem(line,
+                                sizeof(line),
+                                items[itemIndex].hotkey,
+                                items[itemIndex].label,
+                                itemIndex == selectedIndex,
+                                isDisabled);
+            printf("%s\n", line);
         }
 
         fflush(stdout);
