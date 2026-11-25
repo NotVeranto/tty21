@@ -103,6 +103,7 @@ void renderShop(const Game *game,
                                   sizeof("[ PURCHASED ]") - 1) == 0;
 
             renderMenuItemRow(itemRow,
+                              blockPadding + 1,
                               items[itemIndex].hotkey,
                               items[itemIndex].label,
                               itemIndex == selectedIndex,

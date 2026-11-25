@@ -5,7 +5,7 @@ int getCenteredColumn(int contentWidth);
 void printBoxBorder(int row, int column, int width);
 void printBoxSides(int row, int column, int width);
 void renderScreenHeader(const char *title, const char *subtitle, int row);
-void renderMenuItemRow(int row, char hotkey, const char *label,
+void renderMenuItemRow(int row, int column, char hotkey, const char *label,
                        int selected, int disabled, int completed);
 
 #endif

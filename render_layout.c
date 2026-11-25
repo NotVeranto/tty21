@@ -77,12 +77,13 @@ void renderScreenHeader(const char *title,
 
 /* Draws a menu entry with shared selection and availability styling. */
 void renderMenuItemRow(int row,
+                       int column,
                        char hotkey,
                        const char *label,
                        int selected,
                        int disabled,
                        int completed) {
-    printf(SCR_CURSOR, row, 1);
+    printf(SCR_CURSOR, row, column);
     printf(SCR_ERASE_EOL);
 
     if (disabled) {

@@ -21,6 +21,8 @@ void renderMenu(const char *title,
     int titlePadding;
     int itemIndex;
     int isDisabled;
+    int rowWidth;
+    int rowPadding;
 
     renderInitColors();
     terminalGetSize(&terminalWidth, &terminalHeight);
@@ -44,7 +46,10 @@ void renderMenu(const char *title,
 
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             isDisabled = (disabledMask & (1 << itemIndex)) != 0;
+            rowWidth = 7 + (int)strlen(items[itemIndex].label);
+            rowPadding = getCenteredColumn(rowWidth);
             renderMenuItemRow(startRow + itemIndex,
+                              rowPadding,
                               items[itemIndex].hotkey,
                               items[itemIndex].label,
                               itemIndex == selectedIndex,
