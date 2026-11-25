@@ -1,4 +1,5 @@
 #include "game.h"
+#include "dealers.h"
 #include "perks.h"
 #include "round_cards.h"
 #include "round_economy.h"
@@ -391,6 +392,10 @@ typedef struct {
     int bossPrepOffers;
     int bossRulesDisabled;
     long long bossMarksSpent;
+    int bossPrepOffersByDealer[DEALER_COUNT];
+    int bossRulesDisabledByDealer[DEALER_COUNT];
+    int bossPrepUnaffordableByDealer[DEALER_COUNT];
+    long long bossMarksSpentByDealer[DEALER_COUNT];
     int shopRerolls;
     int twistRerolls;
     int twistBlocks;
@@ -403,12 +408,19 @@ static int report_boss_prep_policy(const Game *game, void *context) {
     ReportUtilityContext *stats = (ReportUtilityContext *)context;
     if (game == NULL || stats == NULL || game->state != STATE_BOSS_PREP ||
         stats->mode != REPORT_UTILITY_BOSS_PREP_ONLY) return 0;
+    if (game->run.dealerId < 0 || game->run.dealerId >= DEALER_COUNT ||
+        !dealerIsBoss(game->run.dealerId)) return 0;
     stats->bossPrepOffers++;
+    stats->bossPrepOffersByDealer[game->run.dealerId]++;
     if (game->run.marks >= game->bossRulePaid) {
         stats->bossRulesDisabled++;
+        stats->bossRulesDisabledByDealer[game->run.dealerId]++;
         stats->bossMarksSpent += game->bossRulePaid;
+        stats->bossMarksSpentByDealer[game->run.dealerId] +=
+            game->bossRulePaid;
         return 1;
     }
+    stats->bossPrepUnaffordableByDealer[game->run.dealerId]++;
     return 0;
 }
 
@@ -1053,6 +1065,25 @@ int main(void) {
                    utility.bossMarksSpent, utility.shopRerolls,
                    utility.twistRerolls, utility.twistBlocks,
                    utility.serviceMarksSpent, utility.perkPurchases);
+            if (modeIndex == REPORT_UTILITY_BOSS_PREP_ONLY) {
+                static const DealerId bossIds[] = {
+                    DEALER_BOSS_PIT, DEALER_BOSS_PRIME,
+                    DEALER_BOSS_SUPREME, DEALER_BOSS_VOID
+                };
+                int bossIndex;
+                for (bossIndex = 0;
+                     bossIndex < (int)(sizeof(bossIds) / sizeof(bossIds[0]));
+                     bossIndex++) {
+                    DealerId bossId = bossIds[bossIndex];
+                    const DealerInfo *info = getDealerInfo(bossId);
+                    printf("      %-20s offers %d | disabled %d | unaffordable %d | marks %lld\\n",
+                           info->name,
+                           utility.bossPrepOffersByDealer[bossId],
+                           utility.bossRulesDisabledByDealer[bossId],
+                           utility.bossPrepUnaffordableByDealer[bossId],
+                           utility.bossMarksSpentByDealer[bossId]);
+                }
+            }
             if (utility.serviceMarksSpent !=
                 utility.shopRerolls * 10LL +
                 utility.twistRerolls * 30LL +
