@@ -67,9 +67,9 @@ static const char *curseColor(CurseId id) {
 
 static void printFaceDownLine(int lineIndex) {
     static const char *PATTERN_LINES[] = {
-        " . . . . . ",
-        "  #######  ",
-        "  ## # ##  ",
+        " . . . . ",
+        " ####### ",
+        " ## # ## ",
         "  #######  ",
         " . . . . . "
     };
@@ -91,7 +91,14 @@ static void printVisibleCardLine(const Card *card, int lineIndex) {
               ? scrRed() : scrDim();
 
     if (lineIndex == 0) {
-        printf("|%s%-2s%s       |", ink, rankName, scrReset());
+        printf("|%s%-2s%s", ink, rankName, scrReset());
+        if (card->cursed != CURSED_NONE) {
+            printf("      %s%s*%s|",
+                   curseColor((CurseId)card->cursed),
+                   scrBold(), scrReset());
+        } else {
+            printf("       |");
+        }
     } else if (lineIndex == 1 || lineIndex == 3) {
         printf("|         |");
     } else if (lineIndex == 2) {
@@ -101,9 +108,6 @@ static void printVisibleCardLine(const Card *card, int lineIndex) {
         printf("|       %s%2s%s|", ink, rankName, scrReset());
     }
 
-    if (card->cursed != CURSED_NONE && lineIndex == 0) {
-        printf("%s", scrReset());
-    }
 }
 static void drawCards(const Hand *hand,
                       int startRow,
