@@ -131,7 +131,7 @@ void renderShop(const Game *game,
 
             formatPlainScreenHeader(header, sizeof(header),
                                     terminalWidth, "TTY21 - SHOP");
-            printf("%s\\n", header);
+            printf("%s\n", header);
         }
         printf("Marks: %d | Chips: %d\n\n", game->run.marks, game->player.chips);
         prevGroup = -1;

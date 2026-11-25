@@ -64,7 +64,7 @@ void renderMenu(const char *title,
 
             formatPlainScreenHeader(header, sizeof(header),
                                     terminalWidth, title);
-            printf("%s\\n", header);
+            printf("%s\n", header);
         }
 
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
