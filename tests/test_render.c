@@ -60,7 +60,7 @@ TEST(render_plain_screen_header_centers_title) {
     char line[64];
 
     formatPlainScreenHeader(line, sizeof(line), 40, "TTY21 - SHOP");
-    ASSERT_TRUE(strcmp(line, "             TTY21 - SHOP") == 0);
+    ASSERT_TRUE(strcmp(line, "              TTY21 - SHOP") == 0);
 }
 
 TEST(render_plain_screen_header_left_aligns_when_title_is_wide) {

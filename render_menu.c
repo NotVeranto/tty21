@@ -59,10 +59,13 @@ void renderMenu(const char *title,
 
         fflush(stdout);
     } else {
-        titlePadding = getCenteredColumnForWidth(
-                           terminalWidth, (int)strlen(title)) - 1;
+        {
+            char header[512];
 
-        printf("%*s%s\n", titlePadding, "", title);
+            formatPlainScreenHeader(header, sizeof(header),
+                                    terminalWidth, title);
+            printf("%s\\n", header);
+        }
 
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
             char line[512];
