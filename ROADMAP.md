@@ -11,7 +11,7 @@ These percentages are completion estimates against each stage's exit criteria, n
 | 2 — Test coverage and verification | 100% | Closed |
 | 3 — Maintainability and architecture | 100% | Closed |
 | 4 — Gameplay balance and within-run progression | 100% | Closed |
-| 5 — UX/UI cohesion and interaction feedback | 10% | Active |
+| 5 — Visual presentation and interaction feedback | 10% | Active |
 | 6 — Release polish | 0% | Not started |
 
 Overall roadmap estimate: **87%** (unweighted mean of the seven stage estimates).
@@ -154,8 +154,8 @@ This is where the agreed animation and responsiveness work belongs. It follows c
 - Apply the same interaction language to other player-facing actions and rewards.
 
 ### Explicit presentation constraints
-- **Do not animate currency balances or show animated currency deltas.** Currency feedback is intentionally excluded.
-- Purchase and exchange interactions may still receive clear textual/visual confirmation; the balance itself should update normally.
+- Do not animate numeric currency balances or display animated currency deltas; keep financial information stable and immediately readable.
+- Physical chip visuals, purchase confirmations, and other meaningful shop feedback may still use animation when it improves clarity.
 - Keep routine feedback brief and reserve stronger effects for meaningful events.
 
 **Exit criteria:** every important interaction is acknowledged; transitions feel consistent; animations remain optional, non-blocking, and do not compromise readability or terminal stability.
