@@ -14,7 +14,7 @@ These percentages are completion estimates against each stage's exit criteria, n
 | 5 — Visual presentation and interaction feedback | 16% | Active |
 | 6 — Release polish | 0% | Not started |
 
-Overall roadmap estimate: **88%** (unweighted mean of the seven stage estimates).
+Overall roadmap estimate: **74%** (unweighted mean of the seven stage estimates: five closed stages at 100%, Stage 5 at 16%, and Stage 6 at 0%).
 
 Stage 4 exit criteria have been met: the empty-hand edge case is resolved in production round-start logic and covered for normal and Twin deals; the 2,048-seed progression and boss evidence has been reviewed; and the production economy decision is documented (retain current prices, starting marks, and purchase rules). The latest main-branch CI run passed GCC, Clang, and ASan/UBSan. Stage 4 is closed; do not reopen balance experiments without a reproducible player-facing defect or a materially new hypothesis.
 
