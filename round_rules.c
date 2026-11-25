@@ -29,8 +29,11 @@ int effectiveDealerMirrorsOnHit(const Game *game) {
 }
 
 int effectiveDealerAcesCountAsOne(const Game *game, DealerId id) {
-    if (bossRule1Disabled(game) && id == DEALER_BOSS_SUPREME) return 0;
     return dealerAcesCountAsOne(id);
+}
+
+int effectiveDealerAcesCountAsEleven(const Game *game, DealerId id) {
+    return id == DEALER_BOSS_SUPREME && !bossRule1Disabled(game);
 }
 
 int twistActive(const Game *game, TwistId id) {

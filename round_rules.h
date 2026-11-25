@@ -8,6 +8,7 @@ int effectiveDealerBlackjackNumerator(const Game *game);
 int effectiveDealerBlackjackDenominator(const Game *game);
 int effectiveDealerMirrorsOnHit(const Game *game);
 int effectiveDealerAcesCountAsOne(const Game *game, DealerId id);
+int effectiveDealerAcesCountAsEleven(const Game *game, DealerId id);
 int twistActive(const Game *game, TwistId id);
 void applyAntiFarmPressure(Game *game);
 int fatiguePercent(int roundsOnFloor);

@@ -41,6 +41,15 @@ int calculateDealerHandValue(const Game *game,
         return calculateHandValueAcesLow(hand);
     }
 
+    if (effectiveDealerAcesCountAsEleven(game, id)) {
+        int total = 0;
+        int cardIndex;
+        for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
+            total += getCardValue(&hand->cards[cardIndex]);
+        }
+        return total;
+    }
+
     if (!effectiveDealerAcesCountAsOne(game, id)) {
         return calculateHandValue(hand);
     }

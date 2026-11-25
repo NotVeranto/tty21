@@ -2,6 +2,7 @@
 #include "game.h"
 #include "hand.h"
 #include "round_economy.h"
+#include "round_cards.h"
 #include "round_settlement.h"
 
 #include <string.h>
@@ -48,6 +49,26 @@ static void settlement_set_dealer(Game *game,
                                   Rank second) {
     settlement_add_card(&game->dealer.hands[0], first);
     settlement_add_card(&game->dealer.hands[0], second);
+}
+
+TEST(accountant_supreme_ace_rule_is_a_real_boss_penalty) {
+    Game game;
+    Hand hand;
+
+    memset(&game, 0, sizeof(game));
+    memset(&hand, 0, sizeof(hand));
+    game.run.dealerId = DEALER_BOSS_SUPREME;
+    game.run.twistId = TWIST_NONE;
+    settlement_add_card(&hand, ACE);
+    settlement_add_card(&hand, ACE);
+    settlement_add_card(&hand, NINE);
+
+    ASSERT_EQ_INT(31, calculateDealerHandValue(
+        &game, &hand, DEALER_BOSS_SUPREME));
+
+    game.bossRuleDisabled = 1;
+    ASSERT_EQ_INT(21, calculateDealerHandValue(
+        &game, &hand, DEALER_BOSS_SUPREME));
 }
 
 TEST(settlement_natural_blackjack_pays_three_to_two) {
@@ -275,6 +296,7 @@ TEST(settlement_payout_is_capped_at_twenty_times_the_bet) {
 }
 
 void run_settlement_tests(void) {
+    RUN_TEST(accountant_supreme_ace_rule_is_a_real_boss_penalty);
     RUN_TEST(settlement_natural_blackjack_pays_three_to_two);
     RUN_TEST(settlement_regular_win_pays_one_to_one);
     RUN_TEST(settlement_push_returns_no_net_chips);

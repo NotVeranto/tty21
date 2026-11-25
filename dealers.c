@@ -22,7 +22,7 @@ static const DealerInfo DEALER_INFO[] = {
      "Every player hit makes the dealer draw too.",
      "Dealer draws to 18."},
     {DEALER_BOSS_SUPREME, "Accountant Supreme",
-     "All dealer aces count as 1.",
+     "All dealer aces count as 11.",
      "Your first double down is forced."},
     {DEALER_BOSS_VOID, "Void Saint",
      "Your natural blackjack pays 1:1.",
@@ -164,7 +164,7 @@ int dealerShowsNextCard(DealerId id) {
 
 // Returns whether dealer aces always count as one.
 int dealerAcesCountAsOne(DealerId id) {
-    return id == DEALER_ACCOUNTANT || id == DEALER_BOSS_SUPREME;
+    return id == DEALER_ACCOUNTANT;
 }
 
 // Returns whether the dealer forces the opening double down.

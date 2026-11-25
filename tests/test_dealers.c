@@ -158,7 +158,7 @@ TEST(dealer_shows_next_card_only_for_oracle) {
 
 TEST(dealer_accountant_aces_count_as_one) {
     ASSERT_EQ_INT(1, dealerAcesCountAsOne(DEALER_ACCOUNTANT));
-    ASSERT_EQ_INT(1, dealerAcesCountAsOne(DEALER_BOSS_SUPREME));
+    ASSERT_EQ_INT(0, dealerAcesCountAsOne(DEALER_BOSS_SUPREME));
     ASSERT_EQ_INT(0, dealerAcesCountAsOne(DEALER_CROUPIER));
     ASSERT_EQ_INT(0, dealerAcesCountAsOne(DEALER_BOSS_PIT));
 }
