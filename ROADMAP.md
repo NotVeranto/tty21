@@ -2,7 +2,7 @@
 
 ## Project status snapshot (25 Nov 2026)
 
-These percentages are completion estimates against each stage's exit criteria, not code-volume metrics. Stages 0–3 are closed; Stage 4 is in close-out; Stage 4 is closed; Stage 5 is active; Stage 6 has not started.
+These percentages are completion estimates against each stage's exit criteria, not code-volume metrics. Stages 0–4 are closed, Stage 5 is active, and Stage 6 has not started.
 
 | Stage | Completion | Status |
 |---|---:|---|
@@ -16,7 +16,7 @@ These percentages are completion estimates against each stage's exit criteria, n
 
 Overall roadmap estimate: **87%** (unweighted mean of the seven stage estimates).
 
-To avoid repeating low-value work, Stage 4 is no longer an open-ended balance-experiment track. Its remaining work is limited to: (1) resolve or explicitly classify the rare empty-hand simulation state; (2) review the collected progression and boss evidence once as a whole; and (3) record a deliberate production-balance decision. Do not add more policy matrices or tune prices from the current observational boss split. Once those close-out checks are complete, move to Stage 5.
+Stage 4 exit criteria have been met: the empty-hand edge case is resolved in production round-start logic and covered for normal and Twin deals; the 2,048-seed progression and boss evidence has been reviewed; and the production economy decision is documented (retain current prices, starting marks, and purchase rules). The latest main-branch CI run passed GCC, Clang, and ASan/UBSan. Stage 4 is closed; do not reopen balance experiments without a reproducible player-facing defect or a materially new hypothesis.
 
 This roadmap orders work by risk and player impact. It is the project-wide plan; visual polish and animation work are one part of it, not a separate top-level project.
 
@@ -107,7 +107,7 @@ Refactor only where it reduces real coupling or makes future work safer.
 
 ## Stage 5 — UX/UI cohesion and interaction feedback
 
-**Status:** active. Initial audit found that dealing already has a short automatic reveal, while dealer draw pacing differed by input mode: raw terminals blocked for a key press between cards, and line-oriented terminals advanced immediately. The first UX correction makes dealer reveals consistent and automatic. Current completion estimate: 10%.
+**Status:** active. The first UX correction is complete: the dealer's hidden-card reveal now has a brief automatic transition, and subsequent dealer draws advance with a consistent 300 ms pause. Raw terminals no longer block for a key press between dealer cards; input is flushed after the reveal prompt. All presentation pauses remain disabled in fast and non-TTY modes. Current completion estimate: 10%.
 
 - Make card dealing, player actions, dealer reveals, and round outcomes feel like one coherent sequence.
 - Keep feedback concise and legible; avoid currency animations and redundant pauses.

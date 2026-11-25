@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Verified
+
+- Closed the gameplay-balance stage after reviewing the 2,048-seed progression report, retaining production economy values, and fixing No-Reshuffle incomplete deals (including Twin). Main-branch CI passed GCC, Clang, and ASan/UBSan.
+
 ### Changed
 
 - Make dealer card reveals advance automatically with a short, consistent pause in raw and line-oriented terminal modes instead of blocking on a key between cards.
