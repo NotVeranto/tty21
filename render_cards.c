@@ -120,7 +120,7 @@ static void drawCards(const Hand *hand,
         moveToTableRow(startRow + lineIndex, padding);
         for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
             if (lineIndex == 0 || lineIndex == CARD_HEIGHT - 1) {
-                printf("%s+---------+%s", scrCardBorder(), scrReset());
+                printf("+---------+");
             } else if (hideFirstCard && cardIndex == 0) {
                 printFaceDownLine(lineIndex - 1);
             } else {
