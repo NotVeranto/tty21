@@ -160,6 +160,25 @@ int startRoundWithBet(Game *game, int betAmount,
         return 0;
     }
 
+    if (twistActive(game, TWIST_SIX_DECK)) {
+        initDeck(&game->deck);
+        shuffleDeck(&game->deck);
+    } else if (!twistActive(game, TWIST_NO_RESHUFFLE) &&
+               game->deck.top >= DECK_SIZE - DECK_BURN_SIZE - DECK_START_RESERVE) {
+        initDeck(&game->deck);
+        shuffleDeck(&game->deck);
+        logPush(game, "Deck reshuffled.", MSG_INFO);
+    }
+
+    if (twistActive(game, TWIST_NO_RESHUFFLE) &&
+        DECK_SIZE - DECK_BURN_SIZE - game->deck.top <
+            2 + dealerDivisor * 2) {
+        logPush(game, "No cards remain for a complete deal. Run ended.",
+                MSG_INFO);
+        game->state = STATE_QUIT;
+        return 1;
+    }
+
     game->peekActive = 0;
 
     {
@@ -176,16 +195,6 @@ int startRoundWithBet(Game *game, int betAmount,
     resetHand(&game->dealer.hands[0]);
     resetHand(&game->dealer.hands[1]);
     game->dealer.handCount = 1;
-
-    if (twistActive(game, TWIST_SIX_DECK)) {
-        initDeck(&game->deck);
-        shuffleDeck(&game->deck);
-    } else if (!twistActive(game, TWIST_NO_RESHUFFLE) &&
-               game->deck.top >= DECK_SIZE - DECK_BURN_SIZE - DECK_START_RESERVE) {
-        initDeck(&game->deck);
-        shuffleDeck(&game->deck);
-        logPush(game, "Deck reshuffled.", MSG_INFO);
-    }
 
     game->player.bets[game->player.activeHand] = betAmount;
     memset(game->player.usedDouble, 0, sizeof(game->player.usedDouble));

@@ -113,6 +113,7 @@ int simulateRound(Game *game,
                            insuranceDecision, evenMoneyDecision)) {
         return 0;
     }
+    if (game->state == STATE_QUIT) return 2;
 
     for (step = 0; step < SIMULATION_ACTION_LIMIT; step++) {
         if (game->state == STATE_PLAYER_TURN) {

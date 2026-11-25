@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- End No-Reshuffle runs before a deal when the remaining deck cannot supply every initial player and dealer card, including Twin's extra dealer hand; no wager or round is started.
+
 ### Changed
 
 - Publish stage-by-stage completion estimates and bound Stage 4 to a final empty-hand review and documented balance decision instead of open-ended simulation experiments.

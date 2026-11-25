@@ -157,6 +157,50 @@ TEST(policy_runner_reports_quit_without_failing_or_settling_round) {
     ASSERT_EQ_INT(STATE_QUIT, game.state);
 }
 
+TEST(no_reshuffle_ends_before_an_incomplete_initial_deal) {
+    Game game;
+    MessageStyle style;
+    int startingChips;
+
+    rngInit(20261125U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.fastMode = 1;
+    game.saveEnabled = 0;
+    game.run.twistId = TWIST_NO_RESHUFFLE;
+    game.deck.top = DECK_SIZE - DECK_BURN_SIZE - 3;
+    startingChips = game.player.chips;
+
+    ASSERT_EQ_INT(2, simulateRound(&game, 10, 0, 0,
+                                   stand_policy, NULL, &style));
+    ASSERT_EQ_INT(STATE_QUIT, game.state);
+    ASSERT_EQ_INT(0, game.roundNumber);
+    ASSERT_EQ_INT(0, game.roundInProgress);
+    ASSERT_EQ_INT(startingChips, game.player.chips);
+    ASSERT_EQ_INT(0, game.player.hands[0].count);
+}
+
+TEST(no_reshuffle_twin_requires_six_initial_cards) {
+    Game game;
+    MessageStyle style;
+    int startingChips;
+
+    rngInit(20261126U, 1);
+    initGame(&game, MODE_ROGUELIKE);
+    game.fastMode = 1;
+    game.saveEnabled = 0;
+    game.run.twistId = TWIST_NO_RESHUFFLE;
+    game.run.dealerId = DEALER_TWIN;
+    game.deck.top = DECK_SIZE - DECK_BURN_SIZE - 5;
+    startingChips = game.player.chips;
+
+    ASSERT_EQ_INT(2, simulateRound(&game, 10, 0, 0,
+                                   stand_policy, NULL, &style));
+    ASSERT_EQ_INT(STATE_QUIT, game.state);
+    ASSERT_EQ_INT(0, game.roundNumber);
+    ASSERT_EQ_INT(startingChips, game.player.chips);
+    ASSERT_EQ_INT(0, game.player.hands[0].count);
+}
+
 TEST(policy_runner_rejects_unavailable_policy_action) {
     Game game;
     MessageStyle style;
