@@ -187,10 +187,20 @@ int simulateClassicRun(Game *game,
         }
 
         {
+            int bossWasRewarded = game->run.bossRewarded;
+            DealerId roundDealer = game->run.dealerId;
+            int ruleWasDisabled = game->bossRuleDisabled;
             int roundResult = simulateRound(
                 game, betAmount, 0, 0, roundPolicy, roundContext,
                 &resultStyle);
             if (roundResult == 0) return 0;
+            if (!bossWasRewarded && game->run.bossRewarded &&
+                dealerIsBoss(roundDealer)) {
+                result.bossDefeatsByDealer[roundDealer]++;
+                if (ruleWasDisabled) {
+                    result.bossDefeatsWithRuleDisabledByDealer[roundDealer]++;
+                }
+            }
             if (roundResult == 2) {
                 result.stopReason = SIMULATION_STOP_GAME_QUIT;
                 break;
@@ -256,6 +266,13 @@ int simulateRoguelikeRun(Game *game,
         if (game->state == STATE_BOSS_PREP) {
             int disableFirstRule = bossPrepPolicy != NULL
                 ? bossPrepPolicy(game, bossPrepContext) : 0;
+            DealerId bossId = game->run.dealerId;
+            if (dealerIsBoss(bossId)) {
+                result.bossPrepEncountersByDealer[bossId]++;
+                if (disableFirstRule) {
+                    result.bossRuleDisabledByDealer[bossId]++;
+                }
+            }
             completeBossPrep(game, disableFirstRule != 0);
         }
 
@@ -451,6 +468,19 @@ int simulateRoguelikeBatch(const unsigned int *seeds,
         }
         result.totalFloorsReached += runStats.floorsReached;
         result.totalBossesDefeated += runStats.bossesDefeated;
+        {
+            int dealerIndex;
+            for (dealerIndex = 0; dealerIndex < DEALER_COUNT; dealerIndex++) {
+                result.bossPrepEncountersByDealer[dealerIndex] +=
+                    runStats.bossPrepEncountersByDealer[dealerIndex];
+                result.bossRuleDisabledByDealer[dealerIndex] +=
+                    runStats.bossRuleDisabledByDealer[dealerIndex];
+                result.bossDefeatsByDealer[dealerIndex] +=
+                    runStats.bossDefeatsByDealer[dealerIndex];
+                result.bossDefeatsWithRuleDisabledByDealer[dealerIndex] +=
+                    runStats.bossDefeatsWithRuleDisabledByDealer[dealerIndex];
+            }
+        }
         result.totalMarksEarned += runStats.marksEarned;
         if (runStats.stopReason >= 0 &&
             runStats.stopReason < SIMULATION_STOP_REASON_COUNT) {

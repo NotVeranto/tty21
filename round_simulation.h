@@ -41,6 +41,10 @@ typedef struct {
     int peakChips;
     int floorsReached;
     int bossesDefeated;
+    int bossPrepEncountersByDealer[DEALER_COUNT];
+    int bossRuleDisabledByDealer[DEALER_COUNT];
+    int bossDefeatsByDealer[DEALER_COUNT];
+    int bossDefeatsWithRuleDisabledByDealer[DEALER_COUNT];
     int marksEarned;
     int failureReason;
     int failureState;
@@ -69,6 +73,10 @@ typedef struct {
     int bankruptRuns;
     int totalFloorsReached;
     int totalBossesDefeated;
+    int bossPrepEncountersByDealer[DEALER_COUNT];
+    int bossRuleDisabledByDealer[DEALER_COUNT];
+    int bossDefeatsByDealer[DEALER_COUNT];
+    int bossDefeatsWithRuleDisabledByDealer[DEALER_COUNT];
     int totalMarksEarned;
     int shallowestFloorReached;
     int deepestFloorReached;
