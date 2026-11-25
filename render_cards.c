@@ -24,47 +24,38 @@ int getDynamicTableWidth(const Game *game) {
     int totalDealerCards;
 
     totalDealerCards = 0;
-
     for (dealerHandIndex = 0;
          dealerHandIndex < game->dealer.handCount;
          dealerHandIndex++) {
         totalDealerCards += game->dealer.hands[dealerHandIndex].count;
     }
-
     if (game->dealer.handCount > 1) {
         totalDealerCards += (game->dealer.handCount - 1) * 2;
     }
 
     cardsTotal = totalDealerCards;
     playerCardsTotal = 0;
-
     for (handIndex = 0;
          handIndex < game->player.handCount;
          handIndex++) {
         playerCardsTotal += game->player.hands[handIndex].count;
     }
-
     if (game->player.handCount > 1) {
         playerCardsTotal += (game->player.handCount - 1) * 2;
     }
-
     if (playerCardsTotal > cardsTotal) {
         cardsTotal = playerCardsTotal;
     }
-
     if (cardsTotal < 5) {
         cardsTotal = 5;
     }
-
     return cardsTotal * CARD_WIDTH + (cardsTotal - 1) * CARD_GAP;
 }
-
 
 static void moveToTableRow(int row, int padding) {
     printf(SCR_CURSOR, row, padding + 1);
 }
 
-// Returns the color associated with a cursed card marker.
 static const char *curseColor(CurseId id) {
     switch (id) {
         case CURSED_BLEED: return scrRed();
@@ -74,15 +65,13 @@ static const char *curseColor(CurseId id) {
     }
 }
 
-
-// Prints one line from a face-down card.
 static void printFaceDownLine(int lineIndex) {
     static const char *PATTERN_LINES[] = {
-        "|#########|",
-        "|#########|",
-        "|#########|",
-        "|#########|",
-        "|#########|"
+        "  . . .  ",
+        " .#####. ",
+        " .#####. ",
+        " .#####. ",
+        "  . . .  "
     };
 
     if (lineIndex < 0 ||
@@ -90,49 +79,42 @@ static void printFaceDownLine(int lineIndex) {
         return;
     }
 
-    printf("%s%s%s", scrDim(), PATTERN_LINES[lineIndex], scrReset());
+    printf("%s%s%s%s|%s%s%s",
+           scrCardBorder(), "|", scrCardBack(), scrCardBackInk(),
+           PATTERN_LINES[lineIndex], scrReset(), scrCardBorder());
+    printf("|%s", scrReset());
 }
 
-// Prints one line from a visible card.
 static void printVisibleCardLine(const Card *card, int lineIndex) {
     const char *rankName;
+    const char *ink;
 
     rankName = CARD_RANKS[card->rank];
+    ink = card->suit == HEARTS || card->suit == DIAMONDS
+              ? scrCardRedInk() : scrCardBlackInk();
+
+    printf("%s|%s", scrCardBorder(), scrCardFace());
 
     if (lineIndex == 0) {
-        printf("%s|%s", scrDim(), scrReset());
-        printf("%s%-2s%s",
-               card->suit == HEARTS || card->suit == DIAMONDS
-                   ? scrRed() : scrBold(),
-               rankName, scrReset());
+        printf("%s%-2s%s", ink, rankName, scrReset());
+        printf("%s%s", scrCardFace(), card->cursed != CURSED_NONE
+                   ? "      " : "       ");
         if (card->cursed != CURSED_NONE) {
-            printf("      %s*%s", curseColor((CurseId)card->cursed), scrReset());
-        } else {
-            printf("       ");
+            printf("%s%s*%s%s", curseColor((CurseId)card->cursed),
+                   scrBold(), scrReset(), scrCardFace());
         }
-        printf("%s|%s", scrDim(), scrReset());
     } else if (lineIndex == 1 || lineIndex == 3) {
-        printf("%s|%s%*s%s|%s",
-               scrDim(), scrReset(), CARD_CONTENT_WIDTH, "",
-               scrDim(), scrReset());
+        printf("         ");
     } else if (lineIndex == 2) {
-        printf("%s|%s    ", scrDim(), scrReset());
-        printf("%s%s%s",
-               card->suit == HEARTS || card->suit == DIAMONDS
-                   ? scrRed() : scrBold(),
-               CARD_SUITS[card->suit], scrReset());
-        printf("    %s|%s", scrDim(), scrReset());
+        printf("%s    %s%s    ", ink, CARD_SUITS[card->suit],
+               scrReset());
     } else {
-        printf("%s|%s       ", scrDim(), scrReset());
-        printf("%s%2s%s",
-               card->suit == HEARTS || card->suit == DIAMONDS
-                   ? scrRed() : scrBold(),
-               rankName, scrReset());
-        printf("%s|%s", scrDim(), scrReset());
+        printf("       %s%2s", ink, rankName);
     }
+
+    printf("%s|%s", scrCardBorder(), scrReset());
 }
 
-// Draws one complete row of cards.
 static void drawCards(const Hand *hand,
                       int startRow,
                       int padding,
@@ -142,16 +124,14 @@ static void drawCards(const Hand *hand,
 
     for (lineIndex = 0; lineIndex < CARD_HEIGHT; lineIndex++) {
         moveToTableRow(startRow + lineIndex, padding);
-
         for (cardIndex = 0; cardIndex < hand->count; cardIndex++) {
             if (lineIndex == 0 || lineIndex == CARD_HEIGHT - 1) {
-                printf("%s+---------+%s", scrDim(), scrReset());
+                printf("%s+---------+%s", scrCardBorder(), scrReset());
             } else if (hideFirstCard && cardIndex == 0) {
                 printFaceDownLine(lineIndex - 1);
             } else {
                 printVisibleCardLine(&hand->cards[cardIndex], lineIndex - 1);
             }
-
             if (cardIndex < hand->count - 1) {
                 printf(" ");
             }
@@ -159,10 +139,9 @@ static void drawCards(const Hand *hand,
     }
 }
 
-// Draws all dealer hands side by side with two spaces between hands.
 void renderDrawDealerHands(const Game *game,
-                            int padding,
-                            int hideFirstCard) {
+                           int padding,
+                           int hideFirstCard) {
     int handIndex;
     int handPadding;
     int handWidth;
@@ -170,19 +149,13 @@ void renderDrawDealerHands(const Game *game,
     if (game->dealer.handCount <= 0) {
         return;
     }
-
     handPadding = padding;
-
     if (game->dealer.handCount > 1) {
         for (handIndex = 0;
              handIndex < game->dealer.handCount;
              handIndex++) {
             moveToTableRow(DEALER_CARD_ROW - 1, handPadding);
-            printf("%sHAND %d%s",
-                   scrDim(),
-                   handIndex + 1,
-                   scrReset());
-
+            printf("%sHAND %d%s", scrDim(), handIndex + 1, scrReset());
             handWidth = game->dealer.hands[handIndex].count * CARD_WIDTH +
                         (game->dealer.hands[handIndex].count - 1) * CARD_GAP;
             handPadding += handWidth + 2;
@@ -190,29 +163,20 @@ void renderDrawDealerHands(const Game *game,
     }
 
     handPadding = padding;
-
     for (handIndex = 0;
          handIndex < game->dealer.handCount;
          handIndex++) {
         drawCards(&game->dealer.hands[handIndex],
-                  DEALER_CARD_ROW,
-                  handPadding,
-                  hideFirstCard);
-
+                  DEALER_CARD_ROW, handPadding, hideFirstCard);
         handWidth = game->dealer.hands[handIndex].count * CARD_WIDTH +
                     (game->dealer.hands[handIndex].count - 1) * CARD_GAP;
         handPadding += handWidth + 2;
     }
 }
 
-// Prints the status below one player hand.
 static void printPlayerHandStatus(const Game *game,
                                   int handIndex,
                                   int padding) {
-    if (game->player.hands[handIndex].count == 0) {
-        return;
-    }
-
     int handWidth;
     int handValue;
     int textWidth;
@@ -220,11 +184,12 @@ static void printPlayerHandStatus(const Game *game,
     const char *style;
     char statusText[32];
 
+    if (game->player.hands[handIndex].count == 0) {
+        return;
+    }
     handWidth = game->player.hands[handIndex].count * CARD_WIDTH +
                 (game->player.hands[handIndex].count - 1) * CARD_GAP;
-
-    handValue =
-        calculatePlayerHandValueForIndex(game, handIndex);
+    handValue = calculatePlayerHandValueForIndex(game, handIndex);
 
     if (handValue > 21) {
         snprintf(statusText, sizeof(statusText), "BUST");
@@ -237,81 +202,55 @@ static void printPlayerHandStatus(const Game *game,
 
     textWidth = (int)strlen(statusText);
     textPadding = (handWidth - textWidth) / 2;
-
     if (textPadding < 0) {
         textPadding = 0;
     }
-
     if (handValue > 21) {
-        style = scrRed();
+        style = scrDanger();
     } else {
         style = handIndex == game->player.activeHand &&
                 game->player.activeHand < game->player.handCount
-                    ? scrBold()
-                    : scrDim();
+                    ? scrEmphasis() : scrMuted();
     }
 
     moveToTableRow(PLAYER_CARD_ROW + CARD_HEIGHT, padding);
-    printf("%*s%s%s%s",
-           textPadding,
-           "",
-           style,
-           statusText,
-           scrReset());
+    printf("%*s%s%s%s", textPadding, "", style, statusText, scrReset());
 }
 
-// Draws all player hands side by side with two spaces between hands.
-void renderDrawPlayerHands(const Game *game,
-                            int padding) {
+void renderDrawPlayerHands(const Game *game, int padding) {
     int handIndex;
     int handPadding;
     int handWidth;
     int isActive;
 
     handPadding = padding;
-
     for (handIndex = 0;
          handIndex < game->player.handCount;
          handIndex++) {
         drawCards(&game->player.hands[handIndex],
-                  PLAYER_CARD_ROW,
-                  handPadding,
-                  0);
-
+                  PLAYER_CARD_ROW, handPadding, 0);
         handWidth = game->player.hands[handIndex].count * CARD_WIDTH +
                     (game->player.hands[handIndex].count - 1) * CARD_GAP;
         handPadding += handWidth + 2;
     }
 
     handPadding = padding;
-
     for (handIndex = 0;
          handIndex < game->player.handCount;
          handIndex++) {
         isActive = handIndex == game->player.activeHand &&
                    game->player.activeHand < game->player.handCount;
-
         moveToTableRow(PLAYER_CARD_ROW - 1, handPadding);
-
         if (game->player.handCount > 1) {
             if (isActive) {
-                printf("%s> HAND %d%s",
-                       scrBold(),
-                       handIndex + 1,
-                       scrReset());
+                printf("%s> HAND %d%s", scrBold(), handIndex + 1, scrReset());
             } else {
-                printf("%s  HAND %d%s",
-                       scrDim(),
-                       handIndex + 1,
-                       scrReset());
+                printf("%s  HAND %d%s", scrDim(), handIndex + 1, scrReset());
             }
         }
-
         printPlayerHandStatus(game, handIndex, handPadding);
-
         handWidth = game->player.hands[handIndex].count * CARD_WIDTH +
                     (game->player.hands[handIndex].count - 1) * CARD_GAP;
         handPadding += handWidth + 2;
     }
 }
-

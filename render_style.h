@@ -22,5 +22,11 @@ const char *scrWarning(void);
 const char *scrDanger(void);
 const char *scrMuted(void);
 const char *scrEmphasis(void);
+const char *scrCardBorder(void);
+const char *scrCardFace(void);
+const char *scrCardRedInk(void);
+const char *scrCardBlackInk(void);
+const char *scrCardBack(void);
+const char *scrCardBackInk(void);
 
 #endif

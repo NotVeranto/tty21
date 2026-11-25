@@ -9,7 +9,6 @@
 static int colorEnabled = 1;
 static int cursorHidden;
 
-// Keep ANSI capability decisions consistent and independently testable.
 int renderTerminalSupportsAnsi(int stdoutIsTerminal,
                                const char *term,
                                const char *noColor) {
@@ -20,7 +19,6 @@ int renderTerminalSupportsAnsi(int stdoutIsTerminal,
            strcmp(term, "dumb") != 0;
 }
 
-// Reads NO_COLOR and terminal capability once before the first visible render.
 void renderInitColors(void) {
     static int initialized;
 
@@ -31,7 +29,6 @@ void renderInitColors(void) {
     }
 }
 
-// Reports whether ANSI styling and cursor control are safe for stdout.
 int renderAnsiEnabled(void) {
     renderInitColors();
     return colorEnabled;
@@ -85,10 +82,33 @@ const char *scrDim(void) {
     return renderAnsiEnabled() ? "\033[2m" : "";
 }
 
-// Semantic palette: renderers describe meaning, not ANSI color numbers.
 const char *scrAccent(void) { return scrCyan(); }
 const char *scrSuccess(void) { return scrGreen(); }
 const char *scrWarning(void) { return scrYellow(); }
 const char *scrDanger(void) { return scrRed(); }
 const char *scrMuted(void) { return scrDim(); }
 const char *scrEmphasis(void) { return scrBold(); }
+
+const char *scrCardBorder(void) {
+    return renderAnsiEnabled() ? "\033[38;5;250m" : "";
+}
+
+const char *scrCardFace(void) {
+    return renderAnsiEnabled() ? "\033[48;5;255m" : "";
+}
+
+const char *scrCardRedInk(void) {
+    return renderAnsiEnabled() ? "\033[38;5;160m" : "";
+}
+
+const char *scrCardBlackInk(void) {
+    return renderAnsiEnabled() ? "\033[38;5;235m" : "";
+}
+
+const char *scrCardBack(void) {
+    return renderAnsiEnabled() ? "\033[48;5;24m" : "";
+}
+
+const char *scrCardBackInk(void) {
+    return renderAnsiEnabled() ? "\033[38;5;117m" : "";
+}
