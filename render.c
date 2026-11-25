@@ -69,11 +69,7 @@ static void printCenteredAtRow(const char *text, int row, int width) {
     int padding;
 
     textWidth = (int)strlen(text);
-    padding = (width - textWidth) / 2;
-
-    if (padding < 0) {
-        padding = 0;
-    }
+    padding = getCenteredColumnForWidth(width, textWidth) - 1;
 
     printf(SCR_CURSOR, row, padding + 1);
     printf("%s", text);
@@ -173,7 +169,8 @@ void renderTable(const Game *game, int hideDealerCard) {
     if (isatty(STDOUT_FILENO) &&
         terminalWidth >= tableWidth + 2) {
         renderHideCursor();
-        tablePadding = (terminalWidth - tableWidth) / 2;
+        tablePadding = getCenteredColumnForWidth(terminalWidth,
+                                                 tableWidth) - 1;
 
         phaseText = "";
 

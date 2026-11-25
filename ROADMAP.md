@@ -11,10 +11,10 @@ These percentages are completion estimates against each stage's exit criteria, n
 | 2 — Test coverage and verification | 100% | Closed |
 | 3 — Maintainability and architecture | 100% | Closed |
 | 4 — Gameplay balance and within-run progression | 100% | Closed |
-| 5 — Visual presentation and interaction feedback | 10% | Active |
+| 5 — Visual presentation and interaction feedback | 16% | Active |
 | 6 — Release polish | 0% | Not started |
 
-Overall roadmap estimate: **87%** (unweighted mean of the seven stage estimates).
+Overall roadmap estimate: **88%** (unweighted mean of the seven stage estimates).
 
 Stage 4 exit criteria have been met: the empty-hand edge case is resolved in production round-start logic and covered for normal and Twin deals; the 2,048-seed progression and boss evidence has been reviewed; and the production economy decision is documented (retain current prices, starting marks, and purchase rules). The latest main-branch CI run passed GCC, Clang, and ASan/UBSan. Stage 4 is closed; do not reopen balance experiments without a reproducible player-facing defect or a materially new hypothesis.
 
@@ -110,6 +110,8 @@ Refactor only where it reduces real coupling or makes future work safer.
 **Status:** active. Work order: first establish consistent presentation conventions across existing screens; only after that foundation is stable, begin the visual redesign and animation work. The dealer reveal already uses a brief automatic transition with a consistent 300 ms pause; fast and non-TTY modes remain immediate. Current completion estimate: 12%.
 
 ### Consistency foundation (first)
+
+**Progress note (25 Nov 2026):** horizontal centering now uses one shared width-based calculation across the main table, centered messages, action bar, run summary, floor transition, menus, and other shared layout callers. The pure width-based helper has regression tests for odd/even widths and content wider than the terminal.
 
 **Progress note (25 Nov 2026):** Plain-output main menus and the shop now share one tested menu-entry formatter. Selection markers, spacing, hotkeys, and disabled labels no longer diverge between the two paths. Full-screen ANSI rendering continues to use the existing shared `renderMenuItemRow()` treatment.
 - [x] Use one shared menu-entry treatment for selection and disabled entries across plain-output menus and the shop; retain the existing ANSI treatment for full-screen mode.

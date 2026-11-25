@@ -60,7 +60,7 @@ void renderFloorTransition(const Game *game) {
     }
 
     boxWidth = 36;
-    boxLeft = (terminalWidth - boxWidth) / 2 + 1;
+    boxLeft = getCenteredColumnForWidth(terminalWidth, boxWidth);
     boxTop = (terminalHeight - 7) / 2 + 1;
     dealerInfo = getDealerInfo(game->run.dealerId);
 
