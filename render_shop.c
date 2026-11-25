@@ -126,7 +126,13 @@ void renderShop(const Game *game,
         renderEventLog(game, shopPadding, terminalWidth);
         fflush(stdout);
     } else {
-        printf("TTY21 - SHOP\n");
+        {
+            char header[128];
+
+            formatPlainScreenHeader(header, sizeof(header),
+                                    terminalWidth, "TTY21 - SHOP");
+            printf("%s\n", header);
+        }
         printf("Marks: %d | Chips: %d\n\n", game->run.marks, game->player.chips);
         prevGroup = -1;
         for (itemIndex = 0; itemIndex < itemCount; itemIndex++) {
