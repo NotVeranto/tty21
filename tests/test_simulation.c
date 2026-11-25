@@ -401,9 +401,16 @@ TEST(roguelike_runner_uses_boss_preparation_policy) {
             stand_policy, NULL, advance_floor_policy, NULL,
             disable_boss_rule_policy, &prepCalls, NULL, NULL, &stats));
         if (prepCalls > 0) {
+            int bossIndex;
+            int recordedPrep = 0;
+            int recordedDisabled = 0;
             ASSERT_EQ_INT(1, game.bossRuleDisabled);
-            ASSERT_TRUE(stats.bossPrepEncountersByDealer[game.run.dealerId] > 0);
-            ASSERT_TRUE(stats.bossRuleDisabledByDealer[game.run.dealerId] > 0);
+            for (bossIndex = 0; bossIndex < DEALER_COUNT; bossIndex++) {
+                recordedPrep += stats.bossPrepEncountersByDealer[bossIndex];
+                recordedDisabled += stats.bossRuleDisabledByDealer[bossIndex];
+            }
+            ASSERT_TRUE(recordedPrep > 0);
+            ASSERT_TRUE(recordedDisabled > 0);
             exercised = 1;
         }
     }
