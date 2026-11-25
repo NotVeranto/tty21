@@ -103,6 +103,17 @@ void renderBossPrep(const Game *game) {
     char title[256];
     char line[256];
 
+    if (game == NULL) {
+        return;
+    }
+
+    renderInitColors();
+    if (isatty(STDOUT_FILENO) &&
+        !renderTerminalSizeOk(&terminalWidth, &terminalHeight)) {
+        renderTooSmallScreen(terminalWidth, terminalHeight);
+        return;
+    }
+
     dealerInfo = getDealerInfo(game->run.dealerId);
     rule2 = dealerInfo->rule2;
     power = dealerPowerRule2(game->run.dealerId, game->run.floor);
@@ -110,9 +121,7 @@ void renderBossPrep(const Game *game) {
         rule2 = power;
     }
 
-    renderInitColors();
     terminalGetSize(&terminalWidth, &terminalHeight);
-    (void)terminalWidth;
     boxColumn = getCenteredColumn(BOX_WIDTH);
     boxRow = (terminalHeight - BOX_HEIGHT) / 2 + 1;
     if (boxRow < 1) {

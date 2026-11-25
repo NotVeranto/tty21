@@ -2,6 +2,7 @@
 #include "render_control.h"
 #include "render_style.h"
 #include "render_layout.h"
+#include "render_terminal.h"
 #include "terminal.h"
 
 #include <stdio.h>
@@ -17,6 +18,13 @@ void renderStatsScreen(const Game *game) {
     int i;
     char lines[9][80];
 
+    terminalGetSize(&width, &height);
+    if (isatty(STDOUT_FILENO) &&
+        !renderTerminalSizeOk(&width, &height)) {
+        renderTooSmallScreen(width, height);
+        return;
+    }
+
     snprintf(lines[0], sizeof(lines[0]), "+------------------------------------+");
     snprintf(lines[1], sizeof(lines[1]), "|             RUN SUMMARY            |");
     snprintf(lines[2], sizeof(lines[2]), "|------------------------------------|");
@@ -30,7 +38,6 @@ void renderStatsScreen(const Game *game) {
     snprintf(lines[7], sizeof(lines[7]), "|       Press any key to return      |");
     snprintf(lines[8], sizeof(lines[8]), "+------------------------------------+");
 
-    terminalGetSize(&width, &height);
     if (isatty(STDOUT_FILENO)) {
         printf("%s%s", SCR_CLEAR, SCR_HOME);
     }
