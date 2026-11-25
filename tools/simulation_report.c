@@ -1076,7 +1076,7 @@ int main(void) {
                      bossIndex++) {
                     DealerId bossId = bossIds[bossIndex];
                     const DealerInfo *info = getDealerInfo(bossId);
-                    printf("      %-20s offers %d | disabled %d | unaffordable %d | marks %lld\\n",
+                    printf("      %-20s offers %d | disabled %d | unaffordable %d | marks %lld\n",
                            info->name,
                            utility.bossPrepOffersByDealer[bossId],
                            utility.bossRulesDisabledByDealer[bossId],
