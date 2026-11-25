@@ -70,8 +70,8 @@ static void printFaceDownLine(int lineIndex) {
         " . . . . ",
         " ####### ",
         " ## # ## ",
-        "  #######  ",
-        " . . . . . "
+        " ####### ",
+        " . . . . "
     };
 
     if (lineIndex < 0 ||
