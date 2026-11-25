@@ -152,3 +152,6 @@ Proceed in stage order. Within a stage, take the highest-risk verified issue fir
 
 
 **Report accounting correction (22 Nov 2026):** The reserve experiment now carries a pending-conversion marker across the shop service callback and the subsequent perk purchase. The production two-minimum-bet reserve records 500 held-mark-funded purchases and 609 conversion-funded purchases from 2,750 exchanges; one- and three-reserve variants record 724 and 489 conversion-funded purchases. The report asserts that total purchases equal the sum of the two funding sources. This corrects diagnostics only; no gameplay balance was changed.
+
+
+**Progress note (25 Nov 2026, marks utility coverage):** Extended the seeded report with a service-aware policy that spends held marks on affordable perks, rerolls an unaffordable shop pool when eligible, responds to hostile twists with the real reroll/block services, and pays for boss-rule disable during boss preparation. The report records each service count and reconciles exact marks spent. This is a policy-level comparison against the no-purchase baseline; it does not isolate the causal value of each service, and production prices remain unchanged pending review of the paired results.

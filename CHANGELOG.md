@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Extend the seeded economy report to exercise shop-pool rerolls, hostile-twist rerolls/blocks, and paid boss-rule preparation through the production service and boss-prep APIs; report service usage and reconcile marks spent.
+
 - Clarify the scope of the 2048-seed conversion experiments: they compare perk-buying policies and do not evaluate shop/twist services or paid boss preparation; their results must not be generalized to all marks spending.
 
 ### Fixed
