@@ -35,81 +35,12 @@ static void printUsage(FILE *stream) {
             "Requires a terminal of at least 70x42.\n");
 }
 
-static const char *LOGO[] = {
-    "TTTTT TTTTT Y   Y 2222    1",
-    "  T     T    Y Y  2  2   11",
-    "  T     T     Y     2     1",
-    "  T     T     Y    2      1",
-    "  T     T     Y   2222  111"
-};
-static const int LOGO_ROWS = 5;
-
-static void printCentered(const char *text, int width) {
-    int padding;
-    int textWidth;
-
-    textWidth = (int)strlen(text);
-    padding = (width - textWidth) / 2;
-
-    if (padding < 0) {
-        padding = 0;
-    }
-
-    printf("%*s%s\n", padding, "", text);
-}
-
-static void printLogo(int width) {
-    int logoIndex;
-
-    for (logoIndex = 0; logoIndex < LOGO_ROWS; logoIndex++) {
-        printCentered(LOGO[logoIndex], width);
-    }
-}
-
-static void printStartupItem(const MenuItem *item,
-                             int selected,
-                             int width,
-                             int colors) {
-    int rowWidth;
-    int padding;
-
-    rowWidth = 2 + 3 + 2 + (int)strlen(item->label);
-    padding = (width - rowWidth) / 2;
-
-    if (padding < 0) {
-        padding = 0;
-    }
-
-    printf("%*s", padding, "");
-
-    if (selected) {
-        if (colors) {
-            printf("\033[1m> \033[0m");
-        } else {
-            printf("> ");
-        }
-    } else {
-        printf("  ");
-    }
-
-    if (colors) {
-        printf("\033[2m[%c]\033[0m  ", item->hotkey);
-    } else {
-        printf("[%c]  ", item->hotkey);
-    }
-
-    if (selected) {
-        if (colors) {
-            printf("\033[1m%s\033[0m\n", item->label);
-        } else {
-            printf("%s\n", item->label);
-        }
-    } else {
-        printf("%s\n", item->label);
-    }
-}
-
-typedef enum { STARTUP_NEW_ROGUELIKE, STARTUP_NEW_CLASSIC, STARTUP_CONTINUE, STARTUP_QUIT } StartupChoice;
+typedef enum {
+    STARTUP_NEW_ROGUELIKE,
+    STARTUP_NEW_CLASSIC,
+    STARTUP_CONTINUE,
+    STARTUP_QUIT
+} StartupChoice;
 
 static StartupChoice runStartupMenu(int showContinue) {
     MenuItem items[4];
@@ -117,11 +48,7 @@ static StartupChoice runStartupMenu(int showContinue) {
     char input[64];
     int selectedIndex;
     int characterIndex;
-    int width;
-    int colors;
-    int ruleLength;
     int menuIndex;
-    int padding;
     KeyEvent event;
 
     if (showContinue) {
@@ -138,122 +65,21 @@ static StartupChoice runStartupMenu(int showContinue) {
     }
 
     selectedIndex = 0;
+    renderResetScreen();
 
     while (1) {
-        width = 80;
-        if (isatty(STDOUT_FILENO)) {
-            struct winsize ws;
-            int height = 24;
-
-            if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0) {
-                if (ws.ws_col > 0) {
-                    width = ws.ws_col;
-                }
-                if (ws.ws_row > 0) {
-                    height = ws.ws_row;
-                }
-            }
-
-            /*
-             * The startup screen is compact and does not need the full
-             * 70x42 game-table viewport. Keep it usable in ordinary
-             * 80x24 terminals; reserve the larger minimum for gameplay.
-             */
-            if (width < 30 || height < 16) {
-                printf("\\033[2J\\033[H");
-                printf("TTY21 startup menu needs at least 30x16.\\n");
-                printf("Current terminal: %dx%d. Resize and press a key.\\n",
-                       width, height);
-                fflush(stdout);
-
-                if (inputIsRaw()) {
-                    (void)readKey();
-                } else {
-                    (void)getchar();
-                }
-
-                continue;
-            }
-        }
-
-        colors = getenv("NO_COLOR") == NULL &&
-                 isatty(STDOUT_FILENO);
-
-        renderHideCursor();
-
-        if (isatty(STDOUT_FILENO) && colors) {
-            printf("\033[2J\033[H");
-        }
-
-        printf("\n");
-        printLogo(width);
-        printf("\n");
-
-        padding = (width - (int)strlen("Terminal blackjack roguelike")) / 2;
-
-        if (padding < 0) {
-            padding = 0;
-        }
-
-        printf("%*s", padding, "");
-
-        if (colors) {
-            printf("\033[2m");
-        }
-
-        printf("Terminal blackjack roguelike");
-
-        if (colors) {
-            printf("\033[0m");
-        }
-
-        printf("\n\n");
-
-        ruleLength = width - 4;
-
-        if (ruleLength > 60) {
-            ruleLength = 60;
-        }
-
-        if (ruleLength < 20) {
-            ruleLength = 20;
-        }
-
-        if (ruleLength > width) {
-            ruleLength = width;
-        }
-
-        printf("%*s", (width - ruleLength) / 2, "");
-
-        for (characterIndex = 0;
-             characterIndex < ruleLength;
-             characterIndex++) {
-            printf("-");
-        }
-
-        printf("\n\n");
-
-        for (menuIndex = 0; menuIndex < itemCount; menuIndex++) {
-            printStartupItem(&items[menuIndex],
-                             menuIndex == selectedIndex,
-                             width,
-                             colors);
-        }
-
-        fflush(stdout);
+        renderMenu("TTY21", items, itemCount, 0, selectedIndex, 12);
 
         if (inputIsRaw()) {
             event = readKey();
 
             if (event.type == KEY_UP) {
                 selectedIndex--;
-
                 if (selectedIndex < 0) {
                     selectedIndex = itemCount - 1;
                 }
             } else if (event.type == KEY_DOWN) {
                 selectedIndex++;
-
                 if (selectedIndex >= itemCount) {
                     selectedIndex = 0;
                 }
@@ -267,8 +93,6 @@ static StartupChoice runStartupMenu(int showContinue) {
             } else if (event.type == KEY_CHAR) {
                 for (menuIndex = 0; menuIndex < itemCount; menuIndex++) {
                     if (event.ch == items[menuIndex].hotkey) {
-                        selectedIndex = menuIndex;
-
                         renderShowCursor();
                         if (items[menuIndex].hotkey == 'c') return STARTUP_CONTINUE;
                         if (items[menuIndex].hotkey == '1') return STARTUP_NEW_ROGUELIKE;
@@ -277,8 +101,7 @@ static StartupChoice runStartupMenu(int showContinue) {
                         return STARTUP_QUIT;
                     }
                 }
-            } else if (event.type == KEY_ESC ||
-                       event.type == KEY_EOF) {
+            } else if (event.type == KEY_ESC || event.type == KEY_EOF) {
                 renderShowCursor();
                 disableRawMode();
                 return STARTUP_QUIT;
@@ -289,7 +112,6 @@ static StartupChoice runStartupMenu(int showContinue) {
             }
 
             characterIndex = 0;
-
             while (input[characterIndex] != '\0' &&
                    isspace((unsigned char)input[characterIndex])) {
                 characterIndex++;
@@ -297,7 +119,6 @@ static StartupChoice runStartupMenu(int showContinue) {
 
             for (menuIndex = 0; menuIndex < itemCount; menuIndex++) {
                 if (input[characterIndex] == items[menuIndex].hotkey) {
-                    selectedIndex = menuIndex;
                     renderShowCursor();
                     if (items[menuIndex].hotkey == 'c') return STARTUP_CONTINUE;
                     if (items[menuIndex].hotkey == '1') return STARTUP_NEW_ROGUELIKE;

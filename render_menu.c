@@ -903,9 +903,6 @@ void renderMenu(const char *title,
     terminalGetSize(&terminalWidth, &terminalHeight);
 
     if (isatty(STDOUT_FILENO) &&
-        renderTerminalSizeOk(&terminalWidth, &terminalHeight) &&
-        terminalWidth >= MIN_TERMINAL_WIDTH &&
-        terminalHeight >= MIN_TERMINAL_HEIGHT &&
         renderLayoutCurrent() == NULL &&
         canvasBegin()) {
         renderSplash(title, items, itemCount, disabledMask, selectedIndex);
