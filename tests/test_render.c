@@ -44,6 +44,22 @@ TEST(render_style_rejects_missing_terminal_type) {
     ASSERT_EQ_INT(0, renderTerminalSupportsAnsi(1, NULL, NULL));
 }
 
+TEST(render_cursor_is_addressable_in_supported_terminal) {
+    ASSERT_EQ_INT(1, renderCursorAddressableFor(1, "xterm-256color"));
+}
+
+TEST(render_cursor_is_not_addressable_when_output_is_redirected) {
+    ASSERT_EQ_INT(0, renderCursorAddressableFor(0, "xterm-256color"));
+}
+
+TEST(render_cursor_is_not_addressable_for_dumb_terminal) {
+    ASSERT_EQ_INT(0, renderCursorAddressableFor(1, "dumb"));
+}
+
+TEST(render_cursor_rejects_missing_terminal_type) {
+    ASSERT_EQ_INT(0, renderCursorAddressableFor(1, NULL));
+}
+
 TEST(render_layout_centers_odd_width_content) {
     ASSERT_EQ_INT(31, getCenteredColumnForWidth(80, 20));
 }
@@ -101,6 +117,10 @@ void run_render_tests(void) {
     RUN_TEST(render_style_disables_ansi_when_no_color_is_set);
     RUN_TEST(render_style_enables_ansi_for_supported_terminal);
     RUN_TEST(render_style_rejects_missing_terminal_type);
+    RUN_TEST(render_cursor_is_addressable_in_supported_terminal);
+    RUN_TEST(render_cursor_is_not_addressable_when_output_is_redirected);
+    RUN_TEST(render_cursor_is_not_addressable_for_dumb_terminal);
+    RUN_TEST(render_cursor_rejects_missing_terminal_type);
     RUN_TEST(render_layout_centers_odd_width_content);
     RUN_TEST(render_layout_centers_even_width_content);
     RUN_TEST(render_layout_left_aligns_content_wider_than_terminal);

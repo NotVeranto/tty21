@@ -13,6 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Replace the ambiguous startup-menu hint "hotkeys jump" with the explicit "1/2/Q quick select" wording.
+
+### Tested
+
+- Cover cursor-addressability detection for supported, redirected, dumb, and unspecified terminal types.
+
+### Changed
+
 - Keep the command-line reference, README, and man page aligned with the animated startup flow and supported launch flags; document compatible and conflicting option combinations.
 - Expand CLI smoke coverage for seed syntax, missing arguments, and incompatible mode/continue flags.
 

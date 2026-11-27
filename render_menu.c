@@ -536,12 +536,12 @@ static void drawCards(const SplashLayout *layout, const SplashFrame *frame) {
 
 static void drawFooter(const SplashLayout *layout) {
     static const char *const UNI[3] = {
-        "\xe2\x86\x91 \xe2\x86\x93  select     Enter  confirm     hotkeys  jump",
+        "\xe2\x86\x91 \xe2\x86\x93  select     Enter  confirm     1/2/Q quick select",
         "\xe2\x86\x91\xe2\x86\x93 select   Enter confirm",
         "Enter confirm",
     };
     static const char *const ASC[3] = {
-        "Up/Down select     Enter confirm     hotkeys jump",
+        "Up/Down select     Enter confirm     1/2/Q quick select",
         "Up/Down select   Enter confirm",
         "Enter confirm",
     };
