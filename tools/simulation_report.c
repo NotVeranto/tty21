@@ -34,14 +34,24 @@ static ActionId progressing_policy(const Game *game,
     (void)context;
 
     /*
-     * No-Reshuffle can exhaust the drawable deck while a low hand is still
-     * forbidden from standing. Hitting then cannot change the hand, so end
-     * this strategy sample cleanly instead of exhausting the action limit.
+     * No-Reshuffle can leave a low hand unable to stand after the last
+     * drawable card is gone. Also account for actions withheld when a
+     * mirrored draw cannot be completed; do not ask the simulation to hit
+     * when the game correctly no longer offers that action.
      */
-    if (standBlocked &&
-        game->deck.top >= DECK_SIZE - DECK_BURN_SIZE) {
+    if (standBlocked) {
+        int canHit = 0;
         for (index = 0; index < actionCount; index++) {
-            if (actions[index] == ACTION_QUIT) return ACTION_QUIT;
+            if (actions[index] == ACTION_HIT) canHit = 1;
+            if (actions[index] == ACTION_QUIT && !canHit &&
+                game->deck.top >= DECK_SIZE - DECK_BURN_SIZE) {
+                /* Keep scanning: HIT may appear later in the action list. */
+            }
+        }
+        if (!canHit) {
+            for (index = 0; index < actionCount; index++) {
+                if (actions[index] == ACTION_QUIT) return ACTION_QUIT;
+            }
         }
     }
 
