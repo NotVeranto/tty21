@@ -9,7 +9,7 @@ license=('MIT')
 depends=('glibc')
 makedepends=('git' 'make' 'gcc')
 checkdepends=('python')
-source=("git+https://github.com/NotVeranto/tty21.git#commit=5b7dd598c9097049376893c91e1248ea72e06a88")
+source=("git+https://github.com/NotVeranto/tty21.git#commit=631ecb21654ed55963a8407470f7ab289a4fdf44")
 sha256sums=('SKIP')
 
 build() {
