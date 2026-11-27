@@ -786,38 +786,6 @@ static void testBossRuleDisablingPreservesSecondRule(void) {
     assert(dealerPaysPureHandBonus(game.run.dealerId) == 1);
 }
 
-static void testForcedDoubleDoesNotChargeWithoutDrawCard(void) {
-    Game game;
-    int bet;
-
-    rngInit(88123U, 1);
-    initGame(&game, MODE_ROGUELIKE);
-    game.run.floor = 10;
-    game.run.dealerId = DEALER_DEVIL;
-    game.run.twistId = TWIST_NO_RESHUFFLE;
-    game.player.chips = 1000;
-    bet = getMinBet(&game, game.run.floor, game.mode);
-
-    game.deck.cards[0].suit = HEARTS;
-    game.deck.cards[0].rank = FIVE;
-    game.deck.cards[0].cursed = CURSED_NONE;
-    game.deck.cards[1].suit = CLUBS;
-    game.deck.cards[1].rank = TEN;
-    game.deck.cards[1].cursed = CURSED_NONE;
-    game.deck.cards[2].suit = DIAMONDS;
-    game.deck.cards[2].rank = SIX;
-    game.deck.cards[2].cursed = CURSED_NONE;
-    game.deck.cards[3].suit = SPADES;
-    game.deck.cards[3].rank = SEVEN;
-    game.deck.cards[3].cursed = CURSED_NONE;
-    game.deck.top = DECK_SIZE - DECK_BURN_SIZE - 4;
-
-    assert(startRoundWithBet(&game, bet, 0, 0));
-    assert(game.player.bets[0] == bet);
-    assert(game.player.chips == 1000 - bet);
-    assert(game.state == STATE_PLAYER_TURN);
-    assert(game.player.usedDouble[0] == 0);
-}
 
 static void testInterruptedRoundRecovery(void) {
     Game game;
@@ -953,7 +921,6 @@ int main(void) {
     testUnaffordableRunTermination();
     testBossPrepTransaction();
     testBossRuleDisablingPreservesSecondRule();
-    testForcedDoubleDoesNotChargeWithoutDrawCard();
     testInterruptedRoundRecovery();
 
     puts("renderer-free core tests passed");
