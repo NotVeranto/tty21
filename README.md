@@ -1,69 +1,83 @@
 # tty21
 
-A blackjack roguelike for the terminal, written in C.
+**Blackjack, with a roguelike twist.**
 
-Play classic blackjack or descend through casino floors: face tougher dealers and bosses, deal with changing table rules, and spend marks on perks to shape your run. Every run is self-contained.
+tty21 is a terminal blackjack game written in C. Play a clean, traditional game or take on a run through increasingly dangerous casino floors, where dealers, bosses, table rules, and run-specific upgrades change how you play.
 
-## What you can do
+## Game modes
 
-- Play **Classic** blackjack or a **Roguelike** run.
-- Hit, stand, double down, split, surrender, and use insurance when offered.
-- Meet special dealers, bosses, floor twists, and cursed cards.
-- Buy run-only perks and services between floors.
-- Save and continue a roguelike run.
-- Use the animated terminal interface, or switch to ASCII and monochrome output.
+- **Classic** — straightforward blackjack, focused on the hand.
+- **Roguelike** — climb through casino floors, face special dealers and bosses, adapt to table twists, and spend marks on upgrades between rounds.
 
-## Install
+Both modes include the familiar blackjack decisions: hit, stand, double down, split, surrender, and insurance when available.
 
-On Arch Linux, build the included package recipe from a checkout:
+## Installation
+
+### Arch Linux
+
+From a checkout of this repository:
 
 ```sh
 makepkg -si
 ```
 
-The recipe is ready for publication to the AUR; the package is not yet listed there.
+The Arch package recipe is included in the repository and is ready for AUR publication. It is not listed in the AUR yet.
 
-On other Linux distributions, build and install from source (the install target defaults to `/usr/local`):
+### Other Linux distributions
+
+Build and install from source:
 
 ```sh
 make
 sudo make install
 ```
 
-To stage an installation under a package root, use `make PREFIX=/usr DESTDIR=/path/to/pkg install`.
+The default install prefix is `/usr/local`. To stage files for packaging:
 
-## Build and run
+```sh
+make PREFIX=/usr DESTDIR=/path/to/pkg install
+```
 
-Requires Linux, GCC or Clang with C11 support, and a terminal.
+## Getting started
 
 ```sh
 make
 ./tty21
 ```
 
-With no arguments, the startup menu lets you choose a mode or continue a saved run.
-
-## Useful options
-
-| Option | What it does |
-| --- | --- |
-| `--classic` | Start classic blackjack |
-| `--roguelike` | Start a new roguelike run |
-| `--continue` | Continue the saved run |
-| `--seed N` | Start with a repeatable random seed |
-| `--fast` | Skip dealer animation pauses |
-| `--ascii` | Use ASCII-only graphics |
-| `--no-color` | Disable colors |
-| `--no-save` | Disable autosaving for this session |
-| `--help` | Show all options |
+Run `./tty21` without arguments to open the mode selection menu. Requires Linux, a C11 compiler (GCC or Clang), and a terminal with ANSI escape-sequence support.
 
 ## Controls
 
-**During a hand:** `h` hit · `s` stand · `d` double · `p` split · `u` surrender · `?` help · `q` quit the run.
+| Action | Key |
+| --- | --- |
+| Hit | `h` |
+| Stand | `s` |
+| Double down | `d` |
+| Split | `p` |
+| Surrender | `u` |
+| Show help | `?` |
+| Continue / advance / shop | `c` / `a` / `s` |
+| Save run | `w` |
+| Quit | `q` |
 
-**Between rounds:** `c` continue · `a` advance floor · `s` shop · `w` save · `q` quit. Menus can also be navigated with the arrow keys and Enter.
+Menus can be navigated with the arrow keys and Enter.
 
-## Tests
+## Command-line options
+
+| Option | Description |
+| --- | --- |
+| `--classic` | Start Classic mode |
+| `--roguelike` | Start a new Roguelike run |
+| `--continue` | Continue a saved run |
+| `--seed N` | Use a repeatable random seed |
+| `--fast` | Skip dealer animation pauses |
+| `--ascii` | Use ASCII-only graphics |
+| `--no-color` | Disable terminal colors |
+| `--no-save` | Disable autosaving for this session |
+| `--help` | Show all options |
+
+## Development
 
 ```sh
 make test
@@ -71,8 +85,8 @@ make test-sanitize
 make simulate-report
 ```
 
-The test suite covers game rules, progression, saves, rendering, command-line options, and terminal behavior. The simulation report compares seeded gameplay strategies; it is an analysis tool, not a balance guarantee.
+The tests cover blackjack rules, progression, saves, rendering, command-line behavior, and terminal handling.
 
-## Platform
+## License
 
-Linux terminal (uses `termios` and ANSI escape sequences). A window of at least 70×42 characters is recommended. UTF-8 graphics are used by default; `--ascii` is available for restricted terminals.
+MIT. See [LICENSE](LICENSE).
