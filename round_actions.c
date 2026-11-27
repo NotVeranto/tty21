@@ -47,7 +47,7 @@ static int canSplit(const Game *game) {
            game->player.hands[game->player.activeHand].cards[0].rank ==
                game->player.hands[game->player.activeHand].cards[1].rank &&
            game->player.handCount < handLimit &&
-           remainingDeckCards(game) >= 2 * cardsNeededForPlayerDraw(game) &&
+           remainingDeckCards(game) >= 2 &&
            (long long)game->player.chips - getTotalExposure(game) >= game->player.bets[game->player.activeHand] &&
            !game->player.isSplitAce[game->player.activeHand];
 }
