@@ -64,4 +64,13 @@ for mode in --classic --roguelike; do
 done
 grep -F "error: --continue cannot be combined" "$tmp_dir/conflicting-flags" >/dev/null
 
+# Explicit new-game modes are mutually exclusive in either argument order.
+for modes in "--classic --roguelike" "--roguelike --classic"; do
+    if ./tty21 $modes >"$tmp_dir/conflicting-modes" 2>&1; then
+        echo "conflicting game modes unexpectedly succeeded: $modes" >&2
+        exit 1
+    fi
+grep -F "error: --roguelike and --classic cannot be combined" "$tmp_dir/conflicting-modes" >/dev/null
+done
+
 echo "CLI smoke tests passed"

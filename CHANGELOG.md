@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Reject simultaneous `--roguelike` and `--classic` flags instead of silently letting argument order choose the mode.
+
 ### Changed
 
 - Keep the command-line reference, README, and man page aligned with the animated startup flow and supported launch flags; document compatible and conflicting option combinations.

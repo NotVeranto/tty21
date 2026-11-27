@@ -95,7 +95,7 @@ With no mode flag, the animated startup menu lets you choose a new roguelike run
     ./tty21 --no-save
     ./tty21 --fast
 
-Options can be combined where their meanings do not conflict. For example, `./tty21 --roguelike --seed 12345 --fast --no-save` starts a seeded roguelike session without autosaving and skips dealer animation pauses. `--continue` cannot be combined with `--roguelike` or `--classic`; it always resumes a saved roguelike run. `--no-save` and `--fast` apply to the current session. A supplied seed initializes the RNG; when continuing a save, the saved RNG state is restored.
+Options can be combined where their meanings do not conflict. For example, `./tty21 --roguelike --seed 12345 --fast --no-save` starts a seeded roguelike session without autosaving and skips dealer animation pauses. `--roguelike` and `--classic` are mutually exclusive, and `--continue` cannot be combined with either; it always resumes a saved roguelike run. `--no-save` and `--fast` apply to the current session. A supplied seed initializes the RNG; when continuing a save, the saved RNG state is restored.
 
 ## Command-line options
 
