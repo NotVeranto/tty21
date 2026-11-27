@@ -75,6 +75,9 @@ void renderActionBar(const ActionId *actions,
                          ? ACTION_NAMES[actionId] : "Unknown";
         visibleWidth += (actionIndex > 0 ? gap : 0) + 3 + 2 +
                         (int)strlen(actionName);
+        if (actionIndex == selectedIndex && !renderAnsiEnabled()) {
+            visibleWidth += 2;
+        }
     }
     if (visibleWidth > regionW) {
         gap = 1;
@@ -102,8 +105,14 @@ void renderActionBar(const ActionId *actions,
             x += gap;
         }
         if (actionIndex == selectedIndex) {
+            if (!renderAnsiEnabled()) {
+                x += canvasPutText(x, row, ">", ST_PLAIN);
+            }
             x += canvasPutText(x, row, cap, ST_SEL_KEY);
             x += canvasPutText(x, row, label, ST_SEL);
+            if (!renderAnsiEnabled()) {
+                x += canvasPutText(x, row, "<", ST_PLAIN);
+            }
         } else {
             x += canvasPutText(x, row, cap, ST_KEYCAP);
             x += canvasPutText(x, row, label, ST_PLAIN);
