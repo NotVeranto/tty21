@@ -43,10 +43,6 @@ static ActionId progressing_policy(const Game *game,
         int canHit = 0;
         for (index = 0; index < actionCount; index++) {
             if (actions[index] == ACTION_HIT) canHit = 1;
-            if (actions[index] == ACTION_QUIT && !canHit &&
-                game->deck.top >= DECK_SIZE - DECK_BURN_SIZE) {
-                /* Keep scanning: HIT may appear later in the action list. */
-            }
         }
         if (!canHit) {
             for (index = 0; index < actionCount; index++) {
