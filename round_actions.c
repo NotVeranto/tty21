@@ -22,9 +22,14 @@ static int getTotalExposure(const Game *game) {
     return exposure > INT_MAX ? INT_MAX : (int)exposure;
 }
 
+static int cardsNeededForPlayerDraw(const Game *game) {
+    return effectiveDealerMirrorsOnHit(game) ? 2 : 1;
+}
+
 static int canDouble(const Game *game) {
     if (game->run.floor >= 10 && game->run.dealerId == DEALER_VOID) return 0;
     return game->player.hands[game->player.activeHand].count == 2 &&
+           remainingDeckCards(game) >= cardsNeededForPlayerDraw(game) &&
            (long long)game->player.chips - getTotalExposure(game) >= game->player.bets[game->player.activeHand];
 }
 
@@ -42,6 +47,7 @@ static int canSplit(const Game *game) {
            game->player.hands[game->player.activeHand].cards[0].rank ==
                game->player.hands[game->player.activeHand].cards[1].rank &&
            game->player.handCount < handLimit &&
+           remainingDeckCards(game) >= 2 * cardsNeededForPlayerDraw(game) &&
            (long long)game->player.chips - getTotalExposure(game) >= game->player.bets[game->player.activeHand] &&
            !game->player.isSplitAce[game->player.activeHand];
 }
@@ -120,7 +126,8 @@ int getPlayerActions(const Game *game, ActionId *actions) {
     }
 
     actionCount = 0;
-    if (game->player.hands[game->player.activeHand].count < MAX_HAND_SIZE)
+    if (game->player.hands[game->player.activeHand].count < MAX_HAND_SIZE &&
+        remainingDeckCards(game) >= cardsNeededForPlayerDraw(game))
         actions[actionCount++] = ACTION_HIT;
     actions[actionCount++] = ACTION_STAND;
 
@@ -170,6 +177,13 @@ void applyPlayerAction(Game *game, ActionId action) {
             logPush(game, "Hand is full.", MSG_DEFAULT);
             return;
         }
+        if (!drawCard(game,
+                      &game->player.hands[game->player.activeHand], 1)) {
+            logPush(game, "No cards remain. Hand stands.", MSG_INFO);
+            advanceActiveHand(game);
+            return;
+        }
+
         if (game->run.floor >= 10 && game->run.dealerId == DEALER_DEVIL) {
             int toll = 3;
             if (toll > game->player.chips) toll = game->player.chips;
@@ -181,7 +195,6 @@ void applyPlayerAction(Game *game, ActionId action) {
                 logPush(game, tollMessage, MSG_LOSS);
             }
         }
-        drawCard(game, &game->player.hands[game->player.activeHand], 1);
 
         if (effectiveDealerMirrorsOnHit(game)) {
             drawCard(game, &game->dealer.hands[0], 0);
@@ -280,24 +293,30 @@ void applyPlayerAction(Game *game, ActionId action) {
                      "Cannot double now.",
                      MSG_DEFAULT);
         } else {
-            game->player.bets[game->player.activeHand] *= 2;
-            game->player.usedDouble[game->player.activeHand] = 1;
-            drawCard(game, &game->player.hands[game->player.activeHand], 1);
+            if (!drawCard(game,
+                          &game->player.hands[game->player.activeHand], 1)) {
+                logPush(game, "No cards remain. Double cancelled.",
+                        MSG_INFO);
+                advanceActiveHand(game);
+            } else {
+                game->player.bets[game->player.activeHand] *= 2;
+                game->player.usedDouble[game->player.activeHand] = 1;
 
-            if (effectiveDealerMirrorsOnHit(game)) {
-                drawCard(game, &game->dealer.hands[0], 0);
+                if (effectiveDealerMirrorsOnHit(game)) {
+                    drawCard(game, &game->dealer.hands[0], 0);
+                }
+
+                {
+                    char msg[64];
+
+                    snprintf(msg, sizeof(msg),
+                             "Double. Total %d.",
+                             calculatePlayerHandValue(game));
+                    logPush(game, msg, MSG_ACTION);
+                }
+
+                advanceActiveHand(game);
             }
-
-            {
-                char msg[64];
-
-                snprintf(msg, sizeof(msg),
-                         "Double. Total %d.",
-                         calculatePlayerHandValue(game));
-                logPush(game, msg, MSG_ACTION);
-            }
-
-            advanceActiveHand(game);
         }
     } else if (action == ACTION_SPLIT) {
         if (!canSplit(game)) {

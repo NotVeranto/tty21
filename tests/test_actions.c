@@ -121,8 +121,41 @@ TEST(actions_insurance_stake_is_not_reserved_twice_for_split) {
     ASSERT_TRUE(found);
 }
 
+TEST(actions_do_not_offer_draw_actions_without_enough_cards) {
+    Game game;
+    ActionId actions[ACTION_COUNT + 1];
+    int count;
+    int i;
+    int hasHit = 0;
+    int hasDouble = 0;
+    int hasSplit = 0;
+
+    setup_action_game(&game, 10);
+    game.player.chips = 100;
+    game.player.hands[0].cards[1].rank = TEN;
+    game.deck.top = DECK_SIZE - DECK_BURN_SIZE - 1;
+    count = getPlayerActions(&game, actions);
+    for (i = 0; i < count; i++) {
+        if (actions[i] == ACTION_HIT) hasHit = 1;
+        if (actions[i] == ACTION_DOUBLE) hasDouble = 1;
+        if (actions[i] == ACTION_SPLIT) hasSplit = 1;
+    }
+    ASSERT_EQ_INT(0, hasHit);
+    ASSERT_EQ_INT(0, hasDouble);
+    ASSERT_EQ_INT(0, hasSplit);
+
+    game.deck.top = DECK_SIZE - DECK_BURN_SIZE;
+    count = getPlayerActions(&game, actions);
+    hasHit = 0;
+    for (i = 0; i < count; i++) {
+        if (actions[i] == ACTION_HIT) hasHit = 1;
+    }
+    ASSERT_EQ_INT(0, hasHit);
+}
+
 void run_action_tests(void) {
     RUN_TEST(actions_expose_and_apply_surrender_without_terminal_input);
+    RUN_TEST(actions_do_not_offer_draw_actions_without_enough_cards);
     RUN_TEST(actions_reject_unavailable_and_out_of_turn_requests);
     RUN_TEST(actions_insurance_stake_is_not_reserved_twice_for_double);
     RUN_TEST(actions_insurance_stake_is_not_reserved_twice_for_split);

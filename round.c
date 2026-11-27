@@ -30,13 +30,22 @@ static const char *CURSE_NAMES[] = {
     "Echo"
 };
 
-void drawCard(Game *game, Hand *hand, int allowCurse) {
+int remainingDeckCards(const Game *game) {
+    int remaining;
+
+    if (game == NULL) return 0;
+    remaining = DECK_SIZE - DECK_BURN_SIZE - game->deck.top;
+    return remaining > 0 ? remaining : 0;
+}
+
+int drawCard(Game *game, Hand *hand, int allowCurse) {
     int previousCount;
     CurseId curseId;
     char message[64];
 
-    if (hand->count >= MAX_HAND_SIZE) return;
-    if (game->deck.top >= DECK_SIZE - DECK_BURN_SIZE) return;
+    if (game == NULL || hand == NULL ||
+        hand->count >= MAX_HAND_SIZE ||
+        remainingDeckCards(game) <= 0) return 0;
 
     previousCount = hand->count;
     addCardToHand(hand, &game->deck.cards[game->deck.top]);
@@ -54,6 +63,8 @@ void drawCard(Game *game, Hand *hand, int allowCurse) {
                  CURSE_NAMES[curseId]);
         logPush(game, message, MSG_INFO);
     }
+
+    return hand->count > previousCount;
 }
 
 static void redrawFirstPlayerCard(Game *game, int requireHighCard) {

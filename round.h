@@ -6,7 +6,8 @@
 int startRoundWithBet(Game *game, int betAmount,
                       int insuranceDecision, int evenMoneyDecision);
 void startRound(Game *game);
-void drawCard(Game *game, Hand *hand, int allowCurse);
+int remainingDeckCards(const Game *game);
+int drawCard(Game *game, Hand *hand, int allowCurse);
 void resetPlayerHandToEleven(Game *game);
 
 
