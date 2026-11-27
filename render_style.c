@@ -147,7 +147,7 @@ const char *scrReset(void) {
 }
 
 void renderHideCursor(void) {
-    if (renderAnsiEnabled() && !cursorHidden) {
+    if (renderCursorAddressable() && !cursorHidden) {
         printf("\033[?25l");
         fflush(stdout);
         cursorHidden = 1;
@@ -155,7 +155,7 @@ void renderHideCursor(void) {
 }
 
 void renderShowCursor(void) {
-    if (renderAnsiEnabled() && cursorHidden) {
+    if (renderCursorAddressable() && cursorHidden) {
         printf("\033[?25h");
         fflush(stdout);
         cursorHidden = 0;
