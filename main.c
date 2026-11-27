@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include "game.h"
 #include "controller.h"
 #include "input.h"
@@ -29,6 +30,8 @@ static void printUsage(FILE *stream) {
             "  -r, --roguelike Start in roguelike mode (default).\n"
             "  -c, --classic   Start in classic blackjack mode.\n"
             "  --fast          Skip dealer animation pauses.\n"
+            "  --ascii         Use ASCII-only graphics.\n"
+            "  --no-color      Disable terminal colours.\n"
             "  --continue      Resume the last roguelike run.\n"
             "  --no-save       Disable autosave for this session.\n"
             "\n"
@@ -213,6 +216,16 @@ int main(int argc, char **argv) {
 
         if (strcmp(argv[argumentIndex], "--fast") == 0) {
             fastFlag = 1;
+            continue;
+        }
+
+        if (strcmp(argv[argumentIndex], "--ascii") == 0) {
+            (void)setenv("TTY21_ASCII", "1", 1);
+            continue;
+        }
+
+        if (strcmp(argv[argumentIndex], "--no-color") == 0) {
+            (void)setenv("TTY21_COLORS", "0", 1);
             continue;
         }
 

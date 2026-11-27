@@ -1,6 +1,6 @@
 CC      = gcc
 CFLAGS  = -Wall -Wextra -Werror -std=c11 -g
-VERSION = 0.1.1
+VERSION = 0.1.2
 CFLAGS += -DTTY21_VERSION=\"$(VERSION)\"
 CFLAGS += -MMD -MP
 PREFIX  ?= /usr/local

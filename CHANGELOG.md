@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add `--ascii` and `--no-color` launch flags, exposing the existing ASCII glyph and monochrome renderer modes without requiring environment-variable setup.
+
+### Changed
+
+- Bump the application version to 0.1.2; the startup-menu version is sourced from the same build-time version as `--version`.
+
+## [0.1.2] - 2026-11-27
+
+### Added
+
+- Add `--ascii` and `--no-color` launch flags for restricted terminals.
+
+### Changed
+
+- Bump the application version to 0.1.2 across build metadata and user-facing documentation.
+
+## [Unreleased]
+
 ### Fixed
 
 - Reject simultaneous `--roguelike` and `--classic` flags instead of silently letting argument order choose the mode.

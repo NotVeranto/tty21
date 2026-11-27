@@ -8,7 +8,16 @@ trap 'rm -rf "$tmp_dir"' EXIT HUP INT TERM
 grep -F "Requires a terminal of at least 70x42." "$tmp_dir/help" >/dev/null
 
 ./tty21 --version >"$tmp_dir/version"
-grep -F "tty21 " "$tmp_dir/version" >/dev/null
+grep -F "tty21 0.1.2" "$tmp_dir/version" >/dev/null
+
+# Rendering modes are accepted as independent and combined launch options.
+./tty21 --ascii --help >"$tmp_dir/ascii-help"
+grep -F -- "--ascii" "$tmp_dir/ascii-help" >/dev/null
+./tty21 --no-color --help >"$tmp_dir/no-color-help"
+grep -F -- "--no-color" "$tmp_dir/no-color-help" >/dev/null
+./tty21 --ascii --no-color --help >"$tmp_dir/combined-render-help"
+grep -F -- "--ascii" "$tmp_dir/combined-render-help" >/dev/null
+grep -F -- "--no-color" "$tmp_dir/combined-render-help" >/dev/null
 
 if ./tty21 --seed invalid >"$tmp_dir/invalid-seed" 2>&1; then
     echo "invalid seed unexpectedly succeeded" >&2

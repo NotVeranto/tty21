@@ -65,7 +65,7 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 
 - GCC or Clang with C11 support.
 - Linux (uses termios and ANSI escape codes).
-- A UTF-8 terminal for card suit symbols.
+- UTF-8 is used for suit and box-drawing symbols by default; `--ascii` switches the entire renderer to ASCII for restricted terminals.
 - A terminal window of at least 70x42 characters.
 
 ## Build
@@ -94,6 +94,9 @@ With no mode flag, the animated startup menu lets you choose a new roguelike run
     ./tty21 --continue
     ./tty21 --no-save
     ./tty21 --fast
+    ./tty21 --ascii
+    ./tty21 --no-color
+    ./tty21 --ascii --no-color
 
 Options can be combined where their meanings do not conflict. For example, `./tty21 --roguelike --seed 12345 --fast --no-save` starts a seeded roguelike session without autosaving and skips dealer animation pauses. `--roguelike` and `--classic` are mutually exclusive, and `--continue` cannot be combined with either; it always resumes a saved roguelike run. `--no-save` and `--fast` apply to the current session. A supplied seed initializes the RNG; when continuing a save, the saved RNG state is restored.
 
@@ -107,6 +110,8 @@ Options can be combined where their meanings do not conflict. For example, `./tt
 - `--continue`: load the last saved roguelike run.
 - `--no-save`: disable autosaving for this session.
 - `--fast`: skip dealer animation pauses.
+- `--ascii`: use ASCII-only cards, borders, and decorative glyphs (also available as `TTY21_ASCII=1`).
+- `--no-color`: disable ANSI colours while keeping terminal layout (also available as `NO_COLOR=1` or `TTY21_COLORS=0`).
 
 ## Controls
 
