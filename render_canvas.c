@@ -414,13 +414,20 @@ void canvasBox(int x, int y, int w, int hgt, const char *title,
 static void outAppend(const char *data, size_t length) {
     char *grown;
     size_t wanted;
+    size_t required;
 
     if (outFailed) {
         return;
     }
-    if (outLen + length + 1 > outCap) {
+    if (outLen == (size_t)-1 ||
+        length > (size_t)-1 - outLen - 1) {
+        outFailed = 1;
+        return;
+    }
+    required = outLen + length + 1;
+    if (required > outCap) {
         wanted = outCap == 0 ? 8192 : outCap;
-        while (wanted < outLen + length + 1) {
+        while (wanted < required) {
             if (wanted > (size_t)-1 / 2) {
                 outFailed = 1;
                 return;
@@ -561,7 +568,10 @@ void canvasFlushEx(void (*extra)(const void *ctx), const void *ctx) {
         return;
     }
 
-    fwrite(outBuf, 1, outLen, stdout);
+    if (fwrite(outBuf, 1, outLen, stdout) != outLen) {
+        shadowValid = 0;
+        return;
+    }
     memcpy(shadow, cur, (size_t)cw * (size_t)ch * sizeof(Cell));
     memset(forced, 0, (size_t)ch);
     shadowValid = 1;
