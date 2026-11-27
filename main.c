@@ -143,16 +143,28 @@ static StartupChoice runStartupMenu(int showContinue) {
         width = 80;
         if (isatty(STDOUT_FILENO)) {
             struct winsize ws;
-            int height = 0;
+            int height = 24;
 
-            width = 0;
             if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0) {
-                width = ws.ws_col;
-                height = ws.ws_row;
+                if (ws.ws_col > 0) {
+                    width = ws.ws_col;
+                }
+                if (ws.ws_row > 0) {
+                    height = ws.ws_row;
+                }
             }
 
-            if (!terminalDimensionsOk(width, height)) {
-                renderTooSmallScreen(width, height);
+            /*
+             * The startup screen is compact and does not need the full
+             * 70x42 game-table viewport. Keep it usable in ordinary
+             * 80x24 terminals; reserve the larger minimum for gameplay.
+             */
+            if (width < 30 || height < 16) {
+                printf("\\033[2J\\033[H");
+                printf("TTY21 startup menu needs at least 30x16.\\n");
+                printf("Current terminal: %dx%d. Resize and press a key.\\n",
+                       width, height);
+                fflush(stdout);
 
                 if (inputIsRaw()) {
                     (void)readKey();
