@@ -2,6 +2,7 @@
 #include "game.h"
 #include "round_actions.h"
 #include "round.h"
+#include "round_economy.h"
 #include "rng.h"
 
 #include <string.h>
