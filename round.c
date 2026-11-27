@@ -401,7 +401,11 @@ int startRoundWithBet(Game *game, int betAmount,
 
     if (dealerForcesDouble(game->run.dealerId) &&
         game->run.floor >= 10) {
+        int forcedDrawCards =
+            1 + (effectiveDealerMirrorsOnHit(game) ? 1 : 0);
+
         if (game->player.hands[0].count == 2 &&
+            remainingDeckCards(game) >= forcedDrawCards &&
             (long long)game->player.chips >=
                 (long long)game->player.bets[0] * 2) {
 
