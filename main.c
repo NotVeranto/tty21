@@ -169,6 +169,9 @@ int main(int argc, char **argv) {
     int fastFlag;
     int noSaveFlag;
     int continueFlag;
+    int exitCode;
+    int replayCharacter;
+    KeyEvent replayEvent;
 
     (void)setvbuf(stdin, NULL, _IONBF, 0);
     seed = 0;
@@ -297,10 +300,12 @@ int main(int argc, char **argv) {
     setlocale(LC_ALL, "");
 
     inputInit();
+    exitCode = 0;
 
     if (forced && continueFlag) {
         fprintf(stderr, "error: --continue cannot be combined with --roguelike or --classic.\n");
-        return 1;
+        exitCode = 1;
+        goto done;
     }
 
     {
@@ -315,14 +320,16 @@ int main(int argc, char **argv) {
             } else if (continueFlag) {
                 if (!saveExists()) {
                     fprintf(stderr, "error: no save to continue.\n");
-                    return 1;
+                    exitCode = 1;
+        goto done;
                 }
 
                 rngInit(seed, seedProvided);
                 initGame(&game, MODE_ROGUELIKE);
                 if (loadGame(&game) != 0) {
                     fprintf(stderr, "error: cannot load save.\n");
-                    return 1;
+                    exitCode = 1;
+        goto done;
                 }
                 recoverInterruptedRound(&game);
                 renderResetScreen();
@@ -342,14 +349,16 @@ int main(int argc, char **argv) {
                 if (choice == STARTUP_CONTINUE) {
                     if (!saveExists()) {
                         fprintf(stderr, "error: no save to continue.\n");
-                        return 1;
+                        exitCode = 1;
+        goto done;
                     }
 
                     rngInit(seed, seedProvided);
                     initGame(&game, MODE_ROGUELIKE);
                     if (loadGame(&game) != 0) {
                         fprintf(stderr, "error: cannot load save.\n");
-                        return 1;
+                        exitCode = 1;
+        goto done;
                     }
                     recoverInterruptedRound(&game);
                     renderResetScreen();
@@ -382,9 +391,15 @@ int main(int argc, char **argv) {
 
             if (isatty(STDOUT_FILENO) && !fastFlag) {
                 if (inputIsRaw()) {
-                    (void)readKey();
+                    replayEvent = readKey();
+                    if (replayEvent.type == KEY_EOF) {
+                        goto done;
+                    }
                 } else {
-                    (void)getchar();
+                    replayCharacter = getchar();
+                    if (replayCharacter == EOF) {
+                        goto done;
+                    }
                 }
             }
 
@@ -399,5 +414,11 @@ int main(int argc, char **argv) {
         }
     }
 
-    return 0;
+    exitCode = 0;
+
+done:
+    if (inputIsRaw()) {
+        disableRawMode();
+    }
+    return exitCode;
 }

@@ -62,3 +62,7 @@ save.dat
 # Editors
 .vscode/
 .idea/
+
+# Generated test binaries
+tests/tty21_tests
+tests/tty21_core_tests

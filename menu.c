@@ -463,12 +463,12 @@ void runShop(Game *game) {
                 characterIndex++;
             }
             if (actionCharacter == -1 || actionCharacter == 27) {
-                (void)handleShopMenuAction(game, actionCharacter);
+                (void)handleShopMenuAction(game, (char)actionCharacter);
                 continue;
             }
         }
 
-        if (handleShopMenuAction(game, actionCharacter)) {
+        if (handleShopMenuAction(game, (char)actionCharacter)) {
             continue;
         }
 

@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-KeyEvent makeKeyEvent(char inputCharacter) {
+KeyEvent makeKeyEvent(int inputCharacter) {
     KeyEvent event;
 
     event.type = KEY_NONE;

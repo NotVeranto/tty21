@@ -272,7 +272,7 @@ int loadGame(Game *game) {
     if (fp == NULL) return -1;
 
     bytesRead = fread(header, 1, sizeof(header), fp);
-    if (bytesRead != sizeof(header) ||
+    if (bytesRead != sizeof(header) || ferror(fp) ||
         memcmp(header, SAVE_MAGIC, SAVE_MAGIC_LEN) != 0) {
         fclose(fp);
         return -1;
@@ -287,8 +287,12 @@ int loadGame(Game *game) {
 
     bytesRead = fread(&temp, 1, sizeof(Game), fp);
     extra = fgetc(fp);
-    fclose(fp);
-    if (bytesRead != sizeof(Game) || extra != EOF) return -1;
+    if (bytesRead != sizeof(Game) || ferror(fp) ||
+        extra != EOF || ferror(fp)) {
+        fclose(fp);
+        return -1;
+    }
+    if (fclose(fp) != 0) return -1;
     if (checksumBytes(&temp, sizeof(Game)) != checksum) return -1;
 
     if (!isValidGame(&temp)) return -1;

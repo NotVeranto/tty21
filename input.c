@@ -112,8 +112,8 @@ int inputInit(void) {
     }
 
     currentTermios = originalTermios;
-    currentTermios.c_lflag &= ~(ICANON | ECHO);
-    currentTermios.c_iflag &= ~(IXON | ICRNL);
+    currentTermios.c_lflag &= (tcflag_t)~(tcflag_t)(ICANON | ECHO);
+    currentTermios.c_iflag &= (tcflag_t)~(tcflag_t)(IXON | ICRNL);
     currentTermios.c_cc[VMIN] = 1;
     currentTermios.c_cc[VTIME] = 0;
     rawTermios = currentTermios;
@@ -202,7 +202,7 @@ int getch(void) {
                 continue;
             }
 
-            return -1;
+            return EOF;
         }
 
         if (selectResult == 0) {
@@ -219,7 +219,7 @@ int getch(void) {
             continue;
         }
 
-        return -1;
+        return EOF;
     }
 }
 
@@ -251,7 +251,7 @@ KeyEvent readKey(void) {
     event.ch = '\0';
     character = getch();
 
-    if (character == -1) {
+    if (character == EOF) {
         event.type = KEY_EOF;
     } else if (character == '\r' || character == '\n') {
         event.type = KEY_ENTER;
@@ -263,7 +263,9 @@ KeyEvent readKey(void) {
         } else {
             character = getch();
 
-            if (character != '[') {
+            if (character == EOF) {
+                event.type = KEY_EOF;
+            } else if (character != '[') {
                 event.type = KEY_ESC;
             } else {
                 selectResult = waitForInputByte();
@@ -273,7 +275,9 @@ KeyEvent readKey(void) {
                 } else {
                     character = getch();
 
-                    if (character == 'A') {
+                    if (character == EOF) {
+                        event.type = KEY_EOF;
+                    } else if (character == 'A') {
                         event.type = KEY_UP;
                     } else if (character == 'B') {
                         event.type = KEY_DOWN;

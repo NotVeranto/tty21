@@ -5,7 +5,7 @@
 #include "input.h"
 #include "input_map.h"
 
-KeyEvent makeKeyEvent(char inputCharacter);
+KeyEvent makeKeyEvent(int inputCharacter);
 int readBet(Game *game);
 int readYesNoPrompt(const char *prompt);
 
