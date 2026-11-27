@@ -226,6 +226,7 @@ void applyPlayerAction(Game *game, ActionId action) {
     } else if (action == ACTION_STAND) {
         if (game->player.hands[game->player.activeHand].count <
                 MAX_HAND_SIZE &&
+            remainingDeckCards(game) >= cardsNeededForPlayerDraw(game) &&
             twistActive(game, TWIST_STICKY_HANDS) &&
             calculatePlayerHandValue(game) < 15) {
             logPush(game,
@@ -233,6 +234,7 @@ void applyPlayerAction(Game *game, ActionId action) {
                     MSG_DEFAULT);
         } else if (game->player.hands[game->player.activeHand].count <
                        MAX_HAND_SIZE &&
+                   remainingDeckCards(game) >= cardsNeededForPlayerDraw(game) &&
                    game->run.floor >= 10 &&
                    game->run.dealerId == DEALER_BUTCHER &&
                    calculatePlayerHandValue(game) < 15) {

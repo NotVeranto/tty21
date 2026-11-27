@@ -160,9 +160,25 @@ TEST(actions_do_not_offer_draw_actions_without_enough_cards) {
     ASSERT_EQ_INT(0, hasSplit);
 }
 
+TEST(actions_allow_forced_stand_when_deck_cannot_supply_a_hit) {
+    Game game;
+
+    setup_action_game(&game, 10);
+    game.mode = MODE_ROGUELIKE;
+    game.run.twistId = TWIST_STICKY_HANDS;
+    game.player.hands[0].cards[0].rank = TEN;
+    game.player.hands[0].cards[1].rank = TWO;
+    game.deck.top = DECK_SIZE - DECK_BURN_SIZE;
+
+    applyPlayerAction(&game, ACTION_STAND);
+
+    ASSERT_EQ_INT(STATE_DEALER_TURN, game.state);
+}
+
 void run_action_tests(void) {
     RUN_TEST(actions_expose_and_apply_surrender_without_terminal_input);
     RUN_TEST(actions_do_not_offer_draw_actions_without_enough_cards);
+    RUN_TEST(actions_allow_forced_stand_when_deck_cannot_supply_a_hit);
     RUN_TEST(actions_reject_unavailable_and_out_of_turn_requests);
     RUN_TEST(actions_insurance_stake_is_not_reserved_twice_for_double);
     RUN_TEST(actions_insurance_stake_is_not_reserved_twice_for_split);
