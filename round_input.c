@@ -35,7 +35,7 @@ KeyEvent makeKeyEvent(char inputCharacter) {
 
 int readBet(Game *game) {
     char input[64];
-    char prompt[64];
+    char prompt[96];
     char message[64];
     char rawInput[9];
     char *endPointer;

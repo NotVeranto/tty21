@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Add an Arch Linux AUR package recipe and install the README and MIT license alongside the binary and man page.
 - Respect packaging-provided compiler/linker flags and support a configurable install prefix and staging root.
+- Increase the bet prompt buffer to accommodate optimized builds with strict format-truncation warnings.
 
 
 ### Tests
