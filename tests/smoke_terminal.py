@@ -4,16 +4,16 @@
 import fcntl
 import os
 import pty
+import re
 import select
 import signal
 import struct
 import subprocess
 import termios
 import time
-import re
 
 
-def run_session(flags):
+def run_session(flags, interrupt=False):
     master, slave = pty.openpty()
     fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", 50, 120, 0, 0))
     original = termios.tcgetattr(slave)
@@ -36,7 +36,7 @@ def run_session(flags):
     )
     output = bytearray()
     deadline = time.monotonic() + 8
-    sent_quit = False
+    action_sent = False
 
     try:
         while time.monotonic() < deadline:
@@ -49,9 +49,12 @@ def run_session(flags):
                 if chunk:
                     output.extend(chunk)
 
-            if not sent_quit and time.monotonic() > deadline - 7.5:
-                os.write(master, b"q")
-                sent_quit = True
+            if not action_sent and b"\x1b[?25l" in output:
+                if interrupt:
+                    process.send_signal(signal.SIGINT)
+                else:
+                    os.write(master, b"q")
+                action_sent = True
 
             if process.poll() is not None:
                 while True:
@@ -68,10 +71,14 @@ def run_session(flags):
                 break
         else:
             process.send_signal(signal.SIGKILL)
-            raise AssertionError("tty21 did not exit after the startup-menu quit key")
+            raise AssertionError("tty21 did not exit after the terminal action")
 
-        if process.returncode != 0:
-            raise AssertionError(f"tty21 exited with status {process.returncode}")
+        expected_status = 130 if interrupt else 0
+        if process.returncode != expected_status:
+            raise AssertionError(
+                f"tty21 exited with status {process.returncode}; "
+                f"expected {expected_status}"
+            )
 
         restored = termios.tcgetattr(slave)
         return bytes(output), original, restored
@@ -83,21 +90,28 @@ def run_session(flags):
         os.close(slave)
 
 
+def check_terminal_restore(output, original, restored, action):
+    if original != restored:
+        raise AssertionError(f"terminal settings were not restored after {action}")
+    if b"\x1b[?25l" not in output:
+        raise AssertionError(f"interactive screen never hid the cursor ({action})")
+    if b"\x1b[?25h" not in output:
+        raise AssertionError(f"terminal cursor was not restored ({action})")
+
+
 def main():
     output, original, restored = run_session(["--ascii", "--no-color"])
+    check_terminal_restore(output, original, restored, "normal quit")
 
-    if original != restored:
-        raise AssertionError("terminal settings were not restored after quitting")
     if any(byte >= 0x80 for byte in output):
         raise AssertionError("ASCII mode emitted non-ASCII bytes")
-    if b"\x1b[?25l" not in output:
-        raise AssertionError("interactive screen never hid the terminal cursor")
-    if b"\x1b[?25h" not in output:
-        raise AssertionError("terminal cursor was not restored on exit")
     if re.search(rb"\x1b\[[0-9;]*m", output):
         raise AssertionError("monochrome mode emitted an SGR style sequence")
 
-    print("Pseudo-terminal smoke tests passed")
+    output, original, restored = run_session([], interrupt=True)
+    check_terminal_restore(output, original, restored, "Ctrl+C")
+
+    print("Pseudo-terminal smoke tests passed (quit, Ctrl+C, ASCII, monochrome)")
 
 
 if __name__ == "__main__":

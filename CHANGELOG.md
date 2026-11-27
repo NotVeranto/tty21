@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 
 - Add pseudo-terminal smoke coverage for ASCII-only rendering, monochrome output, cursor visibility controls, and terminal mode restoration.
+- Verify Ctrl+C exits with the expected status and restores terminal settings and cursor visibility.
 - Keep monochrome canvas output free of unnecessary SGR color-reset sequences.
 
 ### Fixed
