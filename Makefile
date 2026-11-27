@@ -1,7 +1,7 @@
 CC      ?= cc
 CFLAGS  ?= -O2
 VERSION ?= 0.1.2
-CPPFLAGS += -DTTY21_VERSION=\\\"$(VERSION)\\\"
+CPPFLAGS += -DTTY21_VERSION=\"$(VERSION)\"
 TTY21_CFLAGS = -Wall -Wextra -Werror -std=c11 -MMD -MP
 PREFIX  ?= /usr/local
 DESTDIR ?=
@@ -64,6 +64,7 @@ install: $(TARGET)
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/$(TARGET) $(DESTDIR)$(MANDIR)/man1/tty21.1
+	rm -f $(DESTDIR)$(PREFIX)/share/doc/tty21/README.md $(DESTDIR)$(PREFIX)/share/licenses/tty21/LICENSE
 
 .PHONY: all test test-unit test-core test-smoke test-sanitize simulate-report clean install uninstall
 
