@@ -133,7 +133,8 @@ TEST(actions_do_not_offer_draw_actions_without_enough_cards) {
     setup_action_game(&game, 10);
     game.player.chips = 100;
     game.player.hands[0].cards[1].rank = TEN;
-    game.deck.top = DECK_SIZE - DECK_BURN_SIZE - 1;
+
+    game.deck.top = DECK_SIZE - DECK_BURN_SIZE;
     count = getPlayerActions(&game, actions);
     for (i = 0; i < count; i++) {
         if (actions[i] == ACTION_HIT) hasHit = 1;
@@ -144,13 +145,19 @@ TEST(actions_do_not_offer_draw_actions_without_enough_cards) {
     ASSERT_EQ_INT(0, hasDouble);
     ASSERT_EQ_INT(0, hasSplit);
 
-    game.deck.top = DECK_SIZE - DECK_BURN_SIZE;
+    game.deck.top--;
     count = getPlayerActions(&game, actions);
     hasHit = 0;
+    hasDouble = 0;
+    hasSplit = 0;
     for (i = 0; i < count; i++) {
         if (actions[i] == ACTION_HIT) hasHit = 1;
+        if (actions[i] == ACTION_DOUBLE) hasDouble = 1;
+        if (actions[i] == ACTION_SPLIT) hasSplit = 1;
     }
-    ASSERT_EQ_INT(0, hasHit);
+    ASSERT_EQ_INT(1, hasHit);
+    ASSERT_EQ_INT(1, hasDouble);
+    ASSERT_EQ_INT(0, hasSplit);
 }
 
 void run_action_tests(void) {
