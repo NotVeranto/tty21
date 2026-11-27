@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Keep the command-line reference, README, and man page aligned with the animated startup flow and supported launch flags; document compatible and conflicting option combinations.
+- Expand CLI smoke coverage for seed syntax, missing arguments, and incompatible mode/continue flags.
+
+## [0.1.1] - 2026-11-27
+
+### Changed
+
+- Refresh release metadata and user-facing launch documentation after the presentation update.
+- Describe the animated startup menu, current terminal presentation, and session-level behavior of `--fast` and `--no-save`.
+
 ### Verified
 
 - Closed the gameplay-balance stage after reviewing the 2,048-seed progression report, retaining production economy values, and fixing No-Reshuffle incomplete deals (including Twin). Main-branch CI passed GCC, Clang, and ASan/UBSan.

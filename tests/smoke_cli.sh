@@ -16,6 +16,24 @@ if ./tty21 --seed invalid >"$tmp_dir/invalid-seed" 2>&1; then
 fi
 grep -F "error: invalid seed" "$tmp_dir/invalid-seed" >/dev/null
 
+if ./tty21 --seed=invalid >"$tmp_dir/invalid-seed-equals" 2>&1; then
+    echo "--seed=invalid unexpectedly succeeded" >&2
+    exit 1
+fi
+grep -F "error: invalid seed" "$tmp_dir/invalid-seed-equals" >/dev/null
+
+if ./tty21 -sinvalid >"$tmp_dir/invalid-seed-short" 2>&1; then
+    echo "-sinvalid unexpectedly succeeded" >&2
+    exit 1
+fi
+grep -F "error: invalid seed" "$tmp_dir/invalid-seed-short" >/dev/null
+
+if ./tty21 --seed >"$tmp_dir/missing-seed" 2>&1; then
+    echo "--seed unexpectedly succeeded without a value" >&2
+    exit 1
+fi
+grep -F "error: missing seed value" "$tmp_dir/missing-seed" >/dev/null
+
 if ./tty21 --unknown-option >"$tmp_dir/unknown-option" 2>&1; then
     echo "unknown option unexpectedly succeeded" >&2
     exit 1
@@ -28,5 +46,22 @@ if HOME="$tmp_dir" XDG_DATA_HOME="$tmp_dir/data" \
     exit 1
 fi
 grep -F "error: no save to continue." "$tmp_dir/missing-save" >/dev/null
+
+# Session flags and a seed are accepted together with --continue.
+if HOME="$tmp_dir" XDG_DATA_HOME="$tmp_dir/data" \
+    ./tty21 --continue --seed=12345 --fast --no-save >"$tmp_dir/combined-flags" 2>&1; then
+    echo "--continue unexpectedly succeeded without a save" >&2
+    exit 1
+fi
+grep -F "error: no save to continue." "$tmp_dir/combined-flags" >/dev/null
+
+# A continue request cannot be paired with either new-game mode.
+for mode in --classic --roguelike; do
+    if ./tty21 --continue "$mode" >"$tmp_dir/conflicting-flags" 2>&1; then
+        echo "--continue unexpectedly accepted $mode" >&2
+        exit 1
+    fi
+done
+grep -F "error: --continue cannot be combined" "$tmp_dir/conflicting-flags" >/dev/null
 
 echo "CLI smoke tests passed"

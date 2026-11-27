@@ -45,8 +45,8 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 
 ### Terminal presentation
 
-- Full-screen ASCII table with ANSI styling and colored status feedback.
-- Card-deal animations and clear textual feedback for chip changes.
+- Animated startup menu and full-screen blackjack table with ANSI styling, colored status feedback, and adaptive terminal presentation.
+- Card-deal animations, dealer reveals, floor/boss transitions, and clear textual feedback for chip changes.
 - Dealer turn step-through; `--fast` skips animation pauses.
 - Raw terminal controls, keyboard-navigable menus, and an in-game help overlay.
 
@@ -85,12 +85,17 @@ tty21 combines familiar blackjack with roguelike deckbuilder progression. Play i
 ## Run
 
     ./tty21
+
+With no mode flag, the animated startup menu lets you choose a new roguelike run, classic blackjack, or a saved run when one exists. The roguelike mode is the default when selected directly from the command line.
+
     ./tty21 --roguelike
     ./tty21 --classic
     ./tty21 --seed 12345
     ./tty21 --continue
     ./tty21 --no-save
     ./tty21 --fast
+
+Options can be combined where their meanings do not conflict. For example, `./tty21 --roguelike --seed 12345 --fast --no-save` starts a seeded roguelike session without autosaving and skips dealer animation pauses. `--continue` cannot be combined with `--roguelike` or `--classic`; it always resumes a saved roguelike run. `--no-save` and `--fast` apply to the current session. A supplied seed initializes the RNG; when continuing a save, the saved RNG state is restored.
 
 ## Command-line options
 
