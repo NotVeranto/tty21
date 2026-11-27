@@ -30,12 +30,15 @@ static void drawStatRow(int x, int y, int width, const char *label,
 
 static void renderStatsCanvas(const Game *game, int width, int height) {
     const Glyphs *glyphs;
+    const char *title;
     int boxX;
     int boxY;
     int innerX;
     int innerW;
 
     glyphs = renderGlyphs();
+    title = game->mode == MODE_CLASSIC ? "CLASSIC SUMMARY"
+                                       : "RUN SUMMARY";
     renderHideCursor();
     boxX = (width - STATS_BOX_W) / 2 + 1;
     boxY = (height - STATS_BOX_H) / 2 + 1;
@@ -44,16 +47,26 @@ static void renderStatsCanvas(const Game *game, int width, int height) {
 
     canvasBlank();
     renderBackdrop(1, 1, width, height);
-    canvasBox(boxX, boxY, STATS_BOX_W, STATS_BOX_H, "RUN SUMMARY",
+    canvasBox(boxX, boxY, STATS_BOX_W, STATS_BOX_H, title,
               ST_BRASS, ST_PLAIN, ST_GOLD_B);
     innerX = boxX + 3;
     innerW = STATS_BOX_W - 6;
-    drawStatRow(innerX, boxY + 3, innerW, "Floors Reached",
-                game->totalFloorsReached);
-    drawStatRow(innerX, boxY + 4, innerW, "Bosses Defeated",
-                game->totalBossesDefeated);
-    drawStatRow(innerX, boxY + 5, innerW, "Total Marks",
-                game->totalMarksEarned);
+    if (game->mode == MODE_CLASSIC) {
+        drawStatRow(innerX, boxY + 3, innerW, "Rounds Played",
+                    game->roundNumber);
+        drawStatRow(innerX, boxY + 4, innerW, "Starting Chips", 100);
+        drawStatRow(innerX, boxY + 5, innerW, "Final Chips",
+                    game->player.chips);
+        drawStatRow(innerX, boxY + 6, innerW, "Net Result",
+                    game->player.chips - 100);
+    } else {
+        drawStatRow(innerX, boxY + 3, innerW, "Floors Reached",
+                    game->totalFloorsReached);
+        drawStatRow(innerX, boxY + 4, innerW, "Bosses Defeated",
+                    game->totalBossesDefeated);
+        drawStatRow(innerX, boxY + 5, innerW, "Total Marks",
+                    game->totalMarksEarned);
+    }
     canvasHLine(innerX, boxY + 7, innerW, glyphs->rule, ST_BRASS);
     canvasPutCentered(boxX, STATS_BOX_W, boxY + 9, "Press any key to return",
                       ST_MUTED);
@@ -83,17 +96,31 @@ void renderStatsScreen(const Game *game) {
     }
 
     snprintf(lines[0], sizeof(lines[0]), "+------------------------------------+");
-    snprintf(lines[1], sizeof(lines[1]), "|             RUN SUMMARY            |");
-    snprintf(lines[2], sizeof(lines[2]), "|------------------------------------|");
-    snprintf(lines[3], sizeof(lines[3]), "| Floors Reached:   %-16d |",
-             game->totalFloorsReached);
-    snprintf(lines[4], sizeof(lines[4]), "| Bosses Defeated:  %-16d |",
-             game->totalBossesDefeated);
-    snprintf(lines[5], sizeof(lines[5]), "| Total Marks:      %-16d |",
-             game->totalMarksEarned);
-    snprintf(lines[6], sizeof(lines[6]), "+------------------------------------+");
-    snprintf(lines[7], sizeof(lines[7]), "|       Press any key to return      |");
-    snprintf(lines[8], sizeof(lines[8]), "+------------------------------------+");
+    if (game->mode == MODE_CLASSIC) {
+        snprintf(lines[1], sizeof(lines[1]), "|           CLASSIC SUMMARY          |");
+        snprintf(lines[2], sizeof(lines[2]), "|------------------------------------|");
+        snprintf(lines[3], sizeof(lines[3]), "| Rounds Played:    %-16d |",
+                 game->roundNumber);
+        snprintf(lines[4], sizeof(lines[4]), "| Starting Chips:   %-16d |", 100);
+        snprintf(lines[5], sizeof(lines[5]), "| Final Chips:      %-16d |",
+                 game->player.chips);
+        snprintf(lines[6], sizeof(lines[6]), "| Net Result:       %-16d |",
+                 game->player.chips - 100);
+        snprintf(lines[7], sizeof(lines[7]), "|       Press any key to return      |");
+        snprintf(lines[8], sizeof(lines[8]), "+------------------------------------+");
+    } else {
+        snprintf(lines[1], sizeof(lines[1]), "|             RUN SUMMARY            |");
+        snprintf(lines[2], sizeof(lines[2]), "|------------------------------------|");
+        snprintf(lines[3], sizeof(lines[3]), "| Floors Reached:   %-16d |",
+                 game->totalFloorsReached);
+        snprintf(lines[4], sizeof(lines[4]), "| Bosses Defeated:  %-16d |",
+                 game->totalBossesDefeated);
+        snprintf(lines[5], sizeof(lines[5]), "| Total Marks:      %-16d |",
+                 game->totalMarksEarned);
+        snprintf(lines[6], sizeof(lines[6]), "+------------------------------------+");
+        snprintf(lines[7], sizeof(lines[7]), "|       Press any key to return      |");
+        snprintf(lines[8], sizeof(lines[8]), "+------------------------------------+");
+    }
 
     if (isatty(STDOUT_FILENO)) {
         printf("%s%s", SCR_CLEAR, SCR_HOME);
