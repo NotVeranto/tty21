@@ -85,8 +85,46 @@ TEST(deterministic_round_start_uses_production_deal_logic) {
                 game.state == STATE_RESULT);
 }
 
+
+TEST(actions_insurance_stake_is_not_reserved_twice_for_double) {
+    Game game;
+    ActionId actions[ACTION_COUNT + 1];
+    int count;
+    int i;
+    int found = 0;
+
+    setup_action_game(&game, 40);
+    game.player.chips = 80;
+    game.player.insuranceBet = 20;
+    count = getPlayerActions(&game, actions);
+    for (i = 0; i < count; i++) {
+        if (actions[i] == ACTION_DOUBLE) found = 1;
+    }
+    ASSERT_TRUE(found);
+}
+
+TEST(actions_insurance_stake_is_not_reserved_twice_for_split) {
+    Game game;
+    ActionId actions[ACTION_COUNT + 1];
+    int count;
+    int i;
+    int found = 0;
+
+    setup_action_game(&game, 40);
+    game.player.chips = 80;
+    game.player.insuranceBet = 20;
+    game.player.hands[0].cards[1].rank = TEN;
+    count = getPlayerActions(&game, actions);
+    for (i = 0; i < count; i++) {
+        if (actions[i] == ACTION_SPLIT) found = 1;
+    }
+    ASSERT_TRUE(found);
+}
+
 void run_action_tests(void) {
     RUN_TEST(actions_expose_and_apply_surrender_without_terminal_input);
     RUN_TEST(actions_reject_unavailable_and_out_of_turn_requests);
+    RUN_TEST(actions_insurance_stake_is_not_reserved_twice_for_double);
+    RUN_TEST(actions_insurance_stake_is_not_reserved_twice_for_split);
     RUN_TEST(deterministic_round_start_uses_production_deal_logic);
 }

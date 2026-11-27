@@ -16,7 +16,7 @@
 #include <string.h>
 
 static int getTotalExposure(const Game *game) {
-    long long exposure = game->player.insuranceBet;
+    long long exposure = 0;
     int handIndex;
     for (handIndex = 0; handIndex < game->player.handCount && handIndex < MAX_PLAYER_HANDS; handIndex++) exposure += game->player.bets[handIndex];
     return exposure > INT_MAX ? INT_MAX : (int)exposure;
