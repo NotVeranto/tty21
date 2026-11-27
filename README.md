@@ -89,13 +89,22 @@ The tests cover blackjack rules, progression, saves, rendering, command-line beh
 
 ## Screenshots
 
-| Main menu | Gameplay |
-|:---:|:---:|
-| ![Main menu](screenshots/menu.png) | ![Gameplay](screenshots/game.png) |
-
-### Roguelike shop
-
-![Shop](screenshots/shop.png)
+<table>
+  <tr>
+    <th>Main menu</th>
+    <th>Gameplay</th>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/menu.png" alt="tty21 main menu" width="100%"></td>
+    <td align="center"><img src="screenshots/game.png" alt="tty21 gameplay" width="100%"></td>
+  </tr>
+  <tr>
+    <th colspan="2">Roguelike shop</th>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="screenshots/shop.png" alt="tty21 roguelike shop" width="520"></td>
+  </tr>
+</table>
 
 ## License
 
