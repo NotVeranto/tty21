@@ -153,6 +153,12 @@ static const char *taglineFor(const char *label, int disabled) {
         return disabled ? "No saved run yet."
                         : "Back to the table, right where you left.";
     }
+    if (hasWord(label, "classic") || hasWord(label, "blackjack")) {
+        return "A clean game of blackjack. No tower, no detours.";
+    }
+    if (hasWord(label, "roguelike") || hasWord(label, "tower")) {
+        return "Climb the floors, defeat bosses, and shape your run.";
+    }
     if (hasWord(label, "new")) {
         return "Take a seat. The house is shuffling.";
     }
@@ -163,7 +169,7 @@ static const char *taglineFor(const char *label, int disabled) {
         return "The house rules, in brief.";
     }
     if (hasWord(label, "quit") || hasWord(label, "exit")) {
-        return "Cash out and walk away.";
+        return "Leave the table and return another night.";
     }
     return NULL;
 }
