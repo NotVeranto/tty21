@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Tests
+
+- Add pseudo-terminal smoke coverage for ASCII-only rendering, monochrome output, cursor visibility controls, and terminal mode restoration.
+
 ### Fixed
 
 - Reject simultaneous `--roguelike` and `--classic` flags instead of silently letting argument order choose the mode.

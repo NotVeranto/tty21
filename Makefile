@@ -47,6 +47,7 @@ test-core: tests/test_core.c $(CORE_LIB_SRCS)
 
 test-smoke: $(TARGET)
 	sh tests/smoke_cli.sh
+	python3 tests/smoke_terminal.py
 
 test-sanitize:
 	$(MAKE) clean
