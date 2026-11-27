@@ -176,6 +176,15 @@ TEST(actions_allow_forced_stand_when_deck_cannot_supply_a_hit) {
     ASSERT_EQ_INT(STATE_DEALER_TURN, game.state);
 }
 
+static void set_devil_test_card(Game *game, int offset,
+                                Suit suit, Rank rank) {
+    int index = game->deck.top + offset;
+
+    game->deck.cards[index].suit = suit;
+    game->deck.cards[index].rank = rank;
+    game->deck.cards[index].cursed = CURSED_NONE;
+}
+
 TEST(forced_devil_double_does_not_charge_without_draw_card) {
     Game game;
     int bet;
@@ -189,29 +198,21 @@ TEST(forced_devil_double_does_not_charge_without_draw_card) {
     game.run.twistId = TWIST_NO_RESHUFFLE;
     game.player.chips = 1000;
     bet = getMinBet(&game, game.run.floor, game.mode);
-
-    game.deck.cards[0].suit = HEARTS;
-    game.deck.cards[0].rank = FIVE;
-    game.deck.cards[0].cursed = CURSED_NONE;
-    game.deck.cards[1].suit = CLUBS;
-    game.deck.cards[1].rank = TEN;
-    game.deck.cards[1].cursed = CURSED_NONE;
-    game.deck.cards[2].suit = DIAMONDS;
-    game.deck.cards[2].rank = SIX;
-    game.deck.cards[2].cursed = CURSED_NONE;
-    game.deck.cards[3].suit = SPADES;
-    game.deck.cards[3].rank = SEVEN;
-    game.deck.cards[3].cursed = CURSED_NONE;
     game.deck.top = DECK_SIZE - DECK_BURN_SIZE - 4;
+
+    set_devil_test_card(&game, 0, HEARTS, FIVE);
+    set_devil_test_card(&game, 1, CLUBS, TEN);
+    set_devil_test_card(&game, 2, DIAMONDS, SIX);
+    set_devil_test_card(&game, 3, SPADES, SEVEN);
 
     ASSERT_TRUE(startRoundWithBet(&game, bet, 0, 0));
     ASSERT_EQ_INT(bet, game.player.bets[0]);
-    ASSERT_EQ_INT(1000 - bet, game.player.chips);
+    ASSERT_EQ_INT(1000, game.player.chips);
     ASSERT_EQ_INT(STATE_PLAYER_TURN, game.state);
     ASSERT_EQ_INT(0, game.player.usedDouble[0]);
 }
 
-TEST(devil_forced_double_uses_only_the_additional_bet) {
+TEST(devil_forced_double_requires_bankroll_for_full_exposure) {
     Game game;
     int bet;
 
@@ -224,27 +225,17 @@ TEST(devil_forced_double_uses_only_the_additional_bet) {
     game.run.twistId = TWIST_NO_RESHUFFLE;
     bet = getMinBet(&game, game.run.floor, game.mode);
     game.player.chips = bet * 2;
-
-    game.deck.cards[0].suit = HEARTS;
-    game.deck.cards[0].rank = FIVE;
-    game.deck.cards[0].cursed = CURSED_NONE;
-    game.deck.cards[1].suit = CLUBS;
-    game.deck.cards[1].rank = TEN;
-    game.deck.cards[1].cursed = CURSED_NONE;
-    game.deck.cards[2].suit = DIAMONDS;
-    game.deck.cards[2].rank = SIX;
-    game.deck.cards[2].cursed = CURSED_NONE;
-    game.deck.cards[3].suit = SPADES;
-    game.deck.cards[3].rank = SEVEN;
-    game.deck.cards[3].cursed = CURSED_NONE;
-    game.deck.cards[4].suit = HEARTS;
-    game.deck.cards[4].rank = TWO;
-    game.deck.cards[4].cursed = CURSED_NONE;
     game.deck.top = DECK_SIZE - DECK_BURN_SIZE - 5;
+
+    set_devil_test_card(&game, 0, HEARTS, FIVE);
+    set_devil_test_card(&game, 1, CLUBS, TEN);
+    set_devil_test_card(&game, 2, DIAMONDS, SIX);
+    set_devil_test_card(&game, 3, SPADES, SEVEN);
+    set_devil_test_card(&game, 4, HEARTS, TWO);
 
     ASSERT_TRUE(startRoundWithBet(&game, bet, 0, 0));
     ASSERT_EQ_INT(bet * 2, game.player.bets[0]);
-    ASSERT_EQ_INT(0, game.player.chips);
+    ASSERT_EQ_INT(bet * 2, game.player.chips);
     ASSERT_EQ_INT(1, game.player.usedDouble[0]);
     ASSERT_EQ_INT(STATE_DEALER_TURN, game.state);
 }
@@ -252,7 +243,7 @@ TEST(devil_forced_double_uses_only_the_additional_bet) {
 void run_action_tests(void) {
     RUN_TEST(actions_expose_and_apply_surrender_without_terminal_input);
     RUN_TEST(forced_devil_double_does_not_charge_without_draw_card);
-    RUN_TEST(devil_forced_double_uses_only_the_additional_bet);
+    RUN_TEST(devil_forced_double_requires_bankroll_for_full_exposure);
     RUN_TEST(actions_do_not_offer_draw_actions_without_enough_cards);
     RUN_TEST(actions_allow_forced_stand_when_deck_cannot_supply_a_hit);
     RUN_TEST(actions_reject_unavailable_and_out_of_turn_requests);

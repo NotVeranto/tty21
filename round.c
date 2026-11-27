@@ -407,7 +407,7 @@ int startRoundWithBet(Game *game, int betAmount,
         if (game->player.hands[0].count == 2 &&
             remainingDeckCards(game) >= forcedDrawCards &&
             (long long)game->player.chips >=
-                (long long)game->player.bets[0]) {
+                2LL * (long long)game->player.bets[0]) {
 
             game->player.bets[0] *= 2;
             game->player.usedDouble[0] = 1;
