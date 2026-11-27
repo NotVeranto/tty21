@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Show the selected player action explicitly in monochrome (`--no-color`) mode.
 - Reject simultaneous `--roguelike` and `--classic` flags instead of silently letting argument order choose the mode.
 
 ### Changed
