@@ -2,14 +2,14 @@
 pkgname=tty21
 pkgver=0.1.2
 pkgrel=1
-pkgdesc='Animated terminal blackjack roguelike'
+pkgdesc='Terminal blackjack with roguelike progression'
 arch=('x86_64' 'aarch64')
 url='https://github.com/NotVeranto/tty21'
 license=('MIT')
 depends=('glibc')
 makedepends=('git' 'make' 'gcc')
 checkdepends=('python')
-source=("git+https://github.com/NotVeranto/tty21.git#commit=631ecb21654ed55963a8407470f7ab289a4fdf44")
+source=("git+https://github.com/NotVeranto/tty21.git#tag=v0.1.2")
 sha256sums=('SKIP')
 
 build() {
