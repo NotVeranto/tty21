@@ -136,8 +136,11 @@ void renderResultFlash(const Game *game,
 
         keep = width - 17;
         if (keep < 1) keep = 1;
+        if (keep > (int)sizeof(fitted) - 4) {
+            keep = (int)sizeof(fitted) - 4;
+        }
         fitted[keep] = '\0';
-        strcat(fitted, "...");
+        memcpy(fitted + keep, "...", sizeof("..."));
     }
     total = canvasTextWidth(fitted) + 16;
 

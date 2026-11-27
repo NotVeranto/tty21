@@ -25,6 +25,7 @@ static int needClear;
 static char *outBuf;
 static size_t outLen;
 static size_t outCap;
+static int outFailed;
 
 /* ------------------------------------------------------------------ */
 /* Glyph sets                                                          */
@@ -414,13 +415,21 @@ static void outAppend(const char *data, size_t length) {
     char *grown;
     size_t wanted;
 
+    if (outFailed) {
+        return;
+    }
     if (outLen + length + 1 > outCap) {
         wanted = outCap == 0 ? 8192 : outCap;
         while (wanted < outLen + length + 1) {
+            if (wanted > (size_t)-1 / 2) {
+                outFailed = 1;
+                return;
+            }
             wanted *= 2;
         }
         grown = (char *)realloc(outBuf, wanted);
         if (grown == NULL) {
+            outFailed = 1;
             return;
         }
         outBuf = grown;
@@ -493,6 +502,7 @@ void canvasFlushEx(void (*extra)(const void *ctx), const void *ctx) {
     }
 
     outLen = 0;
+    outFailed = 0;
     outString("\033[?2026h\033[?7l");
     if (needClear) {
         if (renderAnsiEnabled()) {
@@ -544,11 +554,17 @@ void canvasFlushEx(void (*extra)(const void *ctx), const void *ctx) {
     }
     emitReset(&active);
 
+    if (outFailed) {
+        outLen = 0;
+        outFailed = 0;
+        shadowValid = 0;
+        return;
+    }
+
+    fwrite(outBuf, 1, outLen, stdout);
     memcpy(shadow, cur, (size_t)cw * (size_t)ch * sizeof(Cell));
     memset(forced, 0, (size_t)ch);
     shadowValid = 1;
-
-    fwrite(outBuf, 1, outLen, stdout);
     if (extra != NULL) {
         extra(ctx);
     }
