@@ -13,6 +13,23 @@ Play classic blackjack or descend through casino floors: face tougher dealers an
 - Save and continue a roguelike run.
 - Use the animated terminal interface, or switch to ASCII and monochrome output.
 
+## Install
+
+On Arch Linux, install the [AUR package](https://aur.archlinux.org/packages/tty21) with your AUR helper:
+
+```sh
+yay -S tty21
+```
+
+On other Linux distributions, build and install from source (the install target defaults to `/usr/local`):
+
+```sh
+make
+sudo make install
+```
+
+To stage an installation under a package root, use `make PREFIX=/usr DESTDIR=/path/to/pkg install`.
+
 ## Build and run
 
 Requires Linux, GCC or Clang with C11 support, and a terminal.

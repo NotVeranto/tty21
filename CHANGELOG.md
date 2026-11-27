@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add an Arch Linux AUR package recipe and install the README and MIT license alongside the binary and man page.
+- Respect packaging-provided compiler/linker flags and support a configurable install prefix and staging root.
+
+
 ### Tests
 
 - Add pseudo-terminal smoke coverage for ASCII-only rendering, monochrome output, cursor visibility controls, and terminal mode restoration.

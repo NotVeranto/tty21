@@ -1,8 +1,8 @@
-CC      = gcc
-CFLAGS  = -Wall -Wextra -Werror -std=c11 -g
-VERSION = 0.1.2
-CFLAGS += -DTTY21_VERSION=\"$(VERSION)\"
-CFLAGS += -MMD -MP
+CC      ?= cc
+CFLAGS  ?= -O2
+VERSION ?= 0.1.2
+CPPFLAGS += -DTTY21_VERSION=\\\"$(VERSION)\\\"
+TTY21_CFLAGS = -Wall -Wextra -Werror -std=c11 -MMD -MP
 PREFIX  ?= /usr/local
 DESTDIR ?=
 BINDIR  = $(PREFIX)/bin
@@ -24,13 +24,13 @@ CORE_LIB_SRCS = card.c hand.c game.c round_cards.c round_economy.c \
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+	$(CC) $(LDFLAGS) $(CPPFLAGS) $(CFLAGS) $(TTY21_CFLAGS) -o $(TARGET) $(OBJS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(TTY21_CFLAGS) -c $< -o $@
 
 $(SIMULATION_REPORT): tools/simulation_report.c $(TEST_LIB_SRCS)
-	$(CC) $(filter-out -MMD -MP,$(CFLAGS)) -I. -o $@ $^
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(filter-out -MMD -MP,$(TTY21_CFLAGS)) -I. -o $@ $^
 
 simulate-report: $(SIMULATION_REPORT)
 	./$(SIMULATION_REPORT)
@@ -38,11 +38,11 @@ simulate-report: $(SIMULATION_REPORT)
 test: test-unit test-core test-smoke
 
 test-unit: $(TESTS_SRCS) $(TEST_LIB_SRCS)
-	$(CC) $(filter-out -MMD -MP,$(CFLAGS)) -I. -o tests/tty21_tests $(TESTS_SRCS) $(TEST_LIB_SRCS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(filter-out -MMD -MP,$(TTY21_CFLAGS)) -I. -o tests/tty21_tests $(TESTS_SRCS) $(TEST_LIB_SRCS)
 	./tests/tty21_tests
 
 test-core: tests/test_core.c $(CORE_LIB_SRCS)
-	$(CC) $(filter-out -MMD -MP,$(CFLAGS)) -I. -o tests/tty21_core_tests tests/test_core.c $(CORE_LIB_SRCS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(filter-out -MMD -MP,$(TTY21_CFLAGS)) -I. -o tests/tty21_core_tests tests/test_core.c $(CORE_LIB_SRCS)
 	./tests/tty21_core_tests
 
 test-smoke: $(TARGET)
@@ -59,6 +59,8 @@ clean:
 install: $(TARGET)
 	install -Dm755 $(TARGET) $(DESTDIR)$(BINDIR)/$(TARGET)
 	install -Dm644 tty21.1 $(DESTDIR)$(MANDIR)/man1/tty21.1
+	install -Dm644 README.md $(DESTDIR)$(PREFIX)/share/doc/tty21/README.md
+	install -Dm644 LICENSE $(DESTDIR)$(PREFIX)/share/licenses/tty21/LICENSE
 
 uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/$(TARGET) $(DESTDIR)$(MANDIR)/man1/tty21.1
