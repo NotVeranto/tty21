@@ -6,6 +6,19 @@
 #include <stdio.h>
 #include <string.h>
 
+/* SGR sequence for a palette entry (empty when colour is off). Small ring
+ * of buffers so several can be used inside one printf. */
+static const char *styleSeq(RenderStyle style) {
+    static char ring[6][64];
+    static int next;
+    char *slot;
+
+    slot = ring[next];
+    next = (next + 1) % 6;
+    renderStyleSgr(style, slot, sizeof(ring[0]));
+    return slot;
+}
+
 int formatPlainScreenHeader(char *buffer,
                             size_t bufferSize,
                             int terminalWidth,
@@ -40,7 +53,7 @@ void printBoxBorder(int row, int column, int width) {
     int index;
 
     printf(SCR_CURSOR, row, column);
-    printf("%s+", scrMuted());
+    printf("%s+", styleSeq(ST_BRASS));
     for (index = 0; index < width - 2; index++) {
         putchar('-');
     }
@@ -49,9 +62,9 @@ void printBoxBorder(int row, int column, int width) {
 
 void printBoxSides(int row, int column, int width) {
     printf(SCR_CURSOR, row, column);
-    printf("%s|%s", scrMuted(), scrReset());
+    printf("%s|%s", styleSeq(ST_BRASS), scrReset());
     printf(SCR_CURSOR, row, column + width - 1);
-    printf("%s|%s", scrMuted(), scrReset());
+    printf("%s|%s", styleSeq(ST_BRASS), scrReset());
 }
 
 void renderScreenHeader(const char *title,
@@ -67,11 +80,11 @@ void renderScreenHeader(const char *title,
 
     titleColumn = getCenteredColumn((int)strlen(title));
     printf(SCR_CURSOR, row, titleColumn);
-    printf("%s%s%s", scrEmphasis(), title, scrReset());
+    printf("%s%s%s", styleSeq(ST_GOLD_B), title, scrReset());
 
     if (subtitle != NULL) {
         printf(SCR_CURSOR, row + 1, getCenteredColumn((int)strlen(subtitle)));
-        printf("%s%s%s", scrMuted(), subtitle, scrReset());
+        printf("%s%s%s", styleSeq(ST_MUTED), subtitle, scrReset());
     }
 
     separatorWidth = terminalWidth < 60 ? terminalWidth : 60;
@@ -82,9 +95,9 @@ void renderScreenHeader(const char *title,
     printf(SCR_CURSOR,
            row + (subtitle != NULL ? 2 : 1),
            getCenteredColumn(separatorWidth));
-    printf("%s", scrMuted());
+    printf("%s", styleSeq(ST_BRASS));
     while (separatorWidth-- > 0) {
-        putchar('-');
+        fputs(renderUtf8Enabled() ? "\xe2\x94\x80" : "-", stdout);
     }
     printf("%s", scrReset());
 }
@@ -102,19 +115,19 @@ void renderMenuItemRow(int row,
 
     if (disabled) {
         printf("  %s[%c]%s  %s%s%s",
-               scrMuted(), hotkey, scrReset(),
-               scrMuted(), label, scrReset());
+               styleSeq(ST_MUTED), hotkey, scrReset(),
+               styleSeq(ST_MUTED), label, scrReset());
     } else if (completed) {
         printf("  %s[%c]%s  %s%s%s",
-               scrMuted(), hotkey, scrReset(),
-               scrSuccess(), label, scrReset());
+               styleSeq(ST_MUTED), hotkey, scrReset(),
+               styleSeq(ST_OK), label, scrReset());
     } else if (selected) {
         printf("%s> %s[%c]%s  %s%s%s",
-               scrEmphasis(), scrAccent(), hotkey, scrReset(),
-               scrEmphasis(), label, scrReset());
+               styleSeq(ST_GOLD_B), styleSeq(ST_GOLD_B), hotkey, scrReset(),
+               styleSeq(ST_STRONG), label, scrReset());
     } else {
         printf("  %s[%c]%s  %s",
-               scrMuted(), hotkey, scrReset(), label);
+               styleSeq(ST_BRASS), hotkey, scrReset(), label);
     }
 }
 

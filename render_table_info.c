@@ -1,7 +1,9 @@
 #include "render_table_info.h"
 
+#include "render_canvas.h"
 #include "render_control.h"
 #include "render_rows.h"
+#include "render_scene.h"
 #include "render_style.h"
 #include "render_oracle.h"
 #include "round_rules.h"
@@ -9,194 +11,169 @@
 #include <stdio.h>
 #include <string.h>
 
-// Moves the cursor to a table row and left-aligns content with the table.
-static void moveToTableRow(int row, int padding) {
-    printf(SCR_CURSOR, row, padding + 1);
-}
-
-
-// Returns the strongest category among active twists for banner coloring.
-static const char *twistBannerColor(const Game *game) {
-    TwistCategory worst = TWIST_CAT_FAVORABLE;
+/* Strongest category among active twists, mapped to a palette entry. */
+static int twistTone(const Game *game) {
+    int worst;
     int i;
+    TwistCategory category;
 
-    if (game->run.twistId != TWIST_NONE &&
-        !game->run.twistBlocked) {
-        TwistCategory cat =
-            getTwistInfo(game->run.twistId)->category;
-        if (cat == TWIST_CAT_HOSTILE) return scrDanger();
-        if (cat == TWIST_CAT_NEUTRAL) worst = TWIST_CAT_NEUTRAL;
+    worst = 0; /* 0 favourable, 1 neutral, 2 hostile */
+    if (game->run.twistId != TWIST_NONE && !game->run.twistBlocked) {
+        category = getTwistInfo(game->run.twistId)->category;
+        if (category == TWIST_CAT_HOSTILE) return 2;
+        if (category == TWIST_CAT_NEUTRAL) worst = 1;
     }
-
     for (i = 0; i < game->run.extraTwistCount; i++) {
-        TwistCategory cat =
-            getTwistInfo(game->run.extraTwists[i])->category;
-        if (cat == TWIST_CAT_HOSTILE) return scrDanger();
-        if (cat == TWIST_CAT_NEUTRAL) worst = TWIST_CAT_NEUTRAL;
+        category = getTwistInfo(game->run.extraTwists[i])->category;
+        if (category == TWIST_CAT_HOSTILE) return 2;
+        if (category == TWIST_CAT_NEUTRAL) worst = 1;
     }
-
-    if (worst == TWIST_CAT_NEUTRAL) return scrMuted();
-    return scrSuccess();
+    return worst;
 }
 
-void renderTableInfo(const Game *game,
-                     int tablePadding) {
+static const char *hintFor(const Game *game) {
+    if (game->state == STATE_BET) {
+        return "Type a bet and press Enter.";
+    }
+    if (game->state == STATE_MENU) {
+        return "Keys: C continue   A advance   S shop   Q quit";
+    }
+    return "";
+}
+
+static void drawRules(const Game *game, int x0, int width) {
     const DealerInfo *dealerInfo;
-    const TwistInfo *twistInfo;
-    const char *hintText;
-    int i;
-    int len;
-    char rulesText[256];
-    char twistsLine[256];
+    const char *rule1;
+    const char *rule2;
+    const char *power;
+    char text[256];
+    int used;
 
     dealerInfo = getDealerInfo(game->run.dealerId);
+    rule1 = dealerInfo->rule1;
+    rule2 = dealerInfo->rule2;
+    power = dealerPowerRule2(game->run.dealerId, game->run.floor);
+    if (rule2 == NULL && power != NULL) {
+        rule2 = power;
+    }
+    if (rule1 == NULL && rule2 == NULL) {
+        return;
+    }
+    if (rule2 == NULL) {
+        snprintf(text, sizeof(text), "%s", rule1);
+    } else if (rule1 == NULL) {
+        snprintf(text, sizeof(text), "%s", rule2);
+    } else {
+        snprintf(text, sizeof(text), "%s | %s", rule1, rule2);
+    }
+    used = canvasPutText(x0, ROW_RULE,
+                         rule1 != NULL && rule2 != NULL ? "RULES" : "RULE",
+                         ST_BRASS);
+    canvasPutFit(x0 + used + 1, ROW_RULE, width - used - 1, text, ST_MUTED);
+}
+
+static void drawTwists(const Game *game, int x0, int width) {
+    const TwistInfo *twistInfo;
+    char text[256];
+    char names[256];
+    int length;
+    int i;
+    int showPrimary;
+    int showBlocked;
+    int showExtras;
+    int hasName;
+    int x;
+    int tone;
+    RenderStyle badge;
+    RenderStyle body;
+
     twistInfo = getTwistInfo(game->run.twistId);
-
-        if (game->state == STATE_BET) {
-            hintText = "Type a bet and press Enter.";
-        } else if (game->state == STATE_PLAYER_TURN) {
-            hintText = "";
-        } else if (game->state == STATE_MENU) {
-            hintText = "Keys: C continue   A advance   S shop   Q quit";
-        } else {
-            hintText = "";
+    showPrimary = game->run.twistId != TWIST_NONE &&
+                  !game->run.twistBlocked;
+    showBlocked = game->run.twistId != TWIST_NONE &&
+                  game->run.twistBlocked;
+    showExtras = 0;
+    for (i = 0; i < game->run.extraTwistCount; i++) {
+        if (game->run.extraTwists[i] != TWIST_NONE) {
+            showExtras = 1;
+            break;
         }
+    }
 
-        moveToTableRow(ROW_HINT, tablePadding);
-        printf(SCR_ERASE_EOL);
-
-        if (hintText[0] != '\0') {
-            printf("%s%s%s", scrMuted(), hintText, scrReset());
+    x = x0;
+    if (!showPrimary && !showBlocked && !showExtras) {
+        if (game->safetyNetArmed) {
+            canvasPutText(x, ROW_TWIST, " SAFETY NET ", ST_BADGE_WARN);
         }
+        return;
+    }
+    if (game->safetyNetArmed) {
+        x += canvasPutText(x, ROW_TWIST, " SAFETY NET ", ST_BADGE_WARN) + 1;
+    }
 
-        moveToTableRow(ROW_RULE, tablePadding);
-        printf(SCR_ERASE_EOL);
+    tone = twistTone(game);
+    badge = tone == 2 ? ST_BADGE_RED : (tone == 1 ? ST_BADGE_GOLD
+                                                  : ST_BADGE_OK);
+    body = tone == 2 ? ST_BAD : (tone == 1 ? ST_MUTED : ST_OK);
 
-        {
-            const char *rule1 = dealerInfo->rule1;
-            const char *rule2 = dealerInfo->rule2;
-            const char *power = dealerPowerRule2(game->run.dealerId, game->run.floor);
-            if (rule2 == NULL && power != NULL) rule2 = power;
-            if (rule1 != NULL || rule2 != NULL) {
-            if (rule2 == NULL) {
-                snprintf(rulesText,
-                         sizeof(rulesText),
-                         "Rule: %s",
-                         rule1);
-            } else if (rule1 == NULL) {
-                snprintf(rulesText, sizeof(rulesText), "Rule: %s", rule2);
-            } else {
-                snprintf(rulesText, sizeof(rulesText), "Rules: %s | %s", rule1, rule2);
-            }
-            printf("%s%s%s", scrMuted(), rulesText, scrReset());
-            }
+    if ((showPrimary || showBlocked) && !showExtras) {
+        snprintf(text, sizeof(text), "%s%s - %s", twistInfo->name,
+                 showBlocked ? " (blocked)" : "", twistInfo->description);
+        x += canvasPutText(x, ROW_TWIST, " TWIST ", badge) + 1;
+        canvasPutFit(x, ROW_TWIST, x0 + width - x, text, body);
+        return;
+    }
+
+    length = 0;
+    names[0] = '\0';
+    hasName = 0;
+    if (showPrimary || showBlocked) {
+        length += snprintf(names, sizeof(names), "%s%s", twistInfo->name,
+                           showBlocked ? " (blocked)" : "");
+        hasName = 1;
+    }
+    for (i = 0; i < game->run.extraTwistCount &&
+                length < (int)sizeof(names); i++) {
+        if (game->run.extraTwists[i] == TWIST_NONE) {
+            continue;
         }
+        length += snprintf(names + length, sizeof(names) - (size_t)length,
+                           "%s%s", hasName ? " | " : "",
+                           getTwistInfo(game->run.extraTwists[i])->name);
+        hasName = 1;
+    }
+    if (hasName) {
+        x += canvasPutText(x, ROW_TWIST, " TWISTS ", badge) + 1;
+        canvasPutFit(x, ROW_TWIST, x0 + width - x, names, body);
+    }
+}
 
-        moveToTableRow(ROW_TWIST, tablePadding);
-        printf(SCR_ERASE_EOL);
+void renderTableInfoRows(const Game *game, int padding) {
+    const char *hint;
+    int x0;
+    int width;
+    int row;
 
-        if (game->mode == MODE_ROGUELIKE) {
-            int showPrimary;
-            int showExtras;
-            int showBlockedPrimary;
-            int hasTwistName;
+    (void)padding;
+    renderHudRegion(&x0, &width);
+    for (row = ROW_HINT; row <= ROW_TWIST; row++) {
+        canvasFill(x0, row, width, 1, ST_PLAIN);
+        canvasTouchRow(row);
+    }
+    hint = hintFor(game);
+    if (hint[0] != '\0') {
+        canvasPutFit(x0, ROW_HINT, width, hint, ST_MUTED);
+    }
+    drawRules(game, x0, width);
+    if (game->mode == MODE_ROGUELIKE) {
+        drawTwists(game, x0, width);
+    }
+}
 
-            showPrimary = game->run.twistId != TWIST_NONE &&
-                          !game->run.twistBlocked;
-            showBlockedPrimary = game->run.twistId != TWIST_NONE &&
-                                 game->run.twistBlocked;
-            showExtras = 0;
-
-            for (i = 0; i < game->run.extraTwistCount; i++) {
-                if (game->run.extraTwists[i] != TWIST_NONE) {
-                    showExtras = 1;
-                    break;
-                }
-            }
-
-            twistsLine[0] = '\0';
-
-            if (!showPrimary &&
-                !showBlockedPrimary &&
-                !showExtras) {
-                if (game->safetyNetArmed) {
-                    printf("%sSAFETY NET%s",
-                           scrMuted(),
-                           scrReset());
-                } else {
-                    printf(SCR_ERASE_EOL);
-                }
-            } else if ((showPrimary || showBlockedPrimary) &&
-                       !showExtras) {
-                snprintf(twistsLine,
-                         sizeof(twistsLine),
-                         "Twist: %s%s - %s",
-                         twistInfo->name,
-                         showBlockedPrimary ? " (blocked)" : "",
-                         twistInfo->description);
-                printf("%s%s%s%s",
-                       twistBannerColor(game),
-                       game->safetyNetArmed ? "SAFETY NET  |  " : "",
-                       twistsLine,
-                       scrReset());
-            } else {
-                len = snprintf(twistsLine,
-                               sizeof(twistsLine),
-                               "Twists: ");
-                hasTwistName = 0;
-
-                if (showPrimary || showBlockedPrimary) {
-                    len += snprintf(twistsLine + len,
-                                    sizeof(twistsLine) - (size_t)len,
-                                    "%s%s",
-                                    twistInfo->name,
-                                    showBlockedPrimary ? " (blocked)" : "");
-                    hasTwistName = 1;
-                }
-
-                for (i = 0;
-                     i < game->run.extraTwistCount &&
-                     len < (int)sizeof(twistsLine);
-                     i++) {
-                    const TwistInfo *extraInfo;
-
-                    if (game->run.extraTwists[i] == TWIST_NONE) {
-                        continue;
-                    }
-
-                    extraInfo = getTwistInfo(game->run.extraTwists[i]);
-
-                    if (hasTwistName) {
-                        len += snprintf(twistsLine + len,
-                                        sizeof(twistsLine) - (size_t)len,
-                                        " | ");
-                    }
-
-                    len += snprintf(twistsLine + len,
-                                    sizeof(twistsLine) - (size_t)len,
-                                    "%s",
-                                    extraInfo->name);
-                    hasTwistName = 1;
-                }
-
-                if (hasTwistName) {
-                    printf("%s%s%s%s",
-                           twistBannerColor(game),
-                           game->safetyNetArmed ? "SAFETY NET  |  " : "",
-                           twistsLine,
-                           scrReset());
-                } else if (game->safetyNetArmed) {
-                    printf("%sSAFETY NET%s",
-                           scrMuted(),
-                           scrReset());
-                } else {
-                    printf(SCR_ERASE_EOL);
-                }
-            }
-        } else {
-            printf(SCR_ERASE_EOL);
-        }
-
-        renderOracleInfo(game, tablePadding);
-
- }
+void renderTableInfo(const Game *game, int tablePadding) {
+    if (canvasBegin()) {
+        renderTableInfoRows(game, tablePadding);
+        canvasFlush();
+    }
+    renderOracleInfo(game, tablePadding);
+}

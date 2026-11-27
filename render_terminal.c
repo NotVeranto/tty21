@@ -2,6 +2,7 @@
 #include "render_terminal.h"
 #include "render_control.h"
 #include "render_style.h"
+#include "render_canvas.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -21,7 +22,8 @@ void renderTooSmallScreen(int currentWidth,
     int row;
     int useAnsi;
 
-    useAnsi = renderAnsiEnabled();
+    useAnsi = renderCursorAddressable();
+    canvasInvalidate();
 
     if (currentWidth <= 0 || currentHeight <= 0) {
         fprintf(stderr,
@@ -32,14 +34,13 @@ void renderTooSmallScreen(int currentWidth,
     }
 
     if (currentWidth >= 40 && currentHeight >= 6) {
-        msg =
-            "Terminal too small.\n"
-            "\n"
-            "Current: %dx%d\n"
-            "Minimum: %dx%d\n"
-            "\n"
-            "Resize the window to continue.";
-        snprintf(sized, sizeof(sized), msg,
+        snprintf(sized, sizeof(sized),
+                 "Terminal too small.\n"
+                 "\n"
+                 "Current: %dx%d\n"
+                 "Minimum: %dx%d\n"
+                 "\n"
+                 "Resize the window to continue.",
                  currentWidth, currentHeight,
                  MIN_TERMINAL_WIDTH, MIN_TERMINAL_HEIGHT);
         lines = 6;

@@ -3,11 +3,63 @@
 #include "render_style.h"
 #include "render_layout.h"
 #include "render_terminal.h"
+#include "render_canvas.h"
+#include "render_scene.h"
 #include "terminal.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+
+#define STATS_BOX_W 40
+#define STATS_BOX_H 11
+
+static void drawStatRow(int x, int y, int width, const char *label,
+                        int value) {
+    char number[24];
+    int numberW;
+    int labelW;
+
+    snprintf(number, sizeof(number), "%d", value);
+    numberW = (int)strlen(number);
+    labelW = canvasPutText(x, y, label, ST_MUTED);
+    canvasHLine(x + labelW + 1, y, width - labelW - numberW - 2,
+                renderGlyphs()->dot, ST_BRASS);
+    canvasPutText(x + width - numberW, y, number, ST_GOLD_B);
+}
+
+static void renderStatsCanvas(const Game *game, int width, int height) {
+    const Glyphs *glyphs;
+    int boxX;
+    int boxY;
+    int innerX;
+    int innerW;
+
+    glyphs = renderGlyphs();
+    renderHideCursor();
+    boxX = (width - STATS_BOX_W) / 2 + 1;
+    boxY = (height - STATS_BOX_H) / 2 + 1;
+    if (boxX < 1) boxX = 1;
+    if (boxY < 1) boxY = 1;
+
+    canvasBlank();
+    renderBackdrop(1, 1, width, height);
+    canvasBox(boxX, boxY, STATS_BOX_W, STATS_BOX_H, "RUN SUMMARY",
+              ST_BRASS, ST_PLAIN, ST_GOLD_B);
+    innerX = boxX + 3;
+    innerW = STATS_BOX_W - 6;
+    drawStatRow(innerX, boxY + 3, innerW, "Floors Reached",
+                game->totalFloorsReached);
+    drawStatRow(innerX, boxY + 4, innerW, "Bosses Defeated",
+                game->totalBossesDefeated);
+    drawStatRow(innerX, boxY + 5, innerW, "Total Marks",
+                game->totalMarksEarned);
+    canvasHLine(innerX, boxY + 7, innerW, glyphs->rule, ST_BRASS);
+    canvasPutCentered(boxX, STATS_BOX_W, boxY + 9, "Press any key to return",
+                      ST_MUTED);
+    canvasInvalidate();
+    canvasFlush();
+}
 
 void renderStatsScreen(const Game *game) {
     int width;
@@ -22,6 +74,11 @@ void renderStatsScreen(const Game *game) {
     if (isatty(STDOUT_FILENO) &&
         !renderTerminalSizeOk(&width, &height)) {
         renderTooSmallScreen(width, height);
+        return;
+    }
+
+    if (isatty(STDOUT_FILENO) && canvasBegin()) {
+        renderStatsCanvas(game, width, height);
         return;
     }
 

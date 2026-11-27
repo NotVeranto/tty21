@@ -1,5 +1,7 @@
 #include "render_actions.h"
+#include "render_canvas.h"
 #include "render_control.h"
+#include "render_scene.h"
 #include "render_terminal.h"
 #include "terminal.h"
 #include "render_style.h"
@@ -9,7 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 
-// Renders the horizontal player action bar.
+/* Renders the horizontal player action bar as a row of key caps. */
 void renderActionBar(const ActionId *actions,
                      int actionCount,
                      int selectedIndex,
@@ -31,10 +33,15 @@ void renderActionBar(const ActionId *actions,
     int actionId;
     const char *actionName;
     char actionKey;
+    char cap[8];
+    char label[48];
     int terminalWidth;
     int terminalHeight;
     int visibleWidth;
-    int startColumn;
+    int gap;
+    int regionX;
+    int regionW;
+    int x;
 
     if (isatty(STDOUT_FILENO) &&
         !renderTerminalSizeOk(&terminalWidth,
@@ -48,25 +55,38 @@ void renderActionBar(const ActionId *actions,
         terminalHeight < MIN_TERMINAL_HEIGHT ||
         actionCount <= 0 ||
         selectedIndex < 0 ||
-        selectedIndex >= actionCount) {
+        selectedIndex >= actionCount ||
+        !canvasBegin()) {
         return;
     }
 
-    visibleWidth = showHelp ? 11 : 0;
+    renderHudRegion(&regionX, &regionW);
+    if (regionW < 20) {
+        regionX = 1;
+        regionW = terminalWidth;
+    }
+
+    /* each entry is " K " + " Name " */
+    gap = 2;
+    visibleWidth = showHelp ? gap + 8 : 0;
     for (actionIndex = 0; actionIndex < actionCount; actionIndex++) {
         actionId = (int)actions[actionIndex];
-        if (actionId >= 0 && actionId < ACTION_COUNT) {
-            actionName = ACTION_NAMES[actionId];
-        } else {
-            actionName = "Unknown";
-        }
-        visibleWidth += (actionIndex > 0 ? 3 : 0) +
-                        6 + (int)strlen(actionName);
+        actionName = actionId >= 0 && actionId < ACTION_COUNT
+                         ? ACTION_NAMES[actionId] : "Unknown";
+        visibleWidth += (actionIndex > 0 ? gap : 0) + 3 + 2 +
+                        (int)strlen(actionName);
     }
-    startColumn = getCenteredColumnForWidth(terminalWidth, visibleWidth);
+    if (visibleWidth > regionW) {
+        gap = 1;
+        visibleWidth -= actionCount - 1 + (showHelp ? 1 : 0);
+    }
+    x = regionX + (regionW - visibleWidth) / 2;
+    if (x < regionX) {
+        x = regionX;
+    }
 
-    printf(SCR_CURSOR, row, startColumn);
-    printf(SCR_ERASE_EOL);
+    canvasFill(regionX, row, regionW, 1, ST_PLAIN);
+    canvasTouchRow(row);
     for (actionIndex = 0; actionIndex < actionCount; actionIndex++) {
         actionId = (int)actions[actionIndex];
         if (actionId >= 0 && actionId < ACTION_COUNT) {
@@ -76,32 +96,23 @@ void renderActionBar(const ActionId *actions,
             actionName = "Unknown";
             actionKey = '?';
         }
-
+        snprintf(cap, sizeof(cap), " %c ", actionKey);
+        snprintf(label, sizeof(label), " %s ", actionName);
         if (actionIndex > 0) {
-            printf("   ");
+            x += gap;
         }
-
         if (actionIndex == selectedIndex) {
-            printf("%s> %s[%c]%s %s%s%s",
-                   scrBold(),
-                   scrDim(),
-                   actionKey,
-                   scrReset(),
-                   scrBold(),
-                   actionName,
-                   scrReset());
+            x += canvasPutText(x, row, cap, ST_SEL_KEY);
+            x += canvasPutText(x, row, label, ST_SEL);
         } else {
-            printf("  %s[%c]%s %s",
-                   scrDim(),
-                   actionKey,
-                   scrReset(),
-                   actionName);
+            x += canvasPutText(x, row, cap, ST_KEYCAP);
+            x += canvasPutText(x, row, label, ST_PLAIN);
         }
     }
-
     if (showHelp) {
-        printf("   %s[?]%s %shelp%s",
-               scrDim(), scrReset(), scrDim(), scrReset());
+        x += gap;
+        x += canvasPutText(x, row, " ? ", ST_KEYCAP);
+        canvasPutText(x, row, " help", ST_MUTED);
     }
-    fflush(stdout);
+    canvasFlush();
 }

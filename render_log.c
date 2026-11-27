@@ -1,98 +1,66 @@
 #include "render_log.h"
-#include "render_control.h"
+#include "render_canvas.h"
 #include "render_rows.h"
+#include "render_scene.h"
 #include "render_style.h"
 
-#include <stdio.h>
 #include <string.h>
 
+static RenderStyle logStyle(int style) {
+    switch (style) {
+        case MSG_WIN:    return ST_OK;
+        case MSG_LOSS:   return ST_BAD;
+        case MSG_PUSH:   return ST_WARN;
+        case MSG_INFO:   return ST_MUTED;
+        case MSG_ACTION: return ST_ACCENT;
+        case MSG_DEALER: return ST_ROSE;
+        default:         return ST_PLAIN;
+    }
+}
 
-// Renders the persistent event log from oldest to newest.
-void renderEventLog(const Game *game,
-                      int padding,
-                      int terminalWidth) {
+/* Draws the event log, oldest line on top, older lines fading out. */
+void renderLogRows(const Game *game, int padding, int terminalWidth) {
+    const Glyphs *glyphs;
+    RenderStyle style;
+    int x0;
+    int width;
     int rowIndex;
     int sourceIndex;
-    int maxWidth;
-    int cut;
-    const char *prefix;
-    const char *suffix;
-    const char *displayText;
-    char truncated[LOG_LINE_LEN];
+    int newest;
 
-    maxWidth = terminalWidth - padding - 2;
-
-    if (maxWidth < 8) {
-        maxWidth = 8;
-    }
-
-    if (game->log.count == 0) {
-        for (rowIndex = 0; rowIndex < LOG_SIZE; rowIndex++) {
-            printf(SCR_CURSOR, ROW_LOG_0 + rowIndex, padding + 1);
-            printf(SCR_ERASE_EOL);
-        }
-
-        fflush(stdout);
-        return;
-    }
+    (void)padding;
+    (void)terminalWidth;
+    glyphs = renderGlyphs();
+    renderHudRegion(&x0, &width);
 
     for (rowIndex = 0; rowIndex < LOG_SIZE; rowIndex++) {
-        printf(SCR_CURSOR, ROW_LOG_0 + rowIndex, padding + 1);
-        printf(SCR_ERASE_EOL);
-
+        canvasFill(x0, ROW_LOG_0 + rowIndex, width, 1, ST_PLAIN);
+        canvasTouchRow(ROW_LOG_0 + rowIndex);
+    }
+    if (game->log.count <= 0) {
+        return;
+    }
+    for (rowIndex = 0; rowIndex < LOG_SIZE; rowIndex++) {
         sourceIndex = rowIndex - (LOG_SIZE - game->log.count);
-
         if (sourceIndex < 0) {
             continue;
         }
-
-        displayText = game->log.lines[sourceIndex];
-
-        if ((int)strlen(displayText) > maxWidth) {
-            cut = maxWidth - 3;
-
-            if (cut < 1) {
-                cut = 1;
-            }
-
-            if (cut > LOG_LINE_LEN - 4) {
-                cut = LOG_LINE_LEN - 4;
-            }
-
-            memcpy(truncated, displayText, (size_t)cut);
-            truncated[cut] = '.';
-            truncated[cut + 1] = '.';
-            truncated[cut + 2] = '.';
-            truncated[cut + 3] = '\0';
-            displayText = truncated;
+        newest = sourceIndex == game->log.count - 1;
+        style = logStyle(game->log.styles[sourceIndex]);
+        if (!newest && sourceIndex < game->log.count - 2) {
+            style |= RSTYLE_DIM;
         }
-
-        prefix = "";
-        suffix = "";
-
-        if (game->log.styles[sourceIndex] == MSG_WIN) {
-            prefix = scrGreen();
-            suffix = scrReset();
-        } else if (game->log.styles[sourceIndex] == MSG_LOSS) {
-            prefix = scrRed();
-            suffix = scrReset();
-        } else if (game->log.styles[sourceIndex] == MSG_PUSH) {
-            prefix = scrYellow();
-            suffix = scrReset();
-        } else if (game->log.styles[sourceIndex] == MSG_INFO) {
-            prefix = scrDim();
-            suffix = scrReset();
-        } else if (game->log.styles[sourceIndex] == MSG_ACTION) {
-            prefix = scrCyan();
-            suffix = scrReset();
-        } else if (game->log.styles[sourceIndex] == MSG_DEALER) {
-            prefix = scrMagenta();
-            suffix = scrReset();
-        }
-
-        printf("%s%s%s", prefix, displayText, suffix);
+        canvasPutGlyph(x0, ROW_LOG_0 + rowIndex, glyphs->bullet,
+                       newest ? ST_GOLD_B : ST_BRASS);
+        canvasPutFit(x0 + 2, ROW_LOG_0 + rowIndex, width - 2,
+                     game->log.lines[sourceIndex], style);
     }
-
-    fflush(stdout);
 }
 
+void renderEventLog(const Game *game, int padding, int terminalWidth) {
+    if (!canvasBegin()) {
+        return;
+    }
+    renderLogRows(game, padding, terminalWidth);
+    canvasFlush();
+}
