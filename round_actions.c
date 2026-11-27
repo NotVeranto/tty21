@@ -401,6 +401,8 @@ void playerTurn(Game *game) {
                                             1);
             } else if (event.type == KEY_ENTER) {
                 applyPlayerAction(game, actions[actionIndex]);
+                /* The next hand may expose a different action list. */
+                actionIndex = 0;
             } else if (event.type == KEY_ESC ||
                        event.type == KEY_UP || event.type == KEY_DOWN ||
                        event.type == KEY_NONE) {
@@ -422,6 +424,8 @@ void playerTurn(Game *game) {
                     if (matchedIndex >= 0) {
                         actionIndex = matchedIndex;
                         applyPlayerAction(game, action);
+                        /* Never carry a stale menu index into the next hand. */
+                        actionIndex = 0;
                     }
                 }
             } else if (event.type == KEY_EOF) {
@@ -480,6 +484,8 @@ void playerTurn(Game *game) {
                         if (matchedIndex >= 0) {
                             actionIndex = matchedIndex;
                             applyPlayerAction(game, action);
+                            /* The next hand may expose a different action list. */
+                            actionIndex = 0;
                         }
                     } else {
                         roundPresentMessage("Invalid action. Enter h, s, d, p, k, or q.",
