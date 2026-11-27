@@ -87,6 +87,16 @@ make simulate-report
 
 The tests cover blackjack rules, progression, saves, rendering, command-line behavior, and terminal handling.
 
+## Screenshots
+
+| Main menu | Gameplay |
+|:---:|:---:|
+| ![Main menu](screenshots/menu.png) | ![Gameplay](screenshots/game.png) |
+
+### Roguelike shop
+
+![Shop](screenshots/shop.png)
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
