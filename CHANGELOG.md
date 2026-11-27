@@ -5,7 +5,7 @@ All notable changes to tty21 are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.2] - 2026-11-27
 
 ### Added
 
@@ -37,7 +37,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Keep the command-line reference, README, and man page aligned with the animated startup flow and supported launch flags; document compatible and conflicting option combinations.
 - Expand CLI smoke coverage for seed syntax, missing arguments, and incompatible mode/continue flags.
 
-## [0.1.2] - 2026-11-27
 
 ### Added
 
