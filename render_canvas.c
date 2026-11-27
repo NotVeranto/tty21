@@ -495,11 +495,16 @@ void canvasFlushEx(void (*extra)(const void *ctx), const void *ctx) {
     outLen = 0;
     outString("\033[?2026h\033[?7l");
     if (needClear) {
-        outString("\033[0m\033[2J");
+        if (renderAnsiEnabled()) {
+            outString("\033[0m");
+        }
+        outString("\033[2J");
         needClear = 0;
         shadowValid = 0;
     }
-    outString("\033[0m");
+    if (renderAnsiEnabled()) {
+        outString("\033[0m");
+    }
     active = ST_PLAIN;
 
     for (y = 0; y < ch; y++) {
