@@ -15,11 +15,13 @@ Play classic blackjack or descend through casino floors: face tougher dealers an
 
 ## Install
 
-On Arch Linux, install the [AUR package](https://aur.archlinux.org/packages/tty21) with your AUR helper:
+On Arch Linux, build the included package recipe from a checkout:
 
 ```sh
-yay -S tty21
+makepkg -si
 ```
+
+The recipe is ready for publication to the AUR; the package is not yet listed there.
 
 On other Linux distributions, build and install from source (the install target defaults to `/usr/local`):
 
