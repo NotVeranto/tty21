@@ -180,7 +180,7 @@ int main(int argc, char **argv) {
         if (strcmp(argv[argumentIndex], "--roguelike") == 0 ||
             strcmp(argv[argumentIndex], "-r") == 0) {
             if (forced && forcedMode != MODE_ROGUELIKE) {
-                fprintf(stderr, "error: --roguelike and --classic cannot be combined.\\n");
+                fprintf(stderr, "error: --roguelike and --classic cannot be combined.\n");
                 printUsage(stderr);
                 return 1;
             }
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
         if (strcmp(argv[argumentIndex], "--classic") == 0 ||
             strcmp(argv[argumentIndex], "-c") == 0) {
             if (forced && forcedMode != MODE_CLASSIC) {
-                fprintf(stderr, "error: --roguelike and --classic cannot be combined.\\n");
+                fprintf(stderr, "error: --roguelike and --classic cannot be combined.\n");
                 printUsage(stderr);
                 return 1;
             }
